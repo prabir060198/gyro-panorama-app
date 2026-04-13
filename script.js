@@ -9,9 +9,6 @@ let captureCount = 0;
 
 // ================= CAMERA =================
 async function startCamera() {
-
-    statusText.innerText = "Requesting camera...";
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
@@ -19,16 +16,11 @@ async function startCamera() {
         });
 
         video.srcObject = stream;
-
-        video.onloadedmetadata = () => {
-            video.play();
-            statusText.innerText = "Camera started ✅";
-        };
+        statusText.innerText = "Camera started ✅";
 
     } catch (err) {
-        console.error(err);
         statusText.innerText = "Camera failed ❌";
-        alert("Allow camera + use HTTPS");
+        alert("Use HTTPS + allow camera");
     }
 }
 
@@ -53,12 +45,40 @@ function requestPermission() {
     }
 }
 
-// ================= LIVE GYRO =================
+// ================= GYRO (FIXED) =================
 window.addEventListener("deviceorientation", (event) => {
 
-    let angle = Math.round(event.alpha || 0);
-    angleUI.innerText = "Angle: " + angle + "°";
+    let alpha = event.alpha;
+    let beta = event.beta;
+    let gamma = event.gamma;
 
+    // ❌ No sensor data
+    if (alpha === null && beta === null) {
+        angleUI.innerText = "Gyro not supported ❌";
+        return;
+    }
+
+    // 🔁 Choose best axis
+    let angle = 0;
+
+    if (alpha && alpha !== 0) {
+        angle = alpha;
+    } else if (beta && beta !== 0) {
+        angle = beta;
+    } else if (gamma && gamma !== 0) {
+        angle = gamma;
+    }
+
+    angle = Math.round(angle);
+
+    // 📺 Show debug
+    angleUI.innerText =
+        `Angle: ${angle}°
+Alpha: ${Math.round(alpha || 0)}
+Beta: ${Math.round(beta || 0)}
+Gamma: ${Math.round(gamma || 0)}`;
+
+    // ================= PANORAMA CAPTURE =================
     if (!capturing) return;
 
     if (lastAngle === null) {
@@ -79,7 +99,7 @@ window.addEventListener("deviceorientation", (event) => {
         `Angle: ${angle}° | Captured: ${captureCount}`;
 });
 
-// ================= SINGLE CAPTURE =================
+// ================= SINGLE PHOTO =================
 function captureSingle() {
 
     if (!video.videoWidth) {
