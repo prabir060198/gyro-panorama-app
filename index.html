@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Street View Capture</title>
+  <title>3D Sphere Capture</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
@@ -10,29 +10,19 @@
 
 <body>
 
-<h2>🌐 Street View Capture</h2>
+<h2>🌐 3D Sphere Capture</h2>
 
-<div class="camera-container">
-  <video id="video" autoplay playsinline muted></video>
+<video id="video" autoplay playsinline muted></video>
 
-  <!-- Overlay -->
-  <div id="overlay">
-    <div id="reticle"></div>
-    <div id="points"></div>
-  </div>
-</div>
+<div id="viewer"></div>
 
-<p id="status">Status: Waiting...</p>
-<p id="angleUI"></p>
+<p id="status">Waiting...</p>
 
-<div class="btns">
+<div>
   <button onclick="startCamera()">Start Camera</button>
   <button onclick="requestPermission()">Enable Sensors</button>
   <button onclick="startCapture()">Start Capture</button>
-  <button onclick="createViewer()">View 360</button>
 </div>
-
-<div id="viewer"></div>
 
 </body>
 </html>
