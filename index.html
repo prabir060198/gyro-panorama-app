@@ -1,40 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>360 Capture Pro</title>
+  <title>360 Capture Easy</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- THREE JS MODULE -->
+  <!-- MODULE -->
   <script type="module" src="script.js"></script>
 </head>
 
 <body>
 
-<h2>🌐 360 Capture Pro</h2>
+<h2>🌐 360 Capture (Easy Mode)</h2>
 
 <div class="camera-container">
   <video id="video" autoplay playsinline></video>
 
-  <!-- 🎯 Overlay -->
+  <!-- Overlay -->
   <div id="overlay">
-
-    <!-- Compass -->
-    <div id="compass">
-      <div id="dot"></div>
-    </div>
-
-    <!-- Center crosshair -->
     <div id="crosshair"></div>
-
+    <div id="arrow">⬆</div>
   </div>
 </div>
 
 <p id="status">Status: Waiting...</p>
 <p id="angleUI">Yaw: 0°</p>
 
-<div class="btn-group">
+<div>
   <button onclick="startCamera()">Start Camera</button>
   <button onclick="requestPermission()">Enable Sensors</button>
   <button onclick="startGuidedCapture()">Start 360 Capture</button>

@@ -3,14 +3,15 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.m
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
-const dot = document.getElementById("dot");
+const arrow = document.getElementById("arrow");
 
 let images = [];
 let yaw = 0;
 let capturing = false;
 let targetIndex = 0;
-let stableTime = 0;
+let isCapturingFrame = false;
 
+// 8 steps
 const targets = [0, 45, 90, 135, 180, 225, 270, 315];
 
 // ================= CAMERA =================
@@ -39,39 +40,48 @@ window.addEventListener("deviceorientation", (event) => {
     if (!capturing) return;
 
     let target = targets[targetIndex];
+
     let diff = target - yaw;
 
+    // normalize
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
 
-    // 🎯 Move dot
-    let radius = 80;
-    let rad = diff * Math.PI / 180;
+    // rotate arrow
+    arrow.style.transform =
+        `translateX(-50%) rotate(${diff}deg)`;
 
-    let x = Math.sin(rad) * radius;
-    let y = -Math.cos(rad) * radius;
+    // guidance text
+    if (Math.abs(diff) > 25) {
+        statusText.innerText = "➡ Rotate phone";
+    } else if (Math.abs(diff) > 10) {
+        statusText.innerText = "➡ Keep going...";
+    } else if (Math.abs(diff) > 5) {
+        statusText.innerText = "🎯 Almost...";
+    } else {
+        statusText.innerText = "⏳ Hold...";
+    }
 
-    dot.style.transform =
-        `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    // EASY CAPTURE
+    if (Math.abs(diff) < 12 && !isCapturingFrame) {
 
-    // Stability check
-    if (Math.abs(diff) < 5) {
-        stableTime++;
-        statusText.innerText = "⏳ Hold steady...";
+        isCapturingFrame = true;
 
-        if (stableTime > 15) {
+        statusText.innerText = "📸 Capturing...";
+
+        setTimeout(() => {
+
             captureImage();
             targetIndex++;
-            stableTime = 0;
+
+            isCapturingFrame = false;
 
             if (targetIndex >= targets.length) {
                 capturing = false;
-                statusText.innerText = "✅ Capture complete!";
+                statusText.innerText = "✅ Done!";
             }
-        }
-    } else {
-        stableTime = 0;
-        statusText.innerText = "➡ Align dot to center";
+
+        }, 600);
     }
 });
 
@@ -94,7 +104,6 @@ window.startGuidedCapture = function () {
     images = [];
     capturing = true;
     targetIndex = 0;
-    stableTime = 0;
 };
 
 // ================= SMOOTH STITCH =================
