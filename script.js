@@ -5,14 +5,16 @@ const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
 const arrow = document.getElementById("arrow");
 
-let images = [];
-let yaw = 0;
 let capturing = false;
-let targetIndex = 0;
-let isCapturingFrame = false;
+let sphereImages = [];
+let isCapturing = false;
 
-// 8 steps
-const targets = [0, 45, 90, 135, 180, 225, 270, 315];
+// 🌐 grid
+const rows = [-45, 0, 45];     // pitch
+const cols = [0, 60, 120, 180, 240, 300]; // yaw
+
+let rowIndex = 0;
+let colIndex = 0;
 
 // ================= CAMERA =================
 window.startCamera = async function () {
@@ -34,59 +36,56 @@ window.addEventListener("deviceorientation", (event) => {
 
     if (event.alpha === null) return;
 
-    yaw = Math.round(event.alpha);
-    angleUI.innerText = `Yaw: ${yaw}° (${targetIndex}/${targets.length})`;
+    let yaw = Math.round(event.alpha);
+    let pitch = Math.round(event.beta);
+
+    angleUI.innerText =
+        `Yaw: ${yaw}° Pitch: ${pitch}°
+Row ${rowIndex+1}/3 Col ${colIndex+1}/6`;
 
     if (!capturing) return;
 
-    let target = targets[targetIndex];
+    let targetYaw = cols[colIndex];
+    let targetPitch = rows[rowIndex];
 
-    let diff = target - yaw;
+    let diffYaw = targetYaw - yaw;
+    if (diffYaw > 180) diffYaw -= 360;
+    if (diffYaw < -180) diffYaw += 360;
 
-    // normalize
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
+    let diffPitch = targetPitch - pitch;
 
-    // rotate arrow
     arrow.style.transform =
-        `translateX(-50%) rotate(${diff}deg)`;
+        `translateX(-50%) rotate(${diffYaw}deg)`;
 
-    // guidance text
-    if (Math.abs(diff) > 25) {
-        statusText.innerText = "➡ Rotate phone";
-    } else if (Math.abs(diff) > 10) {
-        statusText.innerText = "➡ Keep going...";
-    } else if (Math.abs(diff) > 5) {
-        statusText.innerText = "🎯 Almost...";
-    } else {
-        statusText.innerText = "⏳ Hold...";
-    }
+    if (Math.abs(diffYaw) < 12 && Math.abs(diffPitch) < 12 && !isCapturing) {
 
-    // EASY CAPTURE
-    if (Math.abs(diff) < 12 && !isCapturingFrame) {
-
-        isCapturingFrame = true;
-
+        isCapturing = true;
         statusText.innerText = "📸 Capturing...";
 
         setTimeout(() => {
 
-            captureImage();
-            targetIndex++;
+            captureImage(yaw, pitch);
 
-            isCapturingFrame = false;
+            colIndex++;
 
-            if (targetIndex >= targets.length) {
-                capturing = false;
-                statusText.innerText = "✅ Done!";
+            if (colIndex >= cols.length) {
+                colIndex = 0;
+                rowIndex++;
             }
 
-        }, 600);
+            if (rowIndex >= rows.length) {
+                capturing = false;
+                statusText.innerText = "✅ Sphere Capture Done!";
+            }
+
+            isCapturing = false;
+
+        }, 700);
     }
 });
 
 // ================= CAPTURE =================
-function captureImage() {
+function captureImage(yaw, pitch) {
 
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
@@ -96,58 +95,38 @@ function captureImage() {
 
     ctx.drawImage(video, 0, 0);
 
-    images.push(canvas);
+    sphereImages.push({ img: canvas, yaw, pitch });
 }
 
 // ================= START =================
-window.startGuidedCapture = function () {
-    images = [];
+window.startCapture = function () {
+    sphereImages = [];
     capturing = true;
-    targetIndex = 0;
+    rowIndex = 0;
+    colIndex = 0;
 };
 
-// ================= SMOOTH STITCH =================
-function createPanoramaTexture() {
+// ================= TEXTURE =================
+function createTexture() {
 
-    let overlap = 60;
-    let imgW = images[0].width;
-    let imgH = images[0].height;
-
-    let totalWidth = imgW * images.length - overlap * (images.length - 1);
+    let w = sphereImages[0].img.width;
+    let h = sphereImages[0].img.height;
 
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
 
-    canvas.width = totalWidth;
-    canvas.height = imgH;
+    canvas.width = cols.length * w;
+    canvas.height = rows.length * h;
 
-    let xOffset = 0;
+    sphereImages.forEach(data => {
 
-    images.forEach((img, i) => {
+        let x = Math.floor((data.yaw / 360) * cols.length);
+        let y = Math.floor(((data.pitch + 90) / 180) * rows.length);
 
-        if (i === 0) {
-            ctx.drawImage(img, 0, 0);
-            xOffset += imgW - overlap;
-        } else {
+        x = Math.max(0, Math.min(cols.length - 1, x));
+        y = Math.max(0, Math.min(rows.length - 1, y));
 
-            for (let x = 0; x < overlap; x++) {
-                let alpha = x / overlap;
-
-                ctx.globalAlpha = alpha;
-                ctx.drawImage(img, x, 0, 1, imgH,
-                    xOffset + x, 0, 1, imgH);
-            }
-
-            ctx.globalAlpha = 1;
-
-            ctx.drawImage(img,
-                overlap, 0,
-                imgW - overlap, imgH,
-                xOffset + overlap, 0,
-                imgW - overlap, imgH);
-
-            xOffset += imgW - overlap;
-        }
+        ctx.drawImage(data.img, x * w, y * h);
     });
 
     return canvas;
@@ -156,13 +135,8 @@ function createPanoramaTexture() {
 // ================= VIEWER =================
 window.createViewer = function () {
 
-    if (images.length === 0) {
-        alert("No images!");
-        return;
-    }
-
-    const panoCanvas = createPanoramaTexture();
-    const texture = new THREE.CanvasTexture(panoCanvas);
+    const pano = createTexture();
+    const texture = new THREE.CanvasTexture(pano);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
@@ -170,9 +144,8 @@ window.createViewer = function () {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, 400);
 
-    const container = document.getElementById("viewer");
-    container.innerHTML = "";
-    container.appendChild(renderer.domElement);
+    document.getElementById("viewer").innerHTML = "";
+    document.getElementById("viewer").appendChild(renderer.domElement);
 
     const geometry = new THREE.SphereGeometry(500, 60, 40);
     geometry.scale(-1, 1, 1);
@@ -183,6 +156,7 @@ window.createViewer = function () {
     let lon = 0, lat = 0;
     let isDown = false;
 
+    // mouse
     renderer.domElement.addEventListener("mousedown", () => isDown = true);
     renderer.domElement.addEventListener("mouseup", () => isDown = false);
 
@@ -192,13 +166,33 @@ window.createViewer = function () {
         lat -= e.movementY * 0.1;
     });
 
+    // touch
+    let lastX = 0, lastY = 0;
+
+    renderer.domElement.addEventListener("touchstart", (e) => {
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+    });
+
+    renderer.domElement.addEventListener("touchmove", (e) => {
+
+        let dx = e.touches[0].clientX - lastX;
+        let dy = e.touches[0].clientY - lastY;
+
+        lon += dx * 0.1;
+        lat -= dy * 0.1;
+
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+    });
+
     function animate() {
         requestAnimationFrame(animate);
 
         lat = Math.max(-85, Math.min(85, lat));
 
-        const phi = THREE.MathUtils.degToRad(90 - lat);
-        const theta = THREE.MathUtils.degToRad(lon);
+        let phi = THREE.MathUtils.degToRad(90 - lat);
+        let theta = THREE.MathUtils.degToRad(lon);
 
         camera.position.set(
             500 * Math.sin(phi) * Math.cos(theta),
