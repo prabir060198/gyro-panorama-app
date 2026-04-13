@@ -10,7 +10,7 @@ let images = [];
 let currentIndex = 0;
 let isCapturing = false;
 
-// 🌐 capture points (yaw + pitch)
+// capture points
 const capturePoints = [
   { yaw: 0, pitch: 0 },
   { yaw: 60, pitch: 0 },
@@ -32,11 +32,17 @@ const capturePoints = [
 window.startCamera = async function () {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
+      video: { facingMode: "environment" },
+      audio: false
     });
+
     video.srcObject = stream;
+    await video.play();
+
     statusText.innerText = "Camera started ✅";
-  } catch (e) {
+
+  } catch (err) {
+    console.error(err);
     alert("Camera error: allow permission + use HTTPS");
   }
 };
@@ -49,22 +55,19 @@ window.requestPermission = function () {
   statusText.innerText = "Sensor enabled ✅";
 };
 
-// ================= UI POINTS =================
+// ================= UI =================
 function createPointsUI() {
-
   pointsContainer.innerHTML = "";
 
   capturePoints.forEach((p, i) => {
-
     let div = document.createElement("div");
     div.className = "point";
 
-    // simple circular layout
     let angle = (i / capturePoints.length) * 2 * Math.PI;
-    let r = 120;
+    let r = 80;
 
-    div.style.left = (50 + Math.cos(angle) * r / 4) + "%";
-    div.style.top = (50 + Math.sin(angle) * r / 4) + "%";
+    div.style.left = (50 + Math.cos(angle) * r / 2) + "%";
+    div.style.top = (50 + Math.sin(angle) * r / 2) + "%";
 
     pointsContainer.appendChild(div);
   });
@@ -97,6 +100,7 @@ Step:${currentIndex+1}/${capturePoints.length}`;
   let diffPitch = target.pitch - pitch;
 
   let points = document.querySelectorAll(".point");
+
   points.forEach(p => p.classList.remove("active"));
   if (points[currentIndex]) points[currentIndex].classList.add("active");
 
@@ -109,7 +113,7 @@ Step:${currentIndex+1}/${capturePoints.length}`;
 
     setTimeout(() => {
 
-      captureImage(yaw, pitch);
+      captureImage();
 
       if (points[currentIndex]) {
         points[currentIndex].classList.add("done");
@@ -126,7 +130,7 @@ Step:${currentIndex+1}/${capturePoints.length}`;
 
     }, 600);
   } else {
-    statusText.innerText = "🎯 Align with target";
+    statusText.innerText = "🎯 Align target";
   }
 });
 
@@ -137,8 +141,7 @@ function flash() {
 }
 
 // ================= CAPTURE =================
-function captureImage(yaw, pitch) {
-
+function captureImage() {
   let canvas = document.createElement("canvas");
   let ctx = canvas.getContext("2d");
 
@@ -146,7 +149,6 @@ function captureImage(yaw, pitch) {
   canvas.height = video.videoHeight;
 
   ctx.drawImage(video, 0, 0);
-
   images.push(canvas);
 }
 
@@ -206,7 +208,6 @@ window.createViewer = function () {
   });
 
   renderer.domElement.addEventListener("touchmove", (e) => {
-
     let dx = e.touches[0].clientX - lastX;
     let dy = e.touches[0].clientY - lastY;
 

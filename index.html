@@ -13,8 +13,9 @@
 <h2>🌐 Street View Capture</h2>
 
 <div class="camera-container">
-  <video id="video" autoplay playsinline></video>
+  <video id="video" autoplay playsinline muted></video>
 
+  <!-- Overlay -->
   <div id="overlay">
     <div id="reticle"></div>
     <div id="points"></div>
@@ -24,7 +25,7 @@
 <p id="status">Status: Waiting...</p>
 <p id="angleUI"></p>
 
-<div>
+<div class="btns">
   <button onclick="startCamera()">Start Camera</button>
   <button onclick="requestPermission()">Enable Sensors</button>
   <button onclick="startCapture()">Start Capture</button>

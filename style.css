@@ -16,12 +16,17 @@ video {
   border-radius: 10px;
 }
 
+/* 🔥 IMPORTANT FIX */
 #overlay {
   position: absolute;
   width: 100%;
   height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* FIX TOUCH BLOCK */
 }
 
+/* Center target */
 #reticle {
   position: absolute;
   top: 50%;
@@ -33,6 +38,7 @@ video {
   transform: translate(-50%, -50%);
 }
 
+/* Points */
 #points {
   position: absolute;
   width: 100%;
@@ -56,10 +62,9 @@ video {
   background: lime;
 }
 
-#viewer {
-  width: 100%;
-  height: 400px;
-  margin-top: 15px;
+/* Buttons */
+.btns {
+  margin-top: 10px;
 }
 
 button {
@@ -69,4 +74,11 @@ button {
   border: none;
   border-radius: 6px;
   font-weight: bold;
+}
+
+/* Viewer */
+#viewer {
+  width: 100%;
+  height: 400px;
+  margin-top: 15px;
 }
