@@ -2,138 +2,78 @@ const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
 
-let images = [];
-let lastAngle = null;
+let sphereImages = [];
 let capturing = false;
-let captureCount = 0;
+let lastYaw = null;
 
 // ================= CAMERA =================
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
+            video: { facingMode: "environment" }
         });
 
         video.srcObject = stream;
         statusText.innerText = "Camera started ✅";
 
     } catch (err) {
-        statusText.innerText = "Camera failed ❌";
-        alert("Use HTTPS + allow camera");
+        alert("Camera error! Use HTTPS + allow permission");
     }
 }
 
 // ================= SENSOR =================
 function requestPermission() {
-
     if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
 
         DeviceOrientationEvent.requestPermission()
-        .then(state => {
-            if (state === "granted") {
+        .then(res => {
+            if (res === "granted") {
                 statusText.innerText = "Sensor enabled ✅";
-            } else {
-                statusText.innerText = "Sensor denied ❌";
             }
-        })
-        .catch(console.error);
-
+        });
     } else {
         statusText.innerText = "Sensor ready ✅";
     }
 }
 
-// ================= GYRO (FIXED) =================
+// ================= GYRO =================
+let yaw = 0;
+let pitch = 0;
+
 window.addEventListener("deviceorientation", (event) => {
 
-    let alpha = event.alpha;
-    let beta = event.beta;
-    let gamma = event.gamma;
-
-    // ❌ No sensor data
-    if (alpha === null && beta === null) {
+    if (event.alpha === null) {
         angleUI.innerText = "Gyro not supported ❌";
         return;
     }
 
-    // 🔁 Choose best axis
-    let angle = 0;
+    yaw = Math.round(event.alpha);
+    pitch = Math.round(event.beta);
 
-    if (alpha && alpha !== 0) {
-        angle = alpha;
-    } else if (beta && beta !== 0) {
-        angle = beta;
-    } else if (gamma && gamma !== 0) {
-        angle = gamma;
-    }
-
-    angle = Math.round(angle);
-
-    // 📺 Show debug
     angleUI.innerText =
-        `Angle: ${angle}°
-Alpha: ${Math.round(alpha || 0)}
-Beta: ${Math.round(beta || 0)}
-Gamma: ${Math.round(gamma || 0)}`;
+        `Yaw: ${yaw}°
+Pitch: ${pitch}`;
 
-    // ================= PANORAMA CAPTURE =================
     if (!capturing) return;
 
-    if (lastAngle === null) {
-        lastAngle = angle;
-        captureImage(angle);
+    if (lastYaw === null) {
+        captureImage();
+        lastYaw = yaw;
         return;
     }
 
-    let diff = Math.abs(angle - lastAngle);
+    let diff = Math.abs(yaw - lastYaw);
     if (diff > 180) diff = 360 - diff;
 
-    if (diff > 25) {
-        captureImage(angle);
-        lastAngle = angle;
+    if (diff > 30) {
+        captureImage();
+        lastYaw = yaw;
     }
-
-    statusText.innerText =
-        `Angle: ${angle}° | Captured: ${captureCount}`;
 });
 
-// ================= SINGLE PHOTO =================
-function captureSingle() {
-
-    if (!video.videoWidth) {
-        alert("Camera not ready!");
-        return;
-    }
-
-    let canvas = document.createElement("canvas");
-    let ctx = canvas.getContext("2d");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    ctx.drawImage(video, 0, 0);
-
-    const img = document.createElement("img");
-    img.src = canvas.toDataURL("image/png");
-
-    document.getElementById("gallery").prepend(img);
-
-    statusText.innerText = "Photo captured ✅";
-}
-
-// ================= PANORAMA =================
-function startCapture() {
-    images = [];
-    captureCount = 0;
-    capturing = true;
-    lastAngle = null;
-
-    statusText.innerText = "Rotate slowly 📱";
-}
-
-function captureImage(angle) {
+// ================= CAPTURE =================
+function captureImage() {
 
     if (!video.videoWidth) return;
 
@@ -145,33 +85,63 @@ function captureImage(angle) {
 
     ctx.drawImage(video, 0, 0);
 
-    images.push(canvas);
-    captureCount++;
+    sphereImages.push({
+        img: canvas,
+        yaw: yaw,
+        pitch: pitch
+    });
+
+    statusText.innerText = `Captured: ${sphereImages.length}`;
 }
 
-function createPanorama() {
+// ================= SINGLE PHOTO =================
+function captureSingle() {
+    captureImage();
+}
 
-    if (images.length === 0) {
-        alert("No images!");
+// ================= START =================
+function startCapture() {
+    sphereImages = [];
+    capturing = true;
+    lastYaw = null;
+
+    statusText.innerText = "Move phone slowly in all directions 🌐";
+}
+
+// ================= CREATE SPHERE =================
+function createSphere() {
+
+    if (sphereImages.length === 0) {
+        alert("No images captured!");
         return;
     }
 
-    let width = images[0].width * images.length;
-    let height = images[0].height;
+    let cols = 12; // horizontal slices
+    let rows = 4;  // vertical slices
+
+    let imgW = sphereImages[0].img.width;
+    let imgH = sphereImages[0].img.height;
 
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
 
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = cols * imgW;
+    canvas.height = rows * imgH;
 
-    images.forEach((img, index) => {
-        ctx.drawImage(img, index * img.width, 0);
+    sphereImages.forEach((data) => {
+
+        let x = Math.floor((data.yaw / 360) * cols);
+        let y = Math.floor(((data.pitch + 90) / 180) * rows);
+
+        x = Math.max(0, Math.min(cols - 1, x));
+        y = Math.max(0, Math.min(rows - 1, y));
+
+        ctx.drawImage(data.img, x * imgW, y * imgH);
     });
 
     document.getElementById("output").innerHTML = "";
     document.getElementById("output").appendChild(canvas);
 
     capturing = false;
-    statusText.innerText = "Panorama created ✅";
+    statusText.innerText = "Sphere created 🌐";
 }

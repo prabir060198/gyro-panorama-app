@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>360 Camera App</title>
+  <title>Photo Sphere App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 360 Camera App</h2>
+<h2>🌐 Photo Sphere Capture</h2>
 
 <video id="video" autoplay playsinline></video>
 
 <p id="status">Status: Waiting...</p>
-<p id="angleUI">Angle: 0°</p>
+<p id="angleUI">Yaw: 0° | Pitch: 0°</p>
 
 <div class="btn-group">
   <button onclick="startCamera()">Start Camera</button>
@@ -21,14 +21,11 @@
   <button onclick="captureSingle()">📸 Capture Photo</button>
 </div>
 
-<h3>Gallery</h3>
-<div id="gallery"></div>
-
 <hr>
 
 <div class="btn-group">
-  <button onclick="startCapture()">Start Panorama</button>
-  <button onclick="createPanorama()">Create Panorama</button>
+  <button onclick="startCapture()">Start Sphere Capture</button>
+  <button onclick="createSphere()">Create Sphere</button>
 </div>
 
 <div id="output"></div>

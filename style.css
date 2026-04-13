@@ -10,11 +10,6 @@ video {
   width: 95%;
   max-width: 400px;
   border-radius: 10px;
-  margin-top: 10px;
-}
-
-.btn-group {
-  margin-top: 10px;
 }
 
 button {
@@ -28,28 +23,10 @@ button {
   font-weight: bold;
 }
 
-button:hover {
-  background: #00a2d3;
-}
-
 #angleUI {
-  font-size: 16px;
-  margin-top: 5px;
+  margin-top: 10px;
   color: #00ffcc;
   white-space: pre-line;
-}
-
-#gallery {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-#gallery img {
-  width: 100px;
-  margin: 5px;
-  border-radius: 8px;
-  border: 2px solid white;
 }
 
 canvas {
