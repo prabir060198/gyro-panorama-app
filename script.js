@@ -3,14 +3,14 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.m
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
-const arrow = document.getElementById("arrow");
+const dot = document.getElementById("dot");
 
 let images = [];
 let yaw = 0;
 let capturing = false;
 let targetIndex = 0;
+let stableTime = 0;
 
-// 360 targets
 const targets = [0, 45, 90, 135, 180, 225, 270, 315];
 
 // ================= CAMERA =================
@@ -34,31 +34,44 @@ window.addEventListener("deviceorientation", (event) => {
     if (event.alpha === null) return;
 
     yaw = Math.round(event.alpha);
-    angleUI.innerText = "Yaw: " + yaw + "°";
+    angleUI.innerText = `Yaw: ${yaw}° (${targetIndex}/${targets.length})`;
 
     if (!capturing) return;
 
     let target = targets[targetIndex];
-
-    // 🎯 Direction arrow
     let diff = target - yaw;
 
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
 
-    // rotate arrow
-    arrow.style.transform =
-        `translateX(-50%) rotate(${diff}deg)`;
+    // 🎯 Move dot
+    let radius = 80;
+    let rad = diff * Math.PI / 180;
 
-    // auto capture
-    if (Math.abs(diff) < 8) {
-        captureImage();
-        targetIndex++;
+    let x = Math.sin(rad) * radius;
+    let y = -Math.cos(rad) * radius;
 
-        if (targetIndex >= targets.length) {
-            capturing = false;
-            statusText.innerText = "✅ 360 Capture Complete!";
+    dot.style.transform =
+        `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+
+    // Stability check
+    if (Math.abs(diff) < 5) {
+        stableTime++;
+        statusText.innerText = "⏳ Hold steady...";
+
+        if (stableTime > 15) {
+            captureImage();
+            targetIndex++;
+            stableTime = 0;
+
+            if (targetIndex >= targets.length) {
+                capturing = false;
+                statusText.innerText = "✅ Capture complete!";
+            }
         }
+    } else {
+        stableTime = 0;
+        statusText.innerText = "➡ Align dot to center";
     }
 });
 
@@ -74,8 +87,6 @@ function captureImage() {
     ctx.drawImage(video, 0, 0);
 
     images.push(canvas);
-
-    statusText.innerText = "Captured: " + images.length;
 }
 
 // ================= START =================
@@ -83,9 +94,57 @@ window.startGuidedCapture = function () {
     images = [];
     capturing = true;
     targetIndex = 0;
+    stableTime = 0;
 };
 
-// ================= THREE VIEWER =================
+// ================= SMOOTH STITCH =================
+function createPanoramaTexture() {
+
+    let overlap = 60;
+    let imgW = images[0].width;
+    let imgH = images[0].height;
+
+    let totalWidth = imgW * images.length - overlap * (images.length - 1);
+
+    let canvas = document.createElement("canvas");
+    let ctx = canvas.getContext("2d");
+
+    canvas.width = totalWidth;
+    canvas.height = imgH;
+
+    let xOffset = 0;
+
+    images.forEach((img, i) => {
+
+        if (i === 0) {
+            ctx.drawImage(img, 0, 0);
+            xOffset += imgW - overlap;
+        } else {
+
+            for (let x = 0; x < overlap; x++) {
+                let alpha = x / overlap;
+
+                ctx.globalAlpha = alpha;
+                ctx.drawImage(img, x, 0, 1, imgH,
+                    xOffset + x, 0, 1, imgH);
+            }
+
+            ctx.globalAlpha = 1;
+
+            ctx.drawImage(img,
+                overlap, 0,
+                imgW - overlap, imgH,
+                xOffset + overlap, 0,
+                imgW - overlap, imgH);
+
+            xOffset += imgW - overlap;
+        }
+    });
+
+    return canvas;
+}
+
+// ================= VIEWER =================
 window.createViewer = function () {
 
     if (images.length === 0) {
@@ -93,42 +152,27 @@ window.createViewer = function () {
         return;
     }
 
-    // create texture strip
-    let width = images[0].width * images.length;
-    let height = images[0].height;
+    const panoCanvas = createPanoramaTexture();
+    const texture = new THREE.CanvasTexture(panoCanvas);
 
-    let canvas = document.createElement("canvas");
-    let ctx = canvas.getContext("2d");
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
 
-    canvas.width = width;
-    canvas.height = height;
-
-    images.forEach((img, i) => {
-        ctx.drawImage(img, i * img.width, 0);
-    });
-
-    let texture = new THREE.CanvasTexture(canvas);
-
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
-
-    let renderer = new THREE.WebGLRenderer();
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, 400);
 
-    document.getElementById("viewer").innerHTML = "";
-    document.getElementById("viewer").appendChild(renderer.domElement);
+    const container = document.getElementById("viewer");
+    container.innerHTML = "";
+    container.appendChild(renderer.domElement);
 
-    let geometry = new THREE.SphereGeometry(500, 60, 40);
+    const geometry = new THREE.SphereGeometry(500, 60, 40);
     geometry.scale(-1, 1, 1);
 
-    let material = new THREE.MeshBasicMaterial({ map: texture });
+    const material = new THREE.MeshBasicMaterial({ map: texture });
+    scene.add(new THREE.Mesh(geometry, material));
 
-    let mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    // simple control (drag)
-    let isDown = false;
     let lon = 0, lat = 0;
+    let isDown = false;
 
     renderer.domElement.addEventListener("mousedown", () => isDown = true);
     renderer.domElement.addEventListener("mouseup", () => isDown = false);
@@ -144,16 +188,16 @@ window.createViewer = function () {
 
         lat = Math.max(-85, Math.min(85, lat));
 
-        let phi = THREE.MathUtils.degToRad(90 - lat);
-        let theta = THREE.MathUtils.degToRad(lon);
+        const phi = THREE.MathUtils.degToRad(90 - lat);
+        const theta = THREE.MathUtils.degToRad(lon);
 
-        camera.target = new THREE.Vector3(
+        camera.position.set(
             500 * Math.sin(phi) * Math.cos(theta),
             500 * Math.cos(phi),
             500 * Math.sin(phi) * Math.sin(theta)
         );
 
-        camera.lookAt(camera.target);
+        camera.lookAt(0, 0, 0);
 
         renderer.render(scene, camera);
     }
