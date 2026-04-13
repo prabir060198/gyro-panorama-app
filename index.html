@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>360 Capture Pro</title>
+  <title>360 Camera Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
@@ -10,27 +10,27 @@
 
 <body>
 
-<h2>🌐 360 Capture (Stable)</h2>
+<h2>🌐 360 Camera (Pro)</h2>
 
 <video id="video" autoplay playsinline muted></video>
 
-<!-- 🎯 TARGET UI -->
-<div id="target">🎯</div>
-
-<!-- 📊 PROGRESS -->
-<div id="progressBar">
-  <div id="progressFill"></div>
+<div id="ui">
+  <div id="target"></div>
+  <div id="progress">
+    <div id="bar"></div>
+  </div>
 </div>
 
-<p id="status">Waiting...</p>
-<p id="angleUI"></p>
+<p id="info"></p>
 
 <div>
   <button onclick="startCamera()">Start Camera</button>
-  <button onclick="requestPermission()">Enable Sensors</button>
+  <button onclick="enableSensor()">Enable Sensor</button>
   <button onclick="startCapture()">Start Capture</button>
-  <button onclick="manualCapture()">📸 Capture</button>
+  <button onclick="createViewer()">View 360</button>
 </div>
+
+<div id="viewer"></div>
 
 </body>
 </html>
