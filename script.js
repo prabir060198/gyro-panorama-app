@@ -1,24 +1,16 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
+const angleUI = document.getElementById("angleUI");
+const progressFill = document.getElementById("progressFill");
 
-let scene, camera, renderer;
-let points = [];
-
-let yaw = 0, pitch = 0;
 let capturing = false;
-let currentIndex = 0;
 let images = [];
+let index = 0;
 
-// 🌐 sphere capture points
-const capturePoints = [];
+// 🔥 SIMPLE targets (ONLY horizontal first)
+const targets = [0, 60, 120, 180, 240, 300];
 
-for (let y = -45; y <= 45; y += 45) {
-  for (let x = 0; x < 360; x += 60) {
-    capturePoints.push({ yaw: x, pitch: y });
-  }
-}
+let smoothYaw = 0;
 
 // ================= CAMERA =================
 window.startCamera = async function () {
@@ -35,80 +27,52 @@ window.requestPermission = function () {
   }
 };
 
-// ================= INIT 3D =================
-function init3D() {
-
-  scene = new THREE.Scene();
-
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, 400);
-
-  document.getElementById("viewer").appendChild(renderer.domElement);
-
-  // create points
-  capturePoints.forEach((p, i) => {
-
-    let geometry = new THREE.SphereGeometry(5, 8, 8);
-    let material = new THREE.MeshBasicMaterial({ color: 0x888888 });
-
-    let mesh = new THREE.Mesh(geometry, material);
-
-    let phi = THREE.MathUtils.degToRad(90 - p.pitch);
-    let theta = THREE.MathUtils.degToRad(p.yaw);
-
-    mesh.position.set(
-      200 * Math.sin(phi) * Math.cos(theta),
-      200 * Math.cos(phi),
-      200 * Math.sin(phi) * Math.sin(theta)
-    );
-
-    scene.add(mesh);
-    points.push(mesh);
-  });
-}
-
-// ================= GYRO =================
+// ================= GYRO (SMOOTHED) =================
 window.addEventListener("deviceorientation", (event) => {
-
-  yaw = event.alpha || 0;
-  pitch = event.beta || 0;
 
   if (!capturing) return;
 
-  let target = capturePoints[currentIndex];
+  let yaw = event.alpha || 0;
 
-  let diffYaw = target.yaw - yaw;
-  if (diffYaw > 180) diffYaw -= 360;
-  if (diffYaw < -180) diffYaw += 360;
+  // 🔥 smoothing
+  smoothYaw = smoothYaw * 0.8 + yaw * 0.2;
 
-  let diffPitch = target.pitch - pitch;
+  let target = targets[index];
 
-  // highlight active point
-  points.forEach(p => p.material.color.set(0x888888));
-  points[currentIndex].material.color.set(0xff0000);
+  let diff = target - smoothYaw;
 
-  if (Math.abs(diffYaw) < 10 && Math.abs(diffPitch) < 10) {
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
 
-    statusText.innerText = "📸 Capturing...";
+  angleUI.innerText =
+    `Yaw: ${Math.round(smoothYaw)}
+Target: ${target}
+Step: ${index+1}/${targets.length}`;
 
-    setTimeout(() => {
-
-      captureImage();
-
-      points[currentIndex].material.color.set(0x00ff00);
-
-      currentIndex++;
-
-      if (currentIndex >= capturePoints.length) {
-        capturing = false;
-        statusText.innerText = "✅ DONE!";
-      }
-
-    }, 500);
+  // 🎯 lock system
+  if (Math.abs(diff) < 10) {
+    statusText.innerText = "🎯 Locked! Tap Capture";
+  } else {
+    statusText.innerText = "➡ Rotate slowly";
   }
 });
+
+// ================= MANUAL CAPTURE =================
+window.manualCapture = function () {
+
+  if (!capturing) return;
+
+  captureImage();
+
+  index++;
+
+  updateProgress();
+
+  if (index >= targets.length) {
+    capturing = false;
+    statusText.innerText = "✅ Done!";
+  }
+};
 
 // ================= CAPTURE =================
 function captureImage() {
@@ -127,28 +91,13 @@ function captureImage() {
 // ================= START =================
 window.startCapture = function () {
   capturing = true;
-  currentIndex = 0;
   images = [];
-
-  init3D();
+  index = 0;
+  updateProgress();
 };
 
-// ================= RENDER =================
-function animate() {
-  requestAnimationFrame(animate);
-
-  let phi = THREE.MathUtils.degToRad(90 - pitch);
-  let theta = THREE.MathUtils.degToRad(yaw);
-
-  camera.position.set(
-    200 * Math.sin(phi) * Math.cos(theta),
-    200 * Math.cos(phi),
-    200 * Math.sin(phi) * Math.sin(theta)
-  );
-
-  camera.lookAt(0, 0, 0);
-
-  renderer.render(scene, camera);
+// ================= PROGRESS =================
+function updateProgress() {
+  let percent = (index / targets.length) * 100;
+  progressFill.style.width = percent + "%";
 }
-
-animate();
