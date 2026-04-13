@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Full 360 Sphere</title>
+  <title>Street View Capture</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
@@ -10,24 +10,31 @@
 
 <body>
 
-<h2>🌐 Full 360° Photo Sphere</h2>
+<h2>🌐 Street View Capture</h2>
 
 <div class="camera-container">
   <video id="video" autoplay playsinline></video>
 
+  <!-- 🎯 Overlay -->
   <div id="overlay">
-    <div id="arrow">⬆</div>
+
+    <!-- Center target -->
+    <div id="reticle"></div>
+
+    <!-- Sphere points -->
+    <div id="points"></div>
+
   </div>
 </div>
 
-<p id="status">Status: Waiting...</p>
+<p id="status">Waiting...</p>
 <p id="angleUI"></p>
 
 <div>
   <button onclick="startCamera()">Start Camera</button>
   <button onclick="requestPermission()">Enable Sensors</button>
-  <button onclick="startCapture()">Start Full Capture</button>
-  <button onclick="createViewer()">View Sphere</button>
+  <button onclick="startCapture()">Start Capture</button>
+  <button onclick="createViewer()">View 360</button>
 </div>
 
 <div id="viewer"></div>

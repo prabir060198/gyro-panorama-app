@@ -3,207 +3,172 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.m
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
-const arrow = document.getElementById("arrow");
+const pointsContainer = document.getElementById("points");
 
 let capturing = false;
-let sphereImages = [];
-let isCapturing = false;
+let images = [];
+let currentIndex = 0;
 
-// 🌐 grid
-const rows = [-45, 0, 45];     // pitch
-const cols = [0, 60, 120, 180, 240, 300]; // yaw
+// 🌐 sphere points
+const capturePoints = [
+  { yaw: 0, pitch: 0 },
+  { yaw: 60, pitch: 0 },
+  { yaw: 120, pitch: 0 },
+  { yaw: 180, pitch: 0 },
+  { yaw: 240, pitch: 0 },
+  { yaw: 300, pitch: 0 },
 
-let rowIndex = 0;
-let colIndex = 0;
+  { yaw: 0, pitch: 40 },
+  { yaw: 120, pitch: 40 },
+  { yaw: 240, pitch: 40 },
+
+  { yaw: 0, pitch: -40 },
+  { yaw: 120, pitch: -40 },
+  { yaw: 240, pitch: -40 },
+];
 
 // ================= CAMERA =================
 window.startCamera = async function () {
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-    });
-    video.srcObject = stream;
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" }
+  });
+  video.srcObject = stream;
 };
 
 // ================= SENSOR =================
 window.requestPermission = function () {
-    if (DeviceOrientationEvent.requestPermission) {
-        DeviceOrientationEvent.requestPermission();
-    }
+  if (DeviceOrientationEvent.requestPermission) {
+    DeviceOrientationEvent.requestPermission();
+  }
 };
+
+// ================= CREATE UI POINTS =================
+function createPointsUI() {
+
+  pointsContainer.innerHTML = "";
+
+  capturePoints.forEach((p, i) => {
+
+    let div = document.createElement("div");
+    div.className = "point";
+
+    // random placement just for UI feel
+    div.style.left = (50 + Math.sin(i) * 80) + "%";
+    div.style.top = (50 + Math.cos(i) * 80) + "%";
+
+    pointsContainer.appendChild(div);
+  });
+}
 
 // ================= GYRO =================
 window.addEventListener("deviceorientation", (event) => {
 
-    if (event.alpha === null) return;
+  if (!capturing) return;
 
-    let yaw = Math.round(event.alpha);
-    let pitch = Math.round(event.beta);
+  let yaw = Math.round(event.alpha);
+  let pitch = Math.round(event.beta);
 
-    angleUI.innerText =
-        `Yaw: ${yaw}° Pitch: ${pitch}°
-Row ${rowIndex+1}/3 Col ${colIndex+1}/6`;
+  let target = capturePoints[currentIndex];
 
-    if (!capturing) return;
+  angleUI.innerText =
+    `Yaw:${yaw} Pitch:${pitch}
+Target:${target.yaw}/${target.pitch}
+Step:${currentIndex+1}/${capturePoints.length}`;
 
-    let targetYaw = cols[colIndex];
-    let targetPitch = rows[rowIndex];
+  let diffYaw = target.yaw - yaw;
+  if (diffYaw > 180) diffYaw -= 360;
+  if (diffYaw < -180) diffYaw += 360;
 
-    let diffYaw = targetYaw - yaw;
-    if (diffYaw > 180) diffYaw -= 360;
-    if (diffYaw < -180) diffYaw += 360;
+  let diffPitch = target.pitch - pitch;
 
-    let diffPitch = targetPitch - pitch;
+  let points = document.querySelectorAll(".point");
 
-    arrow.style.transform =
-        `translateX(-50%) rotate(${diffYaw}deg)`;
+  points.forEach(p => p.classList.remove("active"));
+  points[currentIndex].classList.add("active");
 
-    if (Math.abs(diffYaw) < 12 && Math.abs(diffPitch) < 12 && !isCapturing) {
+  if (Math.abs(diffYaw) < 10 && Math.abs(diffPitch) < 10) {
 
-        isCapturing = true;
-        statusText.innerText = "📸 Capturing...";
+    statusText.innerText = "📸 Capturing...";
 
-        setTimeout(() => {
+    setTimeout(() => {
 
-            captureImage(yaw, pitch);
+      captureImage(yaw, pitch);
 
-            colIndex++;
+      points[currentIndex].classList.add("done");
 
-            if (colIndex >= cols.length) {
-                colIndex = 0;
-                rowIndex++;
-            }
+      currentIndex++;
 
-            if (rowIndex >= rows.length) {
-                capturing = false;
-                statusText.innerText = "✅ Sphere Capture Done!";
-            }
+      if (currentIndex >= capturePoints.length) {
+        capturing = false;
+        statusText.innerText = "✅ Done!";
+      }
 
-            isCapturing = false;
-
-        }, 700);
-    }
+    }, 500);
+  } else {
+    statusText.innerText = "🎯 Align target";
+  }
 });
 
 // ================= CAPTURE =================
 function captureImage(yaw, pitch) {
 
-    let canvas = document.createElement("canvas");
-    let ctx = canvas.getContext("2d");
+  let canvas = document.createElement("canvas");
+  let ctx = canvas.getContext("2d");
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-    ctx.drawImage(video, 0, 0);
+  ctx.drawImage(video, 0, 0);
 
-    sphereImages.push({ img: canvas, yaw, pitch });
+  images.push({ img: canvas, yaw, pitch });
 }
 
 // ================= START =================
 window.startCapture = function () {
-    sphereImages = [];
-    capturing = true;
-    rowIndex = 0;
-    colIndex = 0;
+  capturing = true;
+  images = [];
+  currentIndex = 0;
+  createPointsUI();
 };
-
-// ================= TEXTURE =================
-function createTexture() {
-
-    let w = sphereImages[0].img.width;
-    let h = sphereImages[0].img.height;
-
-    let canvas = document.createElement("canvas");
-    let ctx = canvas.getContext("2d");
-
-    canvas.width = cols.length * w;
-    canvas.height = rows.length * h;
-
-    sphereImages.forEach(data => {
-
-        let x = Math.floor((data.yaw / 360) * cols.length);
-        let y = Math.floor(((data.pitch + 90) / 180) * rows.length);
-
-        x = Math.max(0, Math.min(cols.length - 1, x));
-        y = Math.max(0, Math.min(rows.length - 1, y));
-
-        ctx.drawImage(data.img, x * w, y * h);
-    });
-
-    return canvas;
-}
 
 // ================= VIEWER =================
 window.createViewer = function () {
 
-    const pano = createTexture();
-    const texture = new THREE.CanvasTexture(pano);
+  if (images.length === 0) return;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
+  let w = images[0].img.width;
+  let h = images[0].img.height;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, 400);
+  let canvas = document.createElement("canvas");
+  let ctx = canvas.getContext("2d");
 
-    document.getElementById("viewer").innerHTML = "";
-    document.getElementById("viewer").appendChild(renderer.domElement);
+  canvas.width = w * images.length;
+  canvas.height = h;
 
-    const geometry = new THREE.SphereGeometry(500, 60, 40);
-    geometry.scale(-1, 1, 1);
+  images.forEach((img, i) => {
+    ctx.drawImage(img.img, i * w, 0);
+  });
 
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    scene.add(new THREE.Mesh(geometry, material));
+  const texture = new THREE.CanvasTexture(canvas);
 
-    let lon = 0, lat = 0;
-    let isDown = false;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
 
-    // mouse
-    renderer.domElement.addEventListener("mousedown", () => isDown = true);
-    renderer.domElement.addEventListener("mouseup", () => isDown = false);
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, 400);
 
-    renderer.domElement.addEventListener("mousemove", (e) => {
-        if (!isDown) return;
-        lon += e.movementX * 0.1;
-        lat -= e.movementY * 0.1;
-    });
+  document.getElementById("viewer").innerHTML = "";
+  document.getElementById("viewer").appendChild(renderer.domElement);
 
-    // touch
-    let lastX = 0, lastY = 0;
+  const geometry = new THREE.SphereGeometry(500, 60, 40);
+  geometry.scale(-1, 1, 1);
 
-    renderer.domElement.addEventListener("touchstart", (e) => {
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-    });
+  scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture })));
 
-    renderer.domElement.addEventListener("touchmove", (e) => {
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
 
-        let dx = e.touches[0].clientX - lastX;
-        let dy = e.touches[0].clientY - lastY;
-
-        lon += dx * 0.1;
-        lat -= dy * 0.1;
-
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-    });
-
-    function animate() {
-        requestAnimationFrame(animate);
-
-        lat = Math.max(-85, Math.min(85, lat));
-
-        let phi = THREE.MathUtils.degToRad(90 - lat);
-        let theta = THREE.MathUtils.degToRad(lon);
-
-        camera.position.set(
-            500 * Math.sin(phi) * Math.cos(theta),
-            500 * Math.cos(phi),
-            500 * Math.sin(phi) * Math.sin(theta)
-        );
-
-        camera.lookAt(0, 0, 0);
-
-        renderer.render(scene, camera);
-    }
-
-    animate();
+  animate();
 };
