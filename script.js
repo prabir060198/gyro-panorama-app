@@ -1,81 +1,69 @@
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
+
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 const angleUI = document.getElementById("angleUI");
+const arrow = document.getElementById("arrow");
 
-let sphereImages = [];
+let images = [];
+let yaw = 0;
 let capturing = false;
-let lastYaw = null;
+let targetIndex = 0;
+
+// 360 targets
+const targets = [0, 45, 90, 135, 180, 225, 270, 315];
 
 // ================= CAMERA =================
-async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
-
-        video.srcObject = stream;
-        statusText.innerText = "Camera started ✅";
-
-    } catch (err) {
-        alert("Camera error! Use HTTPS + allow permission");
-    }
-}
+window.startCamera = async function () {
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+    });
+    video.srcObject = stream;
+};
 
 // ================= SENSOR =================
-function requestPermission() {
-    if (typeof DeviceOrientationEvent !== "undefined" &&
-        typeof DeviceOrientationEvent.requestPermission === "function") {
-
-        DeviceOrientationEvent.requestPermission()
-        .then(res => {
-            if (res === "granted") {
-                statusText.innerText = "Sensor enabled ✅";
-            }
-        });
-    } else {
-        statusText.innerText = "Sensor ready ✅";
+window.requestPermission = function () {
+    if (DeviceOrientationEvent.requestPermission) {
+        DeviceOrientationEvent.requestPermission();
     }
-}
+};
 
 // ================= GYRO =================
-let yaw = 0;
-let pitch = 0;
-
 window.addEventListener("deviceorientation", (event) => {
 
-    if (event.alpha === null) {
-        angleUI.innerText = "Gyro not supported ❌";
-        return;
-    }
+    if (event.alpha === null) return;
 
     yaw = Math.round(event.alpha);
-    pitch = Math.round(event.beta);
-
-    angleUI.innerText =
-        `Yaw: ${yaw}°
-Pitch: ${pitch}`;
+    angleUI.innerText = "Yaw: " + yaw + "°";
 
     if (!capturing) return;
 
-    if (lastYaw === null) {
-        captureImage();
-        lastYaw = yaw;
-        return;
-    }
+    let target = targets[targetIndex];
 
-    let diff = Math.abs(yaw - lastYaw);
-    if (diff > 180) diff = 360 - diff;
+    // 🎯 Direction arrow
+    let diff = target - yaw;
 
-    if (diff > 30) {
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+
+    // rotate arrow
+    arrow.style.transform =
+        `translateX(-50%) rotate(${diff}deg)`;
+
+    // auto capture
+    if (Math.abs(diff) < 8) {
         captureImage();
-        lastYaw = yaw;
+        targetIndex++;
+
+        if (targetIndex >= targets.length) {
+            capturing = false;
+            statusText.innerText = "✅ 360 Capture Complete!";
+        }
     }
 });
 
 // ================= CAPTURE =================
 function captureImage() {
-
-    if (!video.videoWidth) return;
 
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
@@ -85,63 +73,90 @@ function captureImage() {
 
     ctx.drawImage(video, 0, 0);
 
-    sphereImages.push({
-        img: canvas,
-        yaw: yaw,
-        pitch: pitch
-    });
+    images.push(canvas);
 
-    statusText.innerText = `Captured: ${sphereImages.length}`;
-}
-
-// ================= SINGLE PHOTO =================
-function captureSingle() {
-    captureImage();
+    statusText.innerText = "Captured: " + images.length;
 }
 
 // ================= START =================
-function startCapture() {
-    sphereImages = [];
+window.startGuidedCapture = function () {
+    images = [];
     capturing = true;
-    lastYaw = null;
+    targetIndex = 0;
+};
 
-    statusText.innerText = "Move phone slowly in all directions 🌐";
-}
+// ================= THREE VIEWER =================
+window.createViewer = function () {
 
-// ================= CREATE SPHERE =================
-function createSphere() {
-
-    if (sphereImages.length === 0) {
-        alert("No images captured!");
+    if (images.length === 0) {
+        alert("No images!");
         return;
     }
 
-    let cols = 12; // horizontal slices
-    let rows = 4;  // vertical slices
-
-    let imgW = sphereImages[0].img.width;
-    let imgH = sphereImages[0].img.height;
+    // create texture strip
+    let width = images[0].width * images.length;
+    let height = images[0].height;
 
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
 
-    canvas.width = cols * imgW;
-    canvas.height = rows * imgH;
+    canvas.width = width;
+    canvas.height = height;
 
-    sphereImages.forEach((data) => {
-
-        let x = Math.floor((data.yaw / 360) * cols);
-        let y = Math.floor(((data.pitch + 90) / 180) * rows);
-
-        x = Math.max(0, Math.min(cols - 1, x));
-        y = Math.max(0, Math.min(rows - 1, y));
-
-        ctx.drawImage(data.img, x * imgW, y * imgH);
+    images.forEach((img, i) => {
+        ctx.drawImage(img, i * img.width, 0);
     });
 
-    document.getElementById("output").innerHTML = "";
-    document.getElementById("output").appendChild(canvas);
+    let texture = new THREE.CanvasTexture(canvas);
 
-    capturing = false;
-    statusText.innerText = "Sphere created 🌐";
-}
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 1, 1000);
+
+    let renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, 400);
+
+    document.getElementById("viewer").innerHTML = "";
+    document.getElementById("viewer").appendChild(renderer.domElement);
+
+    let geometry = new THREE.SphereGeometry(500, 60, 40);
+    geometry.scale(-1, 1, 1);
+
+    let material = new THREE.MeshBasicMaterial({ map: texture });
+
+    let mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // simple control (drag)
+    let isDown = false;
+    let lon = 0, lat = 0;
+
+    renderer.domElement.addEventListener("mousedown", () => isDown = true);
+    renderer.domElement.addEventListener("mouseup", () => isDown = false);
+
+    renderer.domElement.addEventListener("mousemove", (e) => {
+        if (!isDown) return;
+        lon += e.movementX * 0.1;
+        lat -= e.movementY * 0.1;
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        lat = Math.max(-85, Math.min(85, lat));
+
+        let phi = THREE.MathUtils.degToRad(90 - lat);
+        let theta = THREE.MathUtils.degToRad(lon);
+
+        camera.target = new THREE.Vector3(
+            500 * Math.sin(phi) * Math.cos(theta),
+            500 * Math.cos(phi),
+            500 * Math.sin(phi) * Math.sin(theta)
+        );
+
+        camera.lookAt(camera.target);
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+};

@@ -1,36 +1,62 @@
 body {
   text-align: center;
-  font-family: Arial;
   background: #111;
   color: white;
-  padding: 10px;
+  font-family: Arial;
+}
+
+.camera-container {
+  position: relative;
+  display: inline-block;
 }
 
 video {
-  width: 95%;
+  width: 90%;
   max-width: 400px;
   border-radius: 10px;
 }
 
+/* 🎯 Overlay */
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border: 2px solid yellow;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+#arrow {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 30px;
+  color: red;
+}
+
+#viewer {
+  width: 100%;
+  height: 400px;
+  margin-top: 15px;
+}
+
 button {
   margin: 6px;
-  padding: 10px 15px;
-  font-size: 14px;
+  padding: 10px;
+  background: #00c3ff;
   border: none;
   border-radius: 6px;
-  background: #00c3ff;
-  color: black;
   font-weight: bold;
-}
-
-#angleUI {
-  margin-top: 10px;
-  color: #00ffcc;
-  white-space: pre-line;
-}
-
-canvas {
-  width: 100%;
-  margin-top: 15px;
-  border: 2px solid white;
 }
