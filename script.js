@@ -5,18 +5,22 @@ const gallery = document.getElementById('gallery');
 const angleText = document.getElementById('angleText');
 const targetText = document.getElementById('targetText');
 const startGuideBtn = document.getElementById('startGuide');
+const progressEl = document.getElementById('progress');
 
 let stream = null;
 let currentAngle = 0;
 
-// Target angles
+// Targets
 const targets = [0, 90, 180, 270];
 let currentTargetIndex = 0;
-
-// Store captured flags
 let capturedFlags = [false, false, false, false];
 
-// Start camera
+// Hold logic
+let holding = false;
+let holdStartTime = null;
+const HOLD_TIME = 1000; // 1 second
+
+// Start Camera
 async function startCamera() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -35,7 +39,7 @@ function normalize(angle) {
     return (angle + 360) % 360;
 }
 
-// Capture image
+// Capture photo
 function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
@@ -53,10 +57,9 @@ function capturePhoto(index) {
     capturedFlags[index] = true;
 }
 
-// Gyro handler
+// Orientation handler
 function handleOrientation(event) {
     let alpha = event.alpha;
-
     if (alpha === null) return;
 
     currentAngle = normalize(alpha);
@@ -66,23 +69,46 @@ function handleOrientation(event) {
     let target = targets[currentTargetIndex];
     targetText.innerText = "Target: " + target + "°";
 
-    // tolerance ±10°
     let diff = Math.abs(currentAngle - target);
-
     if (diff > 180) diff = 360 - diff;
 
     if (diff < 10) {
-        if (!capturedFlags[currentTargetIndex]) {
 
-            capturePhoto(currentTargetIndex);
+        if (!holding && !capturedFlags[currentTargetIndex]) {
+            holding = true;
+            holdStartTime = Date.now();
+        }
 
-            currentTargetIndex++;
+        if (holding) {
+            let elapsed = Date.now() - holdStartTime;
+            let progress = Math.min(elapsed / HOLD_TIME, 1);
 
-            if (currentTargetIndex >= targets.length) {
-                window.removeEventListener('deviceorientation', handleOrientation);
-                alert("✅ All 4 directions captured!");
+            // progress circle
+            progressEl.style.background =
+                `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
+
+            if (elapsed >= HOLD_TIME) {
+
+                capturePhoto(currentTargetIndex);
+
+                holding = false;
+                progressEl.style.background =
+                    `conic-gradient(#00c853 0deg, transparent 0deg)`;
+
+                currentTargetIndex++;
+
+                if (currentTargetIndex >= targets.length) {
+                    window.removeEventListener('deviceorientation', handleOrientation);
+                    alert("✅ All 4 directions captured!");
+                }
             }
         }
+
+    } else {
+        // reset if moved
+        holding = false;
+        progressEl.style.background =
+            `conic-gradient(#00c853 0deg, transparent 0deg)`;
     }
 }
 
@@ -93,14 +119,11 @@ startGuideBtn.addEventListener('click', () => {
     capturedFlags = [false, false, false, false];
     gallery.innerHTML = "";
 
-    // iOS permission
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
                 if (response === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
-                } else {
-                    alert("Permission denied");
                 }
             })
             .catch(console.error);

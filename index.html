@@ -3,16 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4 Side Guided Capture</title>
+<title>Guided 4 Direction Capture</title>
 
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 4 Direction Capture</h2>
+<h2>📸 Guided Capture</h2>
 
-<video id="video" autoplay playsinline></video>
+<div class="camera-container">
+    <video id="video" autoplay playsinline></video>
+
+    <!-- Capture UI -->
+    <div class="capture-ui">
+        <div class="circle">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+</div>
+
 <canvas id="canvas"></canvas>
 
 <div class="info">
@@ -22,7 +32,7 @@
 
 <button id="startGuide">Start Guided Capture</button>
 
-<h3>Captured Images</h3>
+<h3>Gallery</h3>
 <div class="gallery" id="gallery"></div>
 
 <script src="script.js"></script>
