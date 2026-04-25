@@ -5,16 +5,19 @@ body {
     font-family: Arial;
 }
 
+/* hide raw video */
 #video {
     display: none;
 }
 
+/* FULL SCREEN CANVAS */
 #canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
 }
 
+/* UI */
 .ui {
     position: fixed;
     bottom: 20px;

@@ -36,28 +36,26 @@ function init3D() {
         1000
     );
 
+    camera.position.z = 0.1;
+
     renderer = new THREE.WebGLRenderer({
         canvas: canvas,
-        alpha: true
+        alpha: true,
+        antialias: true
     });
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // ---------- VIDEO BACKGROUND ----------
+    // ✅ VIDEO AS BACKGROUND (FIXED)
     const videoTexture = new THREE.VideoTexture(video);
+    videoTexture.minFilter = THREE.LinearFilter;
+    videoTexture.magFilter = THREE.LinearFilter;
+    videoTexture.format = THREE.RGBAFormat;
 
-    const bgGeometry = new THREE.PlaneGeometry(16, 9);
-    const bgMaterial = new THREE.MeshBasicMaterial({
-        map: videoTexture
-    });
+    scene.background = videoTexture;
 
-    const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-    bgMesh.position.set(0, 0, -10);
-
-    scene.add(bgMesh);
-
-    // ---------- GHOST PLANE ----------
-    const geometry = new THREE.PlaneGeometry(2, 2);
+    // ✅ GHOST PLANE (BIG + VISIBLE)
+    const geometry = new THREE.PlaneGeometry(3, 3);
 
     const material = new THREE.MeshBasicMaterial({
         color: 0xffffff,
@@ -66,7 +64,7 @@ function init3D() {
     });
 
     ghostMesh = new THREE.Mesh(geometry, material);
-    ghostMesh.position.set(0, 0, -3);
+    ghostMesh.position.set(0, 0, -2);
 
     scene.add(ghostMesh);
 
@@ -87,7 +85,7 @@ function setupGyro() {
     });
 }
 
-// ---------- RENDER LOOP ----------
+// ---------- RENDER ----------
 function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
@@ -134,5 +132,5 @@ startBtn.addEventListener('click', async () => {
     }
 });
 
-// Tap screen to capture
+// Tap anywhere to capture
 window.addEventListener("click", captureFrame);
