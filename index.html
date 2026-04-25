@@ -1,36 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>360 Camera Pro</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture App</title>
 
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="script.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>🌐 360 Camera (Pro)</h2>
+<h2>📸 Camera Capture App</h2>
 
-<video id="video" autoplay playsinline muted></video>
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
-<div id="ui">
-  <div id="target"></div>
-  <div id="progress">
-    <div id="bar"></div>
-  </div>
+<div class="controls">
+    <button id="startBtn">Start Camera</button>
+    <button id="captureBtn">Capture</button>
 </div>
 
-<p id="info"></p>
+<div id="preview"></div>
 
-<div>
-  <button onclick="startCamera()">Start Camera</button>
-  <button onclick="enableSensor()">Enable Sensor</button>
-  <button onclick="startCapture()">Start Capture</button>
-  <button onclick="createViewer()">View 360</button>
-</div>
+<h3>Gallery</h3>
+<div class="gallery" id="gallery"></div>
 
-<div id="viewer"></div>
-
+<script src="script.js"></script>
 </body>
 </html>
