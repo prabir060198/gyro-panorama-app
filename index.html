@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3D Ghost Overlay</title>
+
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<video id="video" autoplay playsinline style="display:none;"></video>
+<!-- Hidden video (camera source) -->
+<video id="video" autoplay playsinline></video>
+
+<!-- 3D canvas -->
 <canvas id="canvas"></canvas>
 
-<button id="startBtn">Start</button>
+<!-- UI -->
+<div class="ui">
+    <p id="status">Press Start</p>
+    <button id="startBtn">Start</button>
+</div>
 
+<!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-<script src="script.js"></script>
 
+<script src="script.js"></script>
 </body>
 </html>

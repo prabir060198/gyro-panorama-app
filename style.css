@@ -2,6 +2,11 @@ body {
     margin: 0;
     overflow: hidden;
     background: black;
+    font-family: Arial;
+}
+
+#video {
+    display: none;
 }
 
 #canvas {
@@ -10,10 +15,19 @@ body {
     left: 0;
 }
 
-#startBtn {
+.ui {
     position: fixed;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 100%;
+    text-align: center;
+    color: white;
+}
+
+button {
     padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    background: #00c853;
+    color: white;
 }
