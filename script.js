@@ -6,12 +6,12 @@ const angleText = document.getElementById('angleText');
 const targetText = document.getElementById('targetText');
 const statusText = document.getElementById('statusText');
 const progressEl = document.getElementById('progress');
+const ghostOverlay = document.getElementById('ghostOverlay');
 const startGuideBtn = document.getElementById('startGuide');
 
-let stream = null;
 let currentAngle = 0;
 
-// 30% overlap → 60° steps
+// 30% overlap → 60° step
 const targets = [0, 60, 120, 180, 240, 300];
 
 let currentTargetIndex = 0;
@@ -21,13 +21,13 @@ let capturedFlags = new Array(targets.length).fill(false);
 let holding = false;
 let holdStartTime = null;
 
-const HOLD_TIME = 1000; // 1 second
+const HOLD_TIME = 1000;
 const TOLERANCE = 8;
 
 // Start camera
 async function startCamera() {
     try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
             audio: false
         });
@@ -43,7 +43,7 @@ function normalize(angle) {
     return (angle + 360) % 360;
 }
 
-// Capture image
+// Capture photo
 function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
@@ -54,11 +54,15 @@ function capturePhoto(index) {
 
     const imgData = canvas.toDataURL("image/png");
 
+    // Gallery
     const img = document.createElement("img");
     img.src = imgData;
     gallery.appendChild(img);
 
     capturedFlags[index] = true;
+
+    // Ghost overlay update
+    ghostOverlay.src = imgData;
 }
 
 // Orientation handler
@@ -78,7 +82,6 @@ function handleOrientation(event) {
 
     if (diff < TOLERANCE) {
 
-        // ALIGNED
         statusText.innerText = "✅ Hold steady...";
         statusText.style.color = "#00c853";
 
@@ -117,7 +120,6 @@ function handleOrientation(event) {
         }
 
     } else {
-        // NOT ALIGNED
         holding = false;
 
         statusText.innerText = "➡️ Move to target";
@@ -128,23 +130,22 @@ function handleOrientation(event) {
     }
 }
 
-// Start guided capture
+// Start capture
 startGuideBtn.addEventListener('click', () => {
 
     currentTargetIndex = 0;
     capturedFlags = new Array(targets.length).fill(false);
     gallery.innerHTML = "";
 
+    ghostOverlay.src = "";
+
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
-            .then(response => {
-                if (response === 'granted') {
+            .then(res => {
+                if (res === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
-                } else {
-                    alert("Permission denied");
                 }
-            })
-            .catch(console.error);
+            });
     } else {
         window.addEventListener('deviceorientation', handleOrientation);
     }
