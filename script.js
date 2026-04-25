@@ -1,15 +1,23 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const preview = document.getElementById('preview');
 const gallery = document.getElementById('gallery');
 
-const startBtn = document.getElementById('startBtn');
-const captureBtn = document.getElementById('captureBtn');
+const angleText = document.getElementById('angleText');
+const targetText = document.getElementById('targetText');
+const startGuideBtn = document.getElementById('startGuide');
 
 let stream = null;
+let currentAngle = 0;
 
-// Start Camera
-startBtn.addEventListener('click', async () => {
+// Target angles
+const targets = [0, 90, 180, 270];
+let currentTargetIndex = 0;
+
+// Store captured flags
+let capturedFlags = [false, false, false, false];
+
+// Start camera
+async function startCamera() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
@@ -17,17 +25,18 @@ startBtn.addEventListener('click', async () => {
         });
         video.srcObject = stream;
     } catch (err) {
-        alert("Camera not working: " + err.message);
+        alert("Camera error: " + err.message);
     }
-});
+}
+startCamera();
 
-// Capture Photo
-captureBtn.addEventListener('click', () => {
-    if (!stream) {
-        alert("Start camera first!");
-        return;
-    }
+// Normalize angle
+function normalize(angle) {
+    return (angle + 360) % 360;
+}
 
+// Capture image
+function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
     canvas.width = video.videoWidth;
@@ -35,20 +44,67 @@ captureBtn.addEventListener('click', () => {
 
     ctx.drawImage(video, 0, 0);
 
-    const imageData = canvas.toDataURL("image/png");
+    const imgData = canvas.toDataURL("image/png");
 
-    // Preview
-    preview.innerHTML = `
-        <h3>Preview</h3>
-        <img src="${imageData}" width="200"/>
-        <br>
-        <a href="${imageData}" download="photo.png">
-            <button>Download</button>
-        </a>
-    `;
-
-    // Add to gallery
     const img = document.createElement("img");
-    img.src = imageData;
+    img.src = imgData;
     gallery.appendChild(img);
+
+    capturedFlags[index] = true;
+}
+
+// Gyro handler
+function handleOrientation(event) {
+    let alpha = event.alpha;
+
+    if (alpha === null) return;
+
+    currentAngle = normalize(alpha);
+
+    angleText.innerText = "Angle: " + Math.round(currentAngle) + "°";
+
+    let target = targets[currentTargetIndex];
+    targetText.innerText = "Target: " + target + "°";
+
+    // tolerance ±10°
+    let diff = Math.abs(currentAngle - target);
+
+    if (diff > 180) diff = 360 - diff;
+
+    if (diff < 10) {
+        if (!capturedFlags[currentTargetIndex]) {
+
+            capturePhoto(currentTargetIndex);
+
+            currentTargetIndex++;
+
+            if (currentTargetIndex >= targets.length) {
+                window.removeEventListener('deviceorientation', handleOrientation);
+                alert("✅ All 4 directions captured!");
+            }
+        }
+    }
+}
+
+// Start guided capture
+startGuideBtn.addEventListener('click', () => {
+
+    currentTargetIndex = 0;
+    capturedFlags = [false, false, false, false];
+    gallery.innerHTML = "";
+
+    // iOS permission
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                } else {
+                    alert("Permission denied");
+                }
+            })
+            .catch(console.error);
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+    }
 });

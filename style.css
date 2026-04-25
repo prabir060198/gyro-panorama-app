@@ -10,7 +10,7 @@ h2 {
     margin: 10px;
 }
 
-video, canvas {
+video {
     width: 90%;
     max-width: 400px;
     border-radius: 10px;
@@ -21,22 +21,22 @@ canvas {
     display: none;
 }
 
-.controls {
-    margin: 15px;
+.info {
+    margin: 10px;
+    font-size: 18px;
 }
 
 button {
-    padding: 10px 15px;
-    margin: 5px;
+    padding: 12px 18px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #00c853;
     color: white;
     font-size: 16px;
-    cursor: pointer;
+    margin: 10px;
 }
 
-button:hover {
+button:active {
     background: #009624;
 }
 
@@ -44,13 +44,12 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    margin-top: 10px;
 }
 
 .gallery img {
     width: 100px;
     height: 80px;
-    object-fit: cover;
     margin: 5px;
-    border-radius: 5px;
+    border-radius: 6px;
+    object-fit: cover;
 }

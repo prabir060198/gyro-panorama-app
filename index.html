@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Capture App</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4 Side Guided Capture</title>
 
-    <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 Camera Capture App</h2>
+<h2>📸 4 Direction Capture</h2>
 
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
-<div class="controls">
-    <button id="startBtn">Start Camera</button>
-    <button id="captureBtn">Capture</button>
+<div class="info">
+    <p id="angleText">Angle: 0°</p>
+    <p id="targetText">Target: 0°</p>
 </div>
 
-<div id="preview"></div>
+<button id="startGuide">Start Guided Capture</button>
 
-<h3>Gallery</h3>
+<h3>Captured Images</h3>
 <div class="gallery" id="gallery"></div>
 
 <script src="script.js"></script>
