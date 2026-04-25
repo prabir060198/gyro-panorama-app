@@ -1,136 +1,145 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const startBtn = document.getElementById('startBtn');
-const statusText = document.getElementById('status');
+const gallery = document.getElementById('gallery');
 
-let scene, camera, renderer;
-let ghostMesh;
+const angleText = document.getElementById('angleText');
+const targetText = document.getElementById('targetText');
+const statusText = document.getElementById('statusText');
+const progressEl = document.getElementById('progress');
+const startGuideBtn = document.getElementById('startGuide');
 
-// ---------- CAMERA ----------
+let currentAngle = 0;
+
+// 30% overlap → 6 shots
+const targets = [0, 60, 120, 180, 240, 300];
+
+let currentTargetIndex = 0;
+let capturedFlags = new Array(targets.length).fill(false);
+
+// Hold system
+let holding = false;
+let holdStartTime = null;
+
+const HOLD_TIME = 1000;
+const TOLERANCE = 8;
+
+// Start camera
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
             audio: false
         });
-
         video.srcObject = stream;
-        await video.play();
-
-        statusText.innerText = "Camera started";
-    } catch (e) {
-        statusText.innerText = "Camera error";
-        console.error(e);
+    } catch (err) {
+        alert("Camera error: " + err.message);
     }
 }
+startCamera();
 
-// ---------- INIT 3D ----------
-function init3D() {
-
-    scene = new THREE.Scene();
-
-    camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-    );
-
-    camera.position.z = 0.1;
-
-    renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        alpha: true,
-        antialias: true
-    });
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // ✅ VIDEO AS BACKGROUND (FIXED)
-    const videoTexture = new THREE.VideoTexture(video);
-    videoTexture.minFilter = THREE.LinearFilter;
-    videoTexture.magFilter = THREE.LinearFilter;
-    videoTexture.format = THREE.RGBAFormat;
-
-    scene.background = videoTexture;
-
-    // ✅ GHOST PLANE (BIG + VISIBLE)
-    const geometry = new THREE.PlaneGeometry(3, 3);
-
-    const material = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        opacity: 0.3,
-        transparent: true
-    });
-
-    ghostMesh = new THREE.Mesh(geometry, material);
-    ghostMesh.position.set(0, 0, -2);
-
-    scene.add(ghostMesh);
-
-    animate();
+// Normalize angle
+function normalize(angle) {
+    return (angle + 360) % 360;
 }
 
-// ---------- GYRO ----------
-function setupGyro() {
-    window.addEventListener('deviceorientation', (e) => {
+// Capture image
+function capturePhoto(index) {
+    const ctx = canvas.getContext('2d');
 
-        if (e.alpha == null) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-        const alpha = THREE.MathUtils.degToRad(e.alpha);
-        const beta = THREE.MathUtils.degToRad(e.beta || 0);
-
-        camera.rotation.y = alpha;
-        camera.rotation.x = beta;
-    });
-}
-
-// ---------- RENDER ----------
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-}
-
-// ---------- CAPTURE ----------
-function captureFrame() {
-
-    const temp = document.createElement("canvas");
-    temp.width = video.videoWidth;
-    temp.height = video.videoHeight;
-
-    const ctx = temp.getContext("2d");
     ctx.drawImage(video, 0, 0);
 
-    const img = temp.toDataURL("image/png");
+    const imgData = canvas.toDataURL("image/png");
 
-    const texture = new THREE.TextureLoader().load(img);
+    const img = document.createElement("img");
+    img.src = imgData;
+    gallery.appendChild(img);
 
-    ghostMesh.material.map = texture;
-    ghostMesh.material.opacity = 0.5;
-    ghostMesh.material.needsUpdate = true;
-
-    statusText.innerText = "Captured";
+    capturedFlags[index] = true;
 }
 
-// ---------- START ----------
-startBtn.addEventListener('click', async () => {
+// Gyro handler
+function handleOrientation(event) {
+    let alpha = event.alpha;
+    if (alpha === null) return;
 
-    await startCamera();
-    init3D();
+    currentAngle = normalize(alpha);
 
-    // iOS permission
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(res => {
-            if (res === 'granted') {
-                setupGyro();
-                statusText.innerText = "Gyro active";
+    angleText.innerText = "Angle: " + Math.round(currentAngle) + "°";
+
+    let target = targets[currentTargetIndex];
+    targetText.innerText = "Target: " + target + "°";
+
+    let diff = Math.abs(currentAngle - target);
+    if (diff > 180) diff = 360 - diff;
+
+    if (diff < TOLERANCE) {
+
+        statusText.innerText = "✅ Hold steady...";
+        statusText.style.color = "#00c853";
+
+        if (!holding && !capturedFlags[currentTargetIndex]) {
+            holding = true;
+            holdStartTime = Date.now();
+
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        if (holding) {
+            let elapsed = Date.now() - holdStartTime;
+            let progress = Math.min(elapsed / HOLD_TIME, 1);
+
+            progressEl.style.background =
+                `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
+
+            if (elapsed >= HOLD_TIME) {
+
+                capturePhoto(currentTargetIndex);
+
+                holding = false;
+                progressEl.style.background =
+                    `conic-gradient(#888 0deg, transparent 0deg)`;
+
+                statusText.innerText = "📸 Captured!";
+                statusText.style.color = "#fff";
+
+                currentTargetIndex++;
+
+                if (currentTargetIndex >= targets.length) {
+                    window.removeEventListener('deviceorientation', handleOrientation);
+                    alert("✅ All 6 images captured!");
+                }
             }
-        });
+        }
+
     } else {
-        setupGyro();
-        statusText.innerText = "Gyro active";
+        holding = false;
+
+        statusText.innerText = "➡️ Move to target";
+        statusText.style.color = "#ccc";
+
+        progressEl.style.background =
+            `conic-gradient(#888 0deg, transparent 0deg)`;
+    }
+}
+
+// Start guided capture
+startGuideBtn.addEventListener('click', () => {
+
+    currentTargetIndex = 0;
+    capturedFlags = new Array(targets.length).fill(false);
+    gallery.innerHTML = "";
+
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(res => {
+                if (res === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            });
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
     }
 });
-
-// Tap anywhere to capture
-window.addEventListener("click", captureFrame);

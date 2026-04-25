@@ -3,27 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Ghost Overlay</title>
+<title>360 Capture (Stable)</title>
 
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<!-- Camera source -->
-<video id="video" autoplay playsinline></video>
+<h2>📸 360 Capture (30% Overlap)</h2>
 
-<!-- 3D Canvas -->
-<canvas id="canvas"></canvas>
+<div class="camera-container">
+    <video id="video" autoplay playsinline></video>
 
-<!-- UI -->
-<div class="ui">
-    <p id="status">Press Start</p>
-    <button id="startBtn">Start</button>
+    <!-- Capture Circle -->
+    <div class="capture-ui">
+        <div class="circle">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
 </div>
 
-<!-- Three.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<canvas id="canvas"></canvas>
+
+<div class="info">
+    <p id="angleText">Angle: 0°</p>
+    <p id="targetText">Target: 0°</p>
+    <p id="statusText">➡️ Move to target</p>
+</div>
+
+<button id="startGuide">Start Guided Capture</button>
+
+<h3>Gallery</h3>
+<div class="gallery" id="gallery"></div>
 
 <script src="script.js"></script>
 </body>
