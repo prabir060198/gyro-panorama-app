@@ -3,17 +3,22 @@ const canvas = document.getElementById('canvas');
 const startBtn = document.getElementById('startBtn');
 
 let scene, camera, renderer;
-let videoTexture, ghostMesh;
+let ghostMesh;
 
+// ✅ Start camera properly
 async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
         audio: false
     });
+
     video.srcObject = stream;
+
+    // IMPORTANT: wait for video
+    await video.play();
 }
 
-// INIT 3D
+// ✅ Init Three.js
 function init3D() {
     scene = new THREE.Scene();
 
@@ -24,6 +29,8 @@ function init3D() {
         1000
     );
 
+    camera.position.set(0, 0, 0);
+
     renderer = new THREE.WebGLRenderer({
         canvas: canvas,
         alpha: true
@@ -31,21 +38,30 @@ function init3D() {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // 🔥 Camera video as background
-    videoTexture = new THREE.VideoTexture(video);
-    scene.background = videoTexture;
+    // ✅ FIX: use video as texture properly
+    const videoTexture = new THREE.VideoTexture(video);
+    videoTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // 🔥 Create ghost plane
+    const bgGeometry = new THREE.PlaneGeometry(16, 9);
+    const bgMaterial = new THREE.MeshBasicMaterial({
+        map: videoTexture
+    });
+
+    const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+    bgMesh.position.z = -10;
+
+    scene.add(bgMesh);
+
+    // ✅ Ghost plane (visible even before capture)
     const geometry = new THREE.PlaneGeometry(2, 2);
 
     const material = new THREE.MeshBasicMaterial({
-        transparent: true,
-        opacity: 0.5
+        color: 0xffffff,
+        opacity: 0.3,
+        transparent: true
     });
 
     ghostMesh = new THREE.Mesh(geometry, material);
-
-    // Place in front of camera
     ghostMesh.position.z = -3;
 
     scene.add(ghostMesh);
@@ -53,55 +69,55 @@ function init3D() {
     animate();
 }
 
-// 🔥 Apply captured image to 3D plane
+// ✅ Apply captured image
 function setGhostImage(imageData) {
     const texture = new THREE.TextureLoader().load(imageData);
 
     ghostMesh.material.map = texture;
+    ghostMesh.material.opacity = 0.5;
     ghostMesh.material.needsUpdate = true;
 }
 
-// Gyro rotation
+// ✅ Better gyro handling
 function setupGyro() {
     window.addEventListener('deviceorientation', (e) => {
         if (e.alpha == null) return;
 
-        // Rotate camera based on device
-        camera.rotation.y = THREE.MathUtils.degToRad(e.alpha);
-        camera.rotation.x = THREE.MathUtils.degToRad(e.beta || 0);
+        const alpha = THREE.MathUtils.degToRad(e.alpha);
+        const beta = THREE.MathUtils.degToRad(e.beta || 0);
+        const gamma = THREE.MathUtils.degToRad(e.gamma || 0);
+
+        // Simple but stable mapping
+        camera.rotation.set(beta, alpha, -gamma);
     });
 }
 
-// Animation loop
+// ✅ Render loop
 function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
 }
 
-// Start everything
+// ✅ Capture function
+function captureFrame() {
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+
+    const ctx = tempCanvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    const imgData = tempCanvas.toDataURL("image/png");
+
+    setGhostImage(imgData);
+}
+
+// ✅ Start button
 startBtn.addEventListener('click', async () => {
     await startCamera();
     init3D();
     setupGyro();
 });
 
-
-// 🔥 Example: simulate capture → apply ghost
-// Replace this with your real capturePhoto()
-function fakeCapture() {
-    const canvas2 = document.createElement("canvas");
-    canvas2.width = video.videoWidth;
-    canvas2.height = video.videoHeight;
-
-    const ctx = canvas2.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-
-    const imgData = canvas2.toDataURL("image/png");
-
-    setGhostImage(imgData);
-}
-
-// TEMP: tap screen to capture
-window.addEventListener("click", () => {
-    fakeCapture();
-});
+// tap screen to capture
+window.addEventListener("click", captureFrame);
