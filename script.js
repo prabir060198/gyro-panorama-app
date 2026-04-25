@@ -1,152 +1,107 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const gallery = document.getElementById('gallery');
+const startBtn = document.getElementById('startBtn');
 
-const angleText = document.getElementById('angleText');
-const targetText = document.getElementById('targetText');
-const statusText = document.getElementById('statusText');
-const progressEl = document.getElementById('progress');
-const ghostOverlay = document.getElementById('ghostOverlay');
-const startGuideBtn = document.getElementById('startGuide');
+let scene, camera, renderer;
+let videoTexture, ghostMesh;
 
-let currentAngle = 0;
-
-// 30% overlap → 60° step
-const targets = [0, 60, 120, 180, 240, 300];
-
-let currentTargetIndex = 0;
-let capturedFlags = new Array(targets.length).fill(false);
-
-// Hold system
-let holding = false;
-let holdStartTime = null;
-
-const HOLD_TIME = 1000;
-const TOLERANCE = 8;
-
-// Start camera
 async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
-        video.srcObject = stream;
-    } catch (err) {
-        alert("Camera error: " + err.message);
-    }
-}
-startCamera();
-
-// Normalize angle
-function normalize(angle) {
-    return (angle + 360) % 360;
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+    });
+    video.srcObject = stream;
 }
 
-// Capture photo
-function capturePhoto(index) {
-    const ctx = canvas.getContext('2d');
+// INIT 3D
+function init3D() {
+    scene = new THREE.Scene();
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
 
+    renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true
+    });
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // 🔥 Camera video as background
+    videoTexture = new THREE.VideoTexture(video);
+    scene.background = videoTexture;
+
+    // 🔥 Create ghost plane
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
+    const material = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.5
+    });
+
+    ghostMesh = new THREE.Mesh(geometry, material);
+
+    // Place in front of camera
+    ghostMesh.position.z = -3;
+
+    scene.add(ghostMesh);
+
+    animate();
+}
+
+// 🔥 Apply captured image to 3D plane
+function setGhostImage(imageData) {
+    const texture = new THREE.TextureLoader().load(imageData);
+
+    ghostMesh.material.map = texture;
+    ghostMesh.material.needsUpdate = true;
+}
+
+// Gyro rotation
+function setupGyro() {
+    window.addEventListener('deviceorientation', (e) => {
+        if (e.alpha == null) return;
+
+        // Rotate camera based on device
+        camera.rotation.y = THREE.MathUtils.degToRad(e.alpha);
+        camera.rotation.x = THREE.MathUtils.degToRad(e.beta || 0);
+    });
+}
+
+// Animation loop
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+
+// Start everything
+startBtn.addEventListener('click', async () => {
+    await startCamera();
+    init3D();
+    setupGyro();
+});
+
+
+// 🔥 Example: simulate capture → apply ghost
+// Replace this with your real capturePhoto()
+function fakeCapture() {
+    const canvas2 = document.createElement("canvas");
+    canvas2.width = video.videoWidth;
+    canvas2.height = video.videoHeight;
+
+    const ctx = canvas2.getContext("2d");
     ctx.drawImage(video, 0, 0);
 
-    const imgData = canvas.toDataURL("image/png");
+    const imgData = canvas2.toDataURL("image/png");
 
-    // Gallery
-    const img = document.createElement("img");
-    img.src = imgData;
-    gallery.appendChild(img);
-
-    capturedFlags[index] = true;
-
-    // Ghost overlay update
-    ghostOverlay.src = imgData;
+    setGhostImage(imgData);
 }
 
-// Orientation handler
-function handleOrientation(event) {
-    let alpha = event.alpha;
-    if (alpha === null) return;
-
-    currentAngle = normalize(alpha);
-
-    angleText.innerText = "Angle: " + Math.round(currentAngle) + "°";
-
-    let target = targets[currentTargetIndex];
-    targetText.innerText = "Target: " + target + "°";
-
-    let diff = Math.abs(currentAngle - target);
-    if (diff > 180) diff = 360 - diff;
-
-    if (diff < TOLERANCE) {
-
-        statusText.innerText = "✅ Hold steady...";
-        statusText.style.color = "#00c853";
-
-        if (!holding && !capturedFlags[currentTargetIndex]) {
-            holding = true;
-            holdStartTime = Date.now();
-
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
-
-        if (holding) {
-            let elapsed = Date.now() - holdStartTime;
-            let progress = Math.min(elapsed / HOLD_TIME, 1);
-
-            progressEl.style.background =
-                `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
-
-            if (elapsed >= HOLD_TIME) {
-
-                capturePhoto(currentTargetIndex);
-
-                holding = false;
-                progressEl.style.background =
-                    `conic-gradient(#888 0deg, transparent 0deg)`;
-
-                statusText.innerText = "📸 Captured!";
-                statusText.style.color = "#fff";
-
-                currentTargetIndex++;
-
-                if (currentTargetIndex >= targets.length) {
-                    window.removeEventListener('deviceorientation', handleOrientation);
-                    alert("✅ All images captured!");
-                }
-            }
-        }
-
-    } else {
-        holding = false;
-
-        statusText.innerText = "➡️ Move to target";
-        statusText.style.color = "#ccc";
-
-        progressEl.style.background =
-            `conic-gradient(#888 0deg, transparent 0deg)`;
-    }
-}
-
-// Start capture
-startGuideBtn.addEventListener('click', () => {
-
-    currentTargetIndex = 0;
-    capturedFlags = new Array(targets.length).fill(false);
-    gallery.innerHTML = "";
-
-    ghostOverlay.src = "";
-
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-            .then(res => {
-                if (res === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                }
-            });
-    } else {
-        window.addEventListener('deviceorientation', handleOrientation);
-    }
+// TEMP: tap screen to capture
+window.addEventListener("click", () => {
+    fakeCapture();
 });
