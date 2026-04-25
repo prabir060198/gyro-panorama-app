@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guided 4 Direction Capture</title>
+<title>360 Guided Capture (Overlap)</title>
 
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 Guided Capture</h2>
+<h2>📸 360 Capture (30% Overlap)</h2>
 
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
 
-    <!-- Capture UI -->
+    <!-- Capture Circle -->
     <div class="capture-ui">
         <div class="circle">
             <div class="progress" id="progress"></div>
@@ -28,6 +28,7 @@
 <div class="info">
     <p id="angleText">Angle: 0°</p>
     <p id="targetText">Target: 0°</p>
+    <p id="statusText">➡️ Move to target</p>
 </div>
 
 <button id="startGuide">Start Guided Capture</button>

@@ -4,23 +4,27 @@ const gallery = document.getElementById('gallery');
 
 const angleText = document.getElementById('angleText');
 const targetText = document.getElementById('targetText');
-const startGuideBtn = document.getElementById('startGuide');
+const statusText = document.getElementById('statusText');
 const progressEl = document.getElementById('progress');
+const startGuideBtn = document.getElementById('startGuide');
 
 let stream = null;
 let currentAngle = 0;
 
-// Targets
-const targets = [0, 90, 180, 270];
-let currentTargetIndex = 0;
-let capturedFlags = [false, false, false, false];
+// 30% overlap → 60° steps
+const targets = [0, 60, 120, 180, 240, 300];
 
-// Hold logic
+let currentTargetIndex = 0;
+let capturedFlags = new Array(targets.length).fill(false);
+
+// Hold system
 let holding = false;
 let holdStartTime = null;
-const HOLD_TIME = 1000; // 1 second
 
-// Start Camera
+const HOLD_TIME = 1000; // 1 second
+const TOLERANCE = 8;
+
+// Start camera
 async function startCamera() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -39,7 +43,7 @@ function normalize(angle) {
     return (angle + 360) % 360;
 }
 
-// Capture photo
+// Capture image
 function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
@@ -72,18 +76,23 @@ function handleOrientation(event) {
     let diff = Math.abs(currentAngle - target);
     if (diff > 180) diff = 360 - diff;
 
-    if (diff < 10) {
+    if (diff < TOLERANCE) {
+
+        // ALIGNED
+        statusText.innerText = "✅ Hold steady...";
+        statusText.style.color = "#00c853";
 
         if (!holding && !capturedFlags[currentTargetIndex]) {
             holding = true;
             holdStartTime = Date.now();
+
+            if (navigator.vibrate) navigator.vibrate(50);
         }
 
         if (holding) {
             let elapsed = Date.now() - holdStartTime;
             let progress = Math.min(elapsed / HOLD_TIME, 1);
 
-            // progress circle
             progressEl.style.background =
                 `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
 
@@ -93,22 +102,29 @@ function handleOrientation(event) {
 
                 holding = false;
                 progressEl.style.background =
-                    `conic-gradient(#00c853 0deg, transparent 0deg)`;
+                    `conic-gradient(#888 0deg, transparent 0deg)`;
+
+                statusText.innerText = "📸 Captured!";
+                statusText.style.color = "#fff";
 
                 currentTargetIndex++;
 
                 if (currentTargetIndex >= targets.length) {
                     window.removeEventListener('deviceorientation', handleOrientation);
-                    alert("✅ All 4 directions captured!");
+                    alert("✅ All images captured!");
                 }
             }
         }
 
     } else {
-        // reset if moved
+        // NOT ALIGNED
         holding = false;
+
+        statusText.innerText = "➡️ Move to target";
+        statusText.style.color = "#ccc";
+
         progressEl.style.background =
-            `conic-gradient(#00c853 0deg, transparent 0deg)`;
+            `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 }
 
@@ -116,7 +132,7 @@ function handleOrientation(event) {
 startGuideBtn.addEventListener('click', () => {
 
     currentTargetIndex = 0;
-    capturedFlags = [false, false, false, false];
+    capturedFlags = new Array(targets.length).fill(false);
     gallery.innerHTML = "";
 
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -124,6 +140,8 @@ startGuideBtn.addEventListener('click', () => {
             .then(response => {
                 if (response === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
+                } else {
+                    alert("Permission denied");
                 }
             })
             .catch(console.error);
