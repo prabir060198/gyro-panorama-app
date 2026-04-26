@@ -119,6 +119,7 @@ gallery.addEventListener("click", (e) => {
 previewModal.onclick = () => {
 
     previewModal.classList.remove("show");
+     previewImg.src = "";
 };
 
 // DOT

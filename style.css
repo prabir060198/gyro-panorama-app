@@ -41,7 +41,7 @@ video {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .progress {
@@ -106,30 +106,25 @@ video {
     color: white;
     cursor: pointer;
 }
+
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.95);
+    background: rgba(0, 0, 0, 0.95);
 
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
-
-    opacity: 0;
-    pointer-events: none;
 
     z-index: 99999;
 }
 
-/* visible state */
 .modal.show {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
-/* PREVIEW IMAGE */
 #previewImg {
     max-width: 90%;
     max-height: 90%;
-    display: block;
+    position: absolute;
 }
