@@ -9,11 +9,21 @@ const progressEl = document.getElementById('progress');
 const startGuideBtn = document.getElementById('startGuide');
 
 let currentAngle = 0;
+let currentTilt = 0;
 
-// 30% overlap → 6 shots
+// 30% overlap (horizontal)
 const targets = [0, 60, 120, 180, 240, 300];
 
+// 3 vertical rows
+const rows = [
+    { name: "TOP", tilt: 30 },
+    { name: "MIDDLE", tilt: 0 },
+    { name: "BOTTOM", tilt: -30 }
+];
+
+let currentRowIndex = 0;
 let currentTargetIndex = 0;
+
 let capturedFlags = new Array(targets.length).fill(false);
 
 // Hold system
@@ -21,9 +31,10 @@ let holding = false;
 let holdStartTime = null;
 
 const HOLD_TIME = 1000;
-const TOLERANCE = 8;
+const ANGLE_TOLERANCE = 8;
+const TILT_TOLERANCE = 12;
 
-// Start camera
+// ---------- CAMERA ----------
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -37,12 +48,12 @@ async function startCamera() {
 }
 startCamera();
 
-// Normalize angle
+// ---------- NORMALIZE ----------
 function normalize(angle) {
     return (angle + 360) % 360;
 }
 
-// Capture image
+// ---------- CAPTURE ----------
 function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
@@ -60,22 +71,43 @@ function capturePhoto(index) {
     capturedFlags[index] = true;
 }
 
-// Gyro handler
+// ---------- ORIENTATION ----------
 function handleOrientation(event) {
+
     let alpha = event.alpha;
+    let beta = event.beta || 0;
+
     if (alpha === null) return;
 
     currentAngle = normalize(alpha);
+    currentTilt = beta;
+
+    let row = rows[currentRowIndex];
+    let target = targets[currentTargetIndex];
 
     angleText.innerText = "Angle: " + Math.round(currentAngle) + "°";
+    targetText.innerText = `Target: ${target}° | ${row.name}`;
 
-    let target = targets[currentTargetIndex];
-    targetText.innerText = "Target: " + target + "°";
+    // ---------- TILT CHECK ----------
+    let tiltDiff = Math.abs(currentTilt - row.tilt);
 
+    if (tiltDiff > TILT_TOLERANCE) {
+        holding = false;
+
+        statusText.innerText = `📱 Tilt ${row.name}`;
+        statusText.style.color = "#ff9800";
+
+        progressEl.style.background =
+            `conic-gradient(#888 0deg, transparent 0deg)`;
+
+        return;
+    }
+
+    // ---------- ANGLE CHECK ----------
     let diff = Math.abs(currentAngle - target);
     if (diff > 180) diff = 360 - diff;
 
-    if (diff < TOLERANCE) {
+    if (diff < ANGLE_TOLERANCE) {
 
         statusText.innerText = "✅ Hold steady...";
         statusText.style.color = "#00c853";
@@ -107,9 +139,20 @@ function handleOrientation(event) {
 
                 currentTargetIndex++;
 
+                // ---------- NEXT STEP ----------
                 if (currentTargetIndex >= targets.length) {
-                    window.removeEventListener('deviceorientation', handleOrientation);
-                    alert("✅ All 6 images captured!");
+
+                    currentRowIndex++;
+                    currentTargetIndex = 0;
+                    capturedFlags = new Array(targets.length).fill(false);
+
+                    if (currentRowIndex >= rows.length) {
+                        window.removeEventListener('deviceorientation', handleOrientation);
+                        alert("✅ Full 360 sphere captured!");
+                        return;
+                    }
+
+                    statusText.innerText = `➡️ Move to ${rows[currentRowIndex].name}`;
                 }
             }
         }
@@ -125,11 +168,13 @@ function handleOrientation(event) {
     }
 }
 
-// Start guided capture
+// ---------- START ----------
 startGuideBtn.addEventListener('click', () => {
 
+    currentRowIndex = 0;
     currentTargetIndex = 0;
     capturedFlags = new Array(targets.length).fill(false);
+
     gallery.innerHTML = "";
 
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
