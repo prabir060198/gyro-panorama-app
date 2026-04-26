@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sensor Debug + Capture</title>
-
+<title>32 Image Photosphere</title>
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 Photosphere Debug</h2>
+<h2>📸 32 Image Photosphere</h2>
 
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
@@ -30,17 +29,15 @@
     <p id="statusText">Press Start</p>
 </div>
 
-<button id="startGuide">Start</button>
+<button id="startBtn">Start Capture</button>
 
 <h3>Gallery</h3>
 <div id="gallery" class="gallery"></div>
 
-<!-- DEBUG PANEL -->
+<!-- Debug -->
 <div id="debug">
     <p>Yaw: <span id="yawVal">0</span></p>
-    <p>Beta: <span id="betaVal">0</span></p>
     <p>Pitch: <span id="pitchVal">0</span></p>
-    <p>Gamma: <span id="gammaVal">0</span></p>
 </div>
 
 <script src="script.js"></script>

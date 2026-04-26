@@ -8,7 +8,6 @@ body {
 
 .camera-container {
     position: relative;
-    width: 100%;
     max-width: 500px;
     margin: auto;
 }
@@ -18,7 +17,7 @@ video {
     border-radius: 10px;
 }
 
-/* Capture Circle */
+/* Capture circle */
 .capture-ui {
     position: absolute;
     top: 50%;
@@ -29,8 +28,8 @@ video {
 .circle {
     width: 90px;
     height: 90px;
-    border: 3px solid rgba(255,255,255,0.3);
     border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.3);
 }
 
 .progress {
@@ -43,11 +42,6 @@ video {
 
 canvas {
     display: none;
-}
-
-/* Info */
-.info {
-    margin: 10px;
 }
 
 /* Gallery */
@@ -65,14 +59,12 @@ canvas {
     object-fit: cover;
 }
 
-/* Debug Panel */
+/* Debug */
 #debug {
     position: fixed;
     bottom: 10px;
     left: 10px;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.6);
     padding: 10px;
     border-radius: 8px;
-    font-size: 14px;
-    text-align: left;
 }

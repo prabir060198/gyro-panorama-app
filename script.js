@@ -3,124 +3,144 @@ const canvas = document.getElementById('canvas');
 const gallery = document.getElementById('gallery');
 
 const angleText = document.getElementById('angleText');
+const targetText = document.getElementById('targetText');
 const statusText = document.getElementById('statusText');
 const progressEl = document.getElementById('progress');
-const startGuideBtn = document.getElementById('startGuide');
+const startBtn = document.getElementById('startBtn');
 
-// Debug elements
 const yawVal = document.getElementById('yawVal');
-const betaVal = document.getElementById('betaVal');
 const pitchVal = document.getElementById('pitchVal');
-const gammaVal = document.getElementById('gammaVal');
 
-let currentAngle = 0;
+let currentYaw = 0;
 let currentPitch = 0;
 
+const targets = [0,45,90,135,180,225,270,315];
+
+// ✅ Your calibrated pitch values
+const rows = [
+    { name: "LOWER", pitch: -75 },
+    { name: "BOTTOM_LOW", pitch: -25 },
+    { name: "BOTTOM_UP", pitch: 25 },
+    { name: "TOP", pitch: 75 }
+];
+
+let rowIndex = 0;
+let targetIndex = 0;
+
+let capturedFlags = new Array(targets.length).fill(false);
+
 let holding = false;
-let holdStartTime = null;
+let holdStart = 0;
 
 const HOLD_TIME = 1000;
+const ANGLE_TOL = 8;
+const PITCH_TOL = 15;
 
-// ---------- CAMERA ----------
+// CAMERA
 async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
-        video.srcObject = stream;
-    } catch (err) {
-        alert("Camera error: " + err.message);
-    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+    });
+    video.srcObject = stream;
 }
 startCamera();
 
-// ---------- CAPTURE ----------
-function capturePhoto() {
-    const ctx = canvas.getContext('2d');
+// CAPTURE
+function capture() {
+    const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     ctx.drawImage(video, 0, 0);
 
-    const imgData = canvas.toDataURL("image/png");
-
     const img = document.createElement("img");
-    img.src = imgData;
+    img.src = canvas.toDataURL("image/png");
+
     gallery.appendChild(img);
 }
 
-// ---------- ORIENTATION ----------
-function handleOrientation(event) {
+// ORIENTATION
+function handleOrientation(e) {
 
-    let alpha = event.alpha;
-    let beta = event.beta || 0;
-    let gamma = event.gamma || 0;
+    if (e.alpha == null) return;
 
-    if (alpha === null) return;
+    currentYaw = (e.alpha + 360) % 360;
+    currentPitch = e.beta - 90;
 
-    // Yaw
-    let yaw = (alpha + 360) % 360;
+    yawVal.innerText = Math.round(currentYaw);
+    pitchVal.innerText = Math.round(currentPitch);
 
-    // Pitch (corrected)
-    let pitch = beta - 90;
+    let row = rows[rowIndex];
+    let target = targets[targetIndex];
 
-    // Debug UI
-    yawVal.innerText = Math.round(yaw);
-    betaVal.innerText = Math.round(beta);
-    pitchVal.innerText = Math.round(pitch);
-    gammaVal.innerText = Math.round(gamma);
+    angleText.innerText = "Yaw: " + Math.round(currentYaw);
+    targetText.innerText = `Target: ${target}° | ${row.name}`;
 
-    // Store
-    currentAngle = yaw;
-    currentPitch = pitch;
+    // Pitch check
+    if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
+        holding = false;
+        statusText.innerText = `Adjust ${row.name}`;
+        return;
+    }
 
-    angleText.innerText = "Yaw: " + Math.round(yaw);
+    // Angle check
+    let diff = Math.abs(currentYaw - target);
+    if (diff > 180) diff = 360 - diff;
 
-    // Example capture trigger (simple hold at center)
-    if (Math.abs(pitch) < 10) {
+    if (diff < ANGLE_TOL) {
 
         statusText.innerText = "Hold steady...";
 
-        if (!holding) {
+        if (!holding && !capturedFlags[targetIndex]) {
             holding = true;
-            holdStartTime = Date.now();
+            holdStart = Date.now();
         }
 
-        let elapsed = Date.now() - holdStartTime;
-        let progress = Math.min(elapsed / HOLD_TIME, 1);
+        let progress = Math.min((Date.now() - holdStart)/HOLD_TIME,1);
 
         progressEl.style.background =
-            `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
+            `conic-gradient(#00c853 ${progress*360}deg, transparent 0deg)`;
 
-        if (elapsed >= HOLD_TIME) {
-            capturePhoto();
+        if (progress >= 1) {
+
+            capture();
+
             holding = false;
-            statusText.innerText = "Captured!";
+            progressEl.style.background =
+                `conic-gradient(#888 0deg, transparent 0deg)`;
+
+            capturedFlags[targetIndex] = true;
+            targetIndex++;
+
+            if (targetIndex >= targets.length) {
+                rowIndex++;
+                targetIndex = 0;
+                capturedFlags = new Array(targets.length).fill(false);
+
+                if (rowIndex >= rows.length) {
+                    window.removeEventListener('deviceorientation', handleOrientation);
+                    statusText.innerText = "✅ 32 images captured!";
+                    return;
+                }
+            }
         }
 
     } else {
         holding = false;
-        statusText.innerText = "Align to center";
-        progressEl.style.background =
-            `conic-gradient(#888 0deg, transparent 0deg)`;
+        statusText.innerText = "Move to target";
     }
 }
 
-// ---------- START ----------
-startGuideBtn.addEventListener('click', () => {
+// START
+startBtn.onclick = async () => {
 
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-            .then(res => {
-                if (res === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                }
-            });
-    } else {
-        window.addEventListener('deviceorientation', handleOrientation);
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        let res = await DeviceOrientationEvent.requestPermission();
+        if (res !== "granted") return;
     }
 
-    statusText.innerText = "Tracking started";
-});
+    window.addEventListener("deviceorientation", handleOrientation);
+
+    statusText.innerText = "Start capturing";
+};
