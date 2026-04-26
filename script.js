@@ -14,13 +14,13 @@ const previewModal = document.getElementById('previewModal');
 const previewImg = document.getElementById('previewImg');
 
 const dot = document.getElementById('dot');
+const arrow = document.getElementById('arrow');
 
 let currentYaw = 0;
 let currentPitch = 0;
 
 const targets = [0,45,90,135,180,225,270,315];
 
-// your calibrated values
 const rows = [
     { name: "LOWER", pitch: -75 },
     { name: "BOTTOM_LOW", pitch: -25 },
@@ -30,7 +30,6 @@ const rows = [
 
 let rowIndex = 0;
 let targetIndex = 0;
-
 let capturedFlags = new Array(targets.length).fill(false);
 
 let holding = false;
@@ -51,7 +50,6 @@ startCamera();
 
 // CAPTURE
 function capture() {
-
     if (!video.videoWidth) return;
 
     const ctx = canvas.getContext("2d");
@@ -74,7 +72,7 @@ function capture() {
     gallery.appendChild(img);
 }
 
-// DOT
+// DOT + ARROW
 function updateDot(targetYaw, targetPitch) {
 
     let yawDiff = currentYaw - targetYaw;
@@ -92,11 +90,24 @@ function updateDot(targetYaw, targetPitch) {
     dot.style.transform =
         `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-    if (Math.abs(yawDiff) < ANGLE_TOL && Math.abs(pitchDiff) < PITCH_TOL) {
-        dot.style.background = "#00c853";
-    } else {
-        dot.style.background = "white";
+    let aligned =
+        Math.abs(yawDiff) < ANGLE_TOL &&
+        Math.abs(pitchDiff) < PITCH_TOL;
+
+    dot.style.background = aligned ? "#00c853" : "white";
+
+    // Arrow direction
+    let arrowText = "";
+
+    if (Math.abs(yawDiff) > ANGLE_TOL) {
+        arrowText += yawDiff > 0 ? "⬅ " : "➡ ";
     }
+
+    if (Math.abs(pitchDiff) > PITCH_TOL) {
+        arrowText += pitchDiff > 0 ? "⬆" : "⬇";
+    }
+
+    arrow.innerText = arrowText;
 }
 
 // ORIENTATION
@@ -117,7 +128,7 @@ function handleOrientation(e) {
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
         holding = false;
-        statusText.innerText = `Adjust ${row.name}`;
+        statusText.innerText = `Adjust ${row.name} (tilt phone)`;
         return;
     }
 
@@ -157,6 +168,7 @@ function handleOrientation(e) {
                 if (rowIndex >= rows.length) {
                     window.removeEventListener('deviceorientation', handleOrientation);
                     statusText.innerText = "✅ 32 images captured!";
+                    downloadBtn.style.display = "block";
                     return;
                 }
             }
@@ -164,7 +176,7 @@ function handleOrientation(e) {
 
     } else {
         holding = false;
-        statusText.innerText = "Move to target";
+        statusText.innerText = "Follow arrow to align";
     }
 }
 
@@ -189,6 +201,7 @@ previewModal.onclick = () => {
 // DOWNLOAD
 downloadBtn.onclick = () => {
     const imgs = gallery.querySelectorAll("img");
+
     imgs.forEach((img, i) => {
         const a = document.createElement("a");
         a.href = img.src;
