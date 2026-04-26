@@ -102,6 +102,9 @@ function capture() {
     gallery.appendChild(img);
 
     statusText.innerText = `${capturedImages.length} / 32 captured`;
+    previewModal.classList.remove("show");
+    previewImg.src = "";
+    document.body.classList.remove("modal-open");
 }
 
 // PREVIEW CLICK
