@@ -3,19 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Capture</title>
+<title>Sensor Debug + Capture</title>
 
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 360 Capture</h2>
+<h2>📸 Photosphere Debug</h2>
 
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
 
-    <!-- Capture Circle -->
     <div class="capture-ui">
         <div class="circle">
             <div class="progress" id="progress"></div>
@@ -26,20 +25,22 @@
 <canvas id="canvas"></canvas>
 
 <div class="info">
-    <p id="angleText">Angle: 0°</p>
-    <p id="targetText">Target: 0°</p>
-    <p id="statusText">➡️ Move to target</p>
+    <p id="angleText">Yaw: 0°</p>
+    <p id="targetText">Target: -</p>
+    <p id="statusText">Press Start</p>
 </div>
 
-<button id="startGuide">Start Capture</button>
-<button id="downloadAll" class="hidden">Download All</button>
+<button id="startGuide">Start</button>
 
 <h3>Gallery</h3>
-<div class="gallery" id="gallery"></div>
+<div id="gallery" class="gallery"></div>
 
-<!-- Fullscreen Preview -->
-<div id="previewModal" class="modal">
-    <img id="previewImg">
+<!-- DEBUG PANEL -->
+<div id="debug">
+    <p>Yaw: <span id="yawVal">0</span></p>
+    <p>Beta: <span id="betaVal">0</span></p>
+    <p>Pitch: <span id="pitchVal">0</span></p>
+    <p>Gamma: <span id="gammaVal">0</span></p>
 </div>
 
 <script src="script.js"></script>
