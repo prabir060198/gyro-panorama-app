@@ -51,7 +51,7 @@ async function startCamera() {
     video.srcObject = stream;
 }
 
-// START FLOW
+// START
 startBtn.onclick = async () => {
 
     startScreen.classList.add("hidden");
@@ -67,9 +67,8 @@ startBtn.onclick = async () => {
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-// CAPTURE (store only)
+// CAPTURE
 function capture() {
-
     const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
@@ -77,9 +76,7 @@ function capture() {
 
     ctx.drawImage(video, 0, 0);
 
-    const imgData = canvas.toDataURL("image/png");
-
-    capturedImages.push(imgData);
+    capturedImages.push(canvas.toDataURL("image/png"));
 }
 
 // DOT + ARROW
@@ -194,7 +191,7 @@ function finishCapture() {
     resultScreen.classList.remove("hidden");
 }
 
-// DOWNLOAD ZIP
+// DOWNLOAD
 downloadBtn.onclick = async () => {
 
     const zip = new JSZip();
