@@ -10,7 +10,6 @@ const gallery = document.getElementById('gallery');
 
 const previewModal = document.getElementById('previewModal');
 const previewImg = document.getElementById('previewImg');
-previewModal.style.display = "none";
 
 const statusText = document.getElementById('statusText');
 const targetText = document.getElementById('targetText');
@@ -20,7 +19,6 @@ const arrow = document.getElementById('arrow');
 
 const progressEl = document.getElementById('progress');
 const downloadBtn = document.getElementById('downloadAll');
-
 const actionBar = document.getElementById('actionBar');
 
 let capturedImages = [];
@@ -29,7 +27,7 @@ let captureComplete = false;
 let currentYaw = 0;
 let currentPitch = 0;
 
-const targets = [0, 45, 90, 135, 180, 225, 270, 315];
+const targets = [0,45,90,135,180,225,270,315];
 
 const rows = [
     { name: "LOWER", pitch: -75 },
@@ -59,11 +57,10 @@ async function startCamera() {
 
 // START
 startBtn.onclick = async () => {
-    previewModal.style.display = "none";
+
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
-    // RESET STATE (important)
     gallery.innerHTML = "";
     capturedImages = [];
     captureComplete = false;
@@ -74,18 +71,11 @@ startBtn.onclick = async () => {
 
     actionBar.classList.add("hidden");
 
-    // SHOW CAMERA AGAIN (in case of retake)
     document.querySelector(".camera-container").style.display = "block";
 
     await startCamera();
 
-    if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        let res = await DeviceOrientationEvent.requestPermission();
-        if (res !== "granted") return;
-    }
-
     window.addEventListener("deviceorientation", handleOrientation);
-
 };
 
 // CAPTURE
@@ -110,7 +100,7 @@ function capture() {
     statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
-// GALLERY CLICK → ALWAYS PREVIEW
+// PREVIEW CLICK
 gallery.addEventListener("click", (e) => {
 
     const img = e.target;
@@ -118,12 +108,17 @@ gallery.addEventListener("click", (e) => {
     if (img.tagName === "IMG") {
         const index = Array.from(gallery.children).indexOf(img);
 
-        previewModal.style.display = "flex";
         previewImg.src = capturedImages[index];
+        previewModal.classList.add("show");
     }
 });
 
-// DOT + ARROW
+// CLOSE PREVIEW
+previewModal.onclick = () => {
+    previewModal.classList.remove("show");
+};
+
+// DOT
 function updateDot(targetYaw, targetPitch) {
 
     let yawDiff = currentYaw - targetYaw;
@@ -132,30 +127,16 @@ function updateDot(targetYaw, targetPitch) {
 
     let pitchDiff = currentPitch - targetPitch;
 
-    let x = yawDiff * 2;
-    let y = pitchDiff * 2;
-
     dot.style.transform =
-        `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        `translate(calc(-50% + ${yawDiff * 2}px), calc(-50% + ${pitchDiff * 2}px))`;
 
-    let arrowText = "";
-
-    if (Math.abs(yawDiff) > ANGLE_TOL) {
-        arrowText += yawDiff > 0 ? "➡ " : "⬅ ";
-    }
-
-    if (Math.abs(pitchDiff) > PITCH_TOL) {
-        arrowText += pitchDiff > 0 ? "⬇" : "⬆";
-    }
-
-    arrow.innerText = arrowText;
+    arrow.innerText = "";
 }
 
 // ORIENTATION
 function handleOrientation(e) {
 
-    if (captureComplete) return; // safety
-
+    if (captureComplete) return;
     if (e.alpha == null) return;
 
     currentYaw = (e.alpha + 360) % 360;
@@ -164,7 +145,6 @@ function handleOrientation(e) {
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
-    // SAFE TEXT UPDATE
     if (targetText) {
         targetText.innerText = `${row.name} | ${target}°`;
     }
@@ -173,7 +153,6 @@ function handleOrientation(e) {
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
         holding = false;
-        statusText.innerText = "Adjust tilt";
         return;
     }
 
@@ -187,8 +166,7 @@ function handleOrientation(e) {
             holdStart = Date.now();
         }
 
-        let elapsed = Date.now() - holdStart;
-        let progress = Math.min(elapsed / HOLD_TIME, 1);
+        let progress = Math.min((Date.now() - holdStart) / HOLD_TIME, 1);
 
         progressEl.style.background =
             `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
@@ -202,7 +180,7 @@ function handleOrientation(e) {
             progressEl.style.background =
                 `conic-gradient(#888 0deg, transparent 0deg)`;
 
-            capturedFlags[targetIndex] = true;
+            capturedFlags[targetIndex]++;
             targetIndex++;
 
             if (targetIndex >= targets.length) {
@@ -218,10 +196,6 @@ function handleOrientation(e) {
 
     } else {
         holding = false;
-        statusText.innerText = "Follow arrows";
-
-        progressEl.style.background =
-            `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 }
 
@@ -232,19 +206,11 @@ function finishCapture() {
 
     captureComplete = true;
 
-    // HIDE CAMERA ONLY
     document.querySelector(".camera-container").style.display = "none";
-
-    // SHOW BUTTONS
     actionBar.classList.remove("hidden");
 
     statusText.innerText = "✅ Capture complete";
 }
-
-// CLOSE PREVIEW
-previewModal.onclick = () => {
-    previewModal.style.display = "none";
-};
 
 // DOWNLOAD
 downloadBtn.onclick = async () => {

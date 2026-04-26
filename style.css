@@ -8,7 +8,7 @@ body {
 
 .hidden { display: none; }
 
-/* CAMERA BOX */
+/* CAMERA */
 .camera-container {
     position: relative;
     width: 90%;
@@ -26,7 +26,7 @@ video {
     object-fit: cover;
 }
 
-/* CLEAN CENTER UI (no heavy look) */
+/* CENTER UI */
 .capture-ui {
     position: absolute;
     top: 50%;
@@ -54,8 +54,8 @@ video {
     position: absolute;
     width: 20px;
     height: 20px;
-    border-radius: 50%;
     background: white;
+    border-radius: 50%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -68,13 +68,11 @@ video {
     left: 50%;
     transform: translateX(-50%);
     font-size: 28px;
-    font-weight: bold;
 }
 
-/* STATUS */
+/* TEXT */
 #statusText {
     margin: 10px 0;
-    font-size: 16px;
 }
 
 /* GALLERY */
@@ -82,20 +80,13 @@ video {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    padding: 5px;
 }
 
 .gallery img {
     width: 70px;
     margin: 4px;
     border-radius: 6px;
-    opacity: 0.95;
     cursor: pointer;
-    border: 2px solid transparent;
-}
-
-.gallery img:hover {
-    border: 2px solid #00c853;
 }
 
 /* ACTION BUTTONS */
@@ -110,30 +101,30 @@ video {
     border-radius: 6px;
     background: #00c853;
     color: white;
-    font-size: 15px;
-    cursor: pointer;
 }
 
-#actionBar button:hover {
-    background: #00e676;
-}
-
+/* ✅ MODAL FIX (IMPORTANT) */
 .modal {
     position: fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background: rgba(0,0,0,0.9);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.95);
 
-    display: none;            
+    display: none;
     justify-content: center;
     align-items: center;
 
-    z-index: 9999;            
+    z-index: 99999;
 }
-.modal img {
-    display: block;           
+
+.modal.show {
+    display: flex !important;
+}
+
+#previewImg {
     max-width: 90%;
     max-height: 90%;
+    display: block;
 }
