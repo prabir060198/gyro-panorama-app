@@ -69,10 +69,10 @@ startBtn.onclick = async () => {
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-// CAPTURE
+// CAPTURE (NO preview trigger)
 function capture() {
-
     const ctx = canvas.getContext("2d");
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
@@ -84,10 +84,26 @@ function capture() {
 
     const img = document.createElement("img");
     img.src = imgData;
+
     gallery.appendChild(img);
 
     statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
+
+// GLOBAL CLICK FIX (always works)
+gallery.addEventListener("click", (e) => {
+    if (!resultScreen.classList.contains("hidden")) {
+
+        const img = e.target;
+
+        if (img.tagName === "IMG") {
+            const index = Array.from(gallery.children).indexOf(img);
+
+            previewModal.style.display = "flex";
+            previewImg.src = capturedImages[index];
+        }
+    }
+});
 
 // DOT + ARROW
 function updateDot(targetYaw, targetPitch) {
@@ -151,7 +167,6 @@ function handleOrientation(e) {
         let elapsed = Date.now() - holdStart;
         let progress = Math.min(elapsed / HOLD_TIME, 1);
 
-        // 🔥 circle animation
         progressEl.style.background =
             `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
 
@@ -161,7 +176,6 @@ function handleOrientation(e) {
 
             holding = false;
 
-            // reset circle
             progressEl.style.background =
                 `conic-gradient(#888 0deg, transparent 0deg)`;
 
@@ -196,17 +210,7 @@ function finishCapture() {
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
 
-    // enable preview only now
-    setTimeout(() => {
-        const imgs = gallery.querySelectorAll("img");
-
-        imgs.forEach((img, i) => {
-            img.onclick = () => {
-                previewModal.style.display = "flex";
-                previewImg.src = capturedImages[i];
-            };
-        });
-    }, 100);
+    statusText.innerText = "✅ Capture complete";
 }
 
 // CLOSE PREVIEW
@@ -214,7 +218,7 @@ previewModal.onclick = () => {
     previewModal.style.display = "none";
 };
 
-// DOWNLOAD ZIP
+// DOWNLOAD
 downloadBtn.onclick = async () => {
 
     const zip = new JSZip();

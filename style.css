@@ -80,6 +80,7 @@ video {
     margin: 4px;
     border-radius: 6px;
     cursor: pointer;
+    opacity: 0.95;
 }
 
 /* Preview */
