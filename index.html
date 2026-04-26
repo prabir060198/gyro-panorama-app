@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>32 Image Photosphere</title>
+<title>32 Photosphere Capture</title>
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,11 +14,15 @@
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
 
+    <!-- Capture UI -->
     <div class="capture-ui">
         <div class="circle">
             <div class="progress" id="progress"></div>
         </div>
     </div>
+
+    <!-- Dot -->
+    <div id="dot"></div>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -30,14 +34,14 @@
 </div>
 
 <button id="startBtn">Start Capture</button>
+<button id="downloadAll">Download All</button>
 
 <h3>Gallery</h3>
 <div id="gallery" class="gallery"></div>
 
-<!-- Debug -->
-<div id="debug">
-    <p>Yaw: <span id="yawVal">0</span></p>
-    <p>Pitch: <span id="pitchVal">0</span></p>
+<!-- Preview -->
+<div id="previewModal" class="modal">
+    <img id="previewImg">
 </div>
 
 <script src="script.js"></script>

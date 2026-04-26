@@ -6,17 +6,21 @@ const angleText = document.getElementById('angleText');
 const targetText = document.getElementById('targetText');
 const statusText = document.getElementById('statusText');
 const progressEl = document.getElementById('progress');
-const startBtn = document.getElementById('startBtn');
 
-const yawVal = document.getElementById('yawVal');
-const pitchVal = document.getElementById('pitchVal');
+const startBtn = document.getElementById('startBtn');
+const downloadBtn = document.getElementById('downloadAll');
+
+const previewModal = document.getElementById('previewModal');
+const previewImg = document.getElementById('previewImg');
+
+const dot = document.getElementById('dot');
 
 let currentYaw = 0;
 let currentPitch = 0;
 
 const targets = [0,45,90,135,180,225,270,315];
 
-// ✅ Your calibrated pitch values
+// your calibrated values
 const rows = [
     { name: "LOWER", pitch: -75 },
     { name: "BOTTOM_LOW", pitch: -25 },
@@ -47,6 +51,9 @@ startCamera();
 
 // CAPTURE
 function capture() {
+
+    if (!video.videoWidth) return;
+
     const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
@@ -54,10 +61,42 @@ function capture() {
 
     ctx.drawImage(video, 0, 0);
 
+    const imgData = canvas.toDataURL("image/png");
+
     const img = document.createElement("img");
-    img.src = canvas.toDataURL("image/png");
+    img.src = imgData;
+
+    img.onclick = () => {
+        previewModal.style.display = "flex";
+        previewImg.src = imgData;
+    };
 
     gallery.appendChild(img);
+}
+
+// DOT
+function updateDot(targetYaw, targetPitch) {
+
+    let yawDiff = currentYaw - targetYaw;
+    if (yawDiff > 180) yawDiff -= 360;
+    if (yawDiff < -180) yawDiff += 360;
+
+    let pitchDiff = currentPitch - targetPitch;
+
+    let x = yawDiff * 2;
+    let y = pitchDiff * 2;
+
+    x = Math.max(-100, Math.min(100, x));
+    y = Math.max(-100, Math.min(100, y));
+
+    dot.style.transform =
+        `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+
+    if (Math.abs(yawDiff) < ANGLE_TOL && Math.abs(pitchDiff) < PITCH_TOL) {
+        dot.style.background = "#00c853";
+    } else {
+        dot.style.background = "white";
+    }
 }
 
 // ORIENTATION
@@ -68,23 +107,20 @@ function handleOrientation(e) {
     currentYaw = (e.alpha + 360) % 360;
     currentPitch = e.beta - 90;
 
-    yawVal.innerText = Math.round(currentYaw);
-    pitchVal.innerText = Math.round(currentPitch);
-
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
     angleText.innerText = "Yaw: " + Math.round(currentYaw);
     targetText.innerText = `Target: ${target}° | ${row.name}`;
 
-    // Pitch check
+    updateDot(target, row.pitch);
+
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
         holding = false;
         statusText.innerText = `Adjust ${row.name}`;
         return;
     }
 
-    // Angle check
     let diff = Math.abs(currentYaw - target);
     if (diff > 180) diff = 360 - diff;
 
@@ -143,4 +179,20 @@ startBtn.onclick = async () => {
     window.addEventListener("deviceorientation", handleOrientation);
 
     statusText.innerText = "Start capturing";
+};
+
+// PREVIEW CLOSE
+previewModal.onclick = () => {
+    previewModal.style.display = "none";
+};
+
+// DOWNLOAD
+downloadBtn.onclick = () => {
+    const imgs = gallery.querySelectorAll("img");
+    imgs.forEach((img, i) => {
+        const a = document.createElement("a");
+        a.href = img.src;
+        a.download = `photo_${i}.png`;
+        a.click();
+    });
 };
