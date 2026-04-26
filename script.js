@@ -18,6 +18,7 @@ const targetText = document.getElementById('targetText');
 const dot = document.getElementById('dot');
 const arrow = document.getElementById('arrow');
 
+const progressEl = document.getElementById('progress');
 const downloadBtn = document.getElementById('downloadAll');
 
 let capturedImages = [];
@@ -36,7 +37,6 @@ const rows = [
 
 let rowIndex = 0;
 let targetIndex = 0;
-
 let capturedFlags = new Array(targets.length).fill(false);
 
 let holding = false;
@@ -82,7 +82,6 @@ function capture() {
 
     capturedImages.push(imgData);
 
-    // SHOW thumbnail live
     const img = document.createElement("img");
     img.src = imgData;
     gallery.appendChild(img);
@@ -144,20 +143,27 @@ function handleOrientation(e) {
 
     if (diff < ANGLE_TOL) {
 
-        statusText.innerText = "Hold steady...";
-
         if (!holding && !capturedFlags[targetIndex]) {
             holding = true;
             holdStart = Date.now();
         }
 
-        let progress = Math.min((Date.now() - holdStart)/HOLD_TIME,1);
+        let elapsed = Date.now() - holdStart;
+        let progress = Math.min(elapsed / HOLD_TIME, 1);
+
+        // 🔥 circle animation
+        progressEl.style.background =
+            `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
 
         if (progress >= 1) {
 
             capture();
 
             holding = false;
+
+            // reset circle
+            progressEl.style.background =
+                `conic-gradient(#888 0deg, transparent 0deg)`;
 
             capturedFlags[targetIndex] = true;
             targetIndex++;
@@ -176,6 +182,9 @@ function handleOrientation(e) {
     } else {
         holding = false;
         statusText.innerText = "Follow arrows";
+
+        progressEl.style.background =
+            `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 }
 
@@ -184,21 +193,23 @@ function finishCapture() {
 
     window.removeEventListener('deviceorientation', handleOrientation);
 
-    // enable preview click now
-    const imgs = gallery.querySelectorAll("img");
-
-    imgs.forEach((img, i) => {
-        img.onclick = () => {
-            previewModal.style.display = "flex";
-            previewImg.src = capturedImages[i];
-        };
-    });
-
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
+
+    // enable preview only now
+    setTimeout(() => {
+        const imgs = gallery.querySelectorAll("img");
+
+        imgs.forEach((img, i) => {
+            img.onclick = () => {
+                previewModal.style.display = "flex";
+                previewImg.src = capturedImages[i];
+            };
+        });
+    }, 100);
 }
 
-// PREVIEW CLOSE
+// CLOSE PREVIEW
 previewModal.onclick = () => {
     previewModal.style.display = "none";
 };

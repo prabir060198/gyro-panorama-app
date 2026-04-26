@@ -23,6 +23,29 @@ video {
     object-fit: cover;
 }
 
+/* Circle */
+.capture-ui {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.5);
+}
+
+.progress {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(#888 0deg, transparent 0deg);
+    transform: rotate(-90deg);
+}
+
 /* Dot */
 #dot {
     position: absolute;
@@ -38,10 +61,11 @@ video {
 /* Arrow */
 #arrow {
     position: absolute;
-    top: 15%;
+    top: 12%;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 28px;
+    font-size: 36px;
+    font-weight: bold;
 }
 
 /* Gallery */
@@ -55,7 +79,7 @@ video {
     width: 70px;
     margin: 4px;
     border-radius: 6px;
-    border: 2px solid transparent;
+    cursor: pointer;
 }
 
 /* Preview */
