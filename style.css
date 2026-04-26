@@ -126,5 +126,5 @@ video {
 #previewImg {
     max-width: 90%;
     max-height: 90%;
-    display: block;
+      display: none;
 }

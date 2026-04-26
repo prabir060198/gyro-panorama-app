@@ -27,7 +27,7 @@ let captureComplete = false;
 let currentYaw = 0;
 let currentPitch = 0;
 
-const targets = [0,45,90,135,180,225,270,315];
+const targets = [0, 45, 90, 135, 180, 225, 270, 315];
 
 const rows = [
     { name: "LOWER", pitch: -75 },
@@ -109,13 +109,17 @@ gallery.addEventListener("click", (e) => {
         const index = Array.from(gallery.children).indexOf(img);
 
         previewImg.src = capturedImages[index];
+        previewImg.style.display = "block";
         previewModal.classList.add("show");
     }
 });
 
 // CLOSE PREVIEW
 previewModal.onclick = () => {
+
     previewModal.classList.remove("show");
+    previewImg.style.display = "none";
+    previewImg.src = "";
 };
 
 // DOT
