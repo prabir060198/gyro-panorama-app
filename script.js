@@ -94,9 +94,7 @@ function capture() {
 
 // GALLERY CLICK (ONLY AFTER COMPLETE)
 gallery.addEventListener("click", (e) => {
-
-    if (!captureComplete) return;
-
+    
     const img = e.target;
 
     if (img.tagName === "IMG") {
