@@ -84,6 +84,7 @@ startBtn.onclick = async () => {
     }
 
     window.addEventListener("deviceorientation", handleOrientation);
+    previewModal.style.display = "none";
 };
 
 // CAPTURE
