@@ -27,6 +27,7 @@ let captureComplete = false;
 let currentYaw = 0;
 let currentPitch = 0;
 
+// ✅ ORIGINAL DATA (UNCHANGED)
 const targets = [0,45,90,135,180,225,270,315];
 
 const rows = [
@@ -47,31 +48,49 @@ const HOLD_TIME = 1000;
 const ANGLE_TOL = 8;
 const PITCH_TOL = 15;
 
-// CAMERA
+// 🎥 CAMERA
 async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" }
     });
     video.srcObject = stream;
+
+    // 🔥 wait for video ready
+    await new Promise(resolve => {
+        video.onloadedmetadata = () => resolve();
+    });
 }
 
-// START
+// 🚀 START
 startBtn.onclick = async () => {
+
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
     await startCamera();
 
+    // 🔥 permission fix (important)
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        let res = await DeviceOrientationEvent.requestPermission();
-        if (res !== "granted") return;
+        try {
+            const res = await DeviceOrientationEvent.requestPermission();
+            if (res !== "granted") {
+                alert("Gyroscope permission denied");
+                return;
+            }
+        } catch (e) {
+            alert("Permission error");
+            return;
+        }
     }
 
-    window.addEventListener("deviceorientation", handleOrientation);
+    // 🔥 important (useCapture true)
+    window.addEventListener("deviceorientation", handleOrientation, true);
 };
 
-// CAPTURE
+// 📸 CAPTURE
 function capture() {
+
+    if (video.videoWidth === 0) return;
 
     const ctx = canvas.getContext("2d");
 
@@ -92,9 +111,8 @@ function capture() {
     statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
-// GALLERY CLICK (ONLY AFTER COMPLETE)
+// 🖼️ PREVIEW CLICK
 gallery.addEventListener("click", (e) => {
-    
     const img = e.target;
 
     if (img.tagName === "IMG") {
@@ -105,7 +123,7 @@ gallery.addEventListener("click", (e) => {
     }
 });
 
-// DOT + ARROW
+// 🔵 DOT + ARROW
 function updateDot(targetYaw, targetPitch) {
 
     let yawDiff = currentYaw - targetYaw;
@@ -133,7 +151,7 @@ function updateDot(targetYaw, targetPitch) {
     arrow.innerText = arrowText;
 }
 
-// ORIENTATION
+// 🎯 ORIENTATION
 function handleOrientation(e) {
 
     if (e.alpha == null) return;
@@ -202,7 +220,7 @@ function handleOrientation(e) {
     }
 }
 
-// FINISH
+// ✅ FINISH
 function finishCapture() {
 
     window.removeEventListener('deviceorientation', handleOrientation);
