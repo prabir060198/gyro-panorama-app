@@ -1,15 +1,17 @@
+const startBtn = document.getElementById('startCapture');
+const retakeBtn = document.getElementById('retake');
+
 const startScreen = document.getElementById('startScreen');
 const cameraScreen = document.getElementById('cameraScreen');
 const resultScreen = document.getElementById('resultScreen');
-
-const startBtn = document.getElementById('startCapture');
-const retakeBtn = document.getElementById('retake');
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const gallery = document.getElementById('gallery');
 
-const progressEl = document.getElementById('progress');
+const previewModal = document.getElementById('previewModal');
+const previewImg = document.getElementById('previewImg');
+
 const statusText = document.getElementById('statusText');
 const targetText = document.getElementById('targetText');
 
@@ -17,6 +19,8 @@ const dot = document.getElementById('dot');
 const arrow = document.getElementById('arrow');
 
 const downloadBtn = document.getElementById('downloadAll');
+
+let capturedImages = [];
 
 let currentYaw = 0;
 let currentPitch = 0;
@@ -32,12 +36,11 @@ const rows = [
 
 let rowIndex = 0;
 let targetIndex = 0;
+
 let capturedFlags = new Array(targets.length).fill(false);
 
 let holding = false;
 let holdStart = 0;
-
-let capturedImages = [];
 
 const HOLD_TIME = 1000;
 const ANGLE_TOL = 8;
@@ -53,7 +56,6 @@ async function startCamera() {
 
 // START
 startBtn.onclick = async () => {
-
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
@@ -69,14 +71,23 @@ startBtn.onclick = async () => {
 
 // CAPTURE
 function capture() {
-    const ctx = canvas.getContext("2d");
 
+    const ctx = canvas.getContext("2d");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     ctx.drawImage(video, 0, 0);
 
-    capturedImages.push(canvas.toDataURL("image/png"));
+    const imgData = canvas.toDataURL("image/png");
+
+    capturedImages.push(imgData);
+
+    // SHOW thumbnail live
+    const img = document.createElement("img");
+    img.src = imgData;
+    gallery.appendChild(img);
+
+    statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
 // DOT + ARROW
@@ -142,16 +153,11 @@ function handleOrientation(e) {
 
         let progress = Math.min((Date.now() - holdStart)/HOLD_TIME,1);
 
-        progressEl.style.background =
-            `conic-gradient(#00c853 ${progress*360}deg, transparent 0deg)`;
-
         if (progress >= 1) {
 
             capture();
 
             holding = false;
-            progressEl.style.background =
-                `conic-gradient(#888 0deg, transparent 0deg)`;
 
             capturedFlags[targetIndex] = true;
             targetIndex++;
@@ -163,7 +169,6 @@ function handleOrientation(e) {
 
                 if (rowIndex >= rows.length) {
                     finishCapture();
-                    return;
                 }
             }
         }
@@ -179,32 +184,38 @@ function finishCapture() {
 
     window.removeEventListener('deviceorientation', handleOrientation);
 
-    gallery.innerHTML = "";
+    // enable preview click now
+    const imgs = gallery.querySelectorAll("img");
 
-    capturedImages.forEach(imgData => {
-        const img = document.createElement("img");
-        img.src = imgData;
-        gallery.appendChild(img);
+    imgs.forEach((img, i) => {
+        img.onclick = () => {
+            previewModal.style.display = "flex";
+            previewImg.src = capturedImages[i];
+        };
     });
 
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
 }
 
-// DOWNLOAD
+// PREVIEW CLOSE
+previewModal.onclick = () => {
+    previewModal.style.display = "none";
+};
+
+// DOWNLOAD ZIP
 downloadBtn.onclick = async () => {
 
     const zip = new JSZip();
 
-    capturedImages.forEach((imgData, i) => {
-        const base64 = imgData.split(",")[1];
-        zip.file(`img_${i}.png`, base64, { base64: true });
+    capturedImages.forEach((img, i) => {
+        zip.file(`img_${i}.png`, img.split(",")[1], { base64: true });
     });
 
-    const content = await zip.generateAsync({ type: "blob" });
+    const blob = await zip.generateAsync({ type: "blob" });
 
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(content);
+    a.href = URL.createObjectURL(blob);
     a.download = "photosphere.zip";
     a.click();
 };

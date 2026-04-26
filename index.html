@@ -9,15 +9,14 @@
 
 <body>
 
-<!-- START SCREEN -->
+<!-- START -->
 <div id="startScreen" class="screen">
     <h2>📸 Capture 360</h2>
-    <button id="startCapture">Start Capture</button>
+    <button id="startCapture">Start</button>
 </div>
 
-<!-- CAMERA SCREEN -->
+<!-- CAMERA -->
 <div id="cameraScreen" class="screen hidden">
-
     <div class="camera-container">
         <video id="video" autoplay playsinline></video>
 
@@ -31,20 +30,23 @@
         <div id="arrow"></div>
     </div>
 
-    <p id="targetText">Target</p>
-    <p id="statusText">Align camera</p>
+    <p id="targetText"></p>
+    <p id="statusText">Align</p>
 
+    <!-- LIVE GALLERY -->
+    <div id="gallery" class="gallery"></div>
 </div>
 
-<!-- RESULT SCREEN -->
+<!-- RESULT -->
 <div id="resultScreen" class="screen hidden">
-
-    <h3>Captured Images</h3>
-    <div id="gallery" class="gallery"></div>
-
+    <h3>Gallery</h3>
     <button id="downloadAll">Download</button>
     <button id="retake">Retake</button>
+</div>
 
+<!-- PREVIEW -->
+<div id="previewModal" class="modal">
+    <img id="previewImg">
 </div>
 
 <canvas id="canvas"></canvas>
