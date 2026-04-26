@@ -3,49 +3,56 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photosphere Capture</title>
+<title>360 Capture</title>
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 Photosphere Capture (32 Images)</h2>
+<!-- START SCREEN -->
+<div id="startScreen" class="screen">
+    <h2>📸 Capture 360</h2>
+    <button id="startCapture">Start Capture</button>
+</div>
 
-<div class="camera-container">
-    <video id="video" autoplay playsinline></video>
+<!-- CAMERA SCREEN -->
+<div id="cameraScreen" class="screen hidden">
 
-    <div class="capture-ui">
-        <div class="circle">
-            <div class="progress" id="progress"></div>
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+
+        <div class="capture-ui">
+            <div class="circle">
+                <div class="progress" id="progress"></div>
+            </div>
         </div>
+
+        <div id="dot"></div>
+        <div id="arrow"></div>
     </div>
 
-    <!-- Dot -->
-    <div id="dot"></div>
+    <div class="info">
+        <p id="targetText">Target</p>
+        <p id="statusText">Align camera</p>
+    </div>
 
-    <!-- Arrow -->
-    <div id="arrow"></div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="resultScreen" class="screen hidden">
+
+    <h3>Captured Images</h3>
+
+    <div id="gallery" class="gallery"></div>
+
+    <button id="downloadAll">Download</button>
+    <button id="retake">Retake</button>
+
 </div>
 
 <canvas id="canvas"></canvas>
 
-<div class="info">
-    <p id="angleText">Yaw: 0°</p>
-    <p id="targetText">Target: -</p>
-    <p id="statusText">Press Start</p>
-</div>
-
-<button id="startBtn">Start Capture</button>
-<button id="downloadAll">Download All</button>
-
-<h3>Gallery</h3>
-<div id="gallery" class="gallery"></div>
-
-<!-- Preview -->
-<div id="previewModal" class="modal">
-    <img id="previewImg">
-</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

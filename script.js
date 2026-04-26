@@ -1,20 +1,22 @@
+const startScreen = document.getElementById('startScreen');
+const cameraScreen = document.getElementById('cameraScreen');
+const resultScreen = document.getElementById('resultScreen');
+
+const startBtn = document.getElementById('startCapture');
+const retakeBtn = document.getElementById('retake');
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const gallery = document.getElementById('gallery');
 
-const angleText = document.getElementById('angleText');
-const targetText = document.getElementById('targetText');
-const statusText = document.getElementById('statusText');
 const progressEl = document.getElementById('progress');
-
-const startBtn = document.getElementById('startBtn');
-const downloadBtn = document.getElementById('downloadAll');
-
-const previewModal = document.getElementById('previewModal');
-const previewImg = document.getElementById('previewImg');
+const statusText = document.getElementById('statusText');
+const targetText = document.getElementById('targetText');
 
 const dot = document.getElementById('dot');
 const arrow = document.getElementById('arrow');
+
+const downloadBtn = document.getElementById('downloadAll');
 
 let currentYaw = 0;
 let currentPitch = 0;
@@ -46,12 +48,24 @@ async function startCamera() {
     });
     video.srcObject = stream;
 }
-startCamera();
+
+// START FLOW
+startBtn.onclick = async () => {
+    startScreen.classList.add("hidden");
+    cameraScreen.classList.remove("hidden");
+
+    await startCamera();
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        let res = await DeviceOrientationEvent.requestPermission();
+        if (res !== "granted") return;
+    }
+
+    window.addEventListener("deviceorientation", handleOrientation);
+};
 
 // CAPTURE
 function capture() {
-    if (!video.videoWidth) return;
-
     const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
@@ -59,15 +73,8 @@ function capture() {
 
     ctx.drawImage(video, 0, 0);
 
-    const imgData = canvas.toDataURL("image/png");
-
     const img = document.createElement("img");
-    img.src = imgData;
-
-    img.onclick = () => {
-        previewModal.style.display = "flex";
-        previewImg.src = imgData;
-    };
+    img.src = canvas.toDataURL("image/png");
 
     gallery.appendChild(img);
 }
@@ -84,27 +91,17 @@ function updateDot(targetYaw, targetPitch) {
     let x = yawDiff * 2;
     let y = pitchDiff * 2;
 
-    x = Math.max(-100, Math.min(100, x));
-    y = Math.max(-100, Math.min(100, y));
-
     dot.style.transform =
         `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-    let aligned =
-        Math.abs(yawDiff) < ANGLE_TOL &&
-        Math.abs(pitchDiff) < PITCH_TOL;
-
-    dot.style.background = aligned ? "#00c853" : "white";
-
-    // Arrow direction
     let arrowText = "";
 
     if (Math.abs(yawDiff) > ANGLE_TOL) {
-        arrowText += yawDiff > 0 ? "⬅ " : "➡ ";
+        arrowText += yawDiff > 0 ? "➡ " : "⬅ ";
     }
 
     if (Math.abs(pitchDiff) > PITCH_TOL) {
-        arrowText += pitchDiff > 0 ? "⬆" : "⬇";
+        arrowText += pitchDiff > 0 ? "⬇" : "⬆";
     }
 
     arrow.innerText = arrowText;
@@ -121,14 +118,12 @@ function handleOrientation(e) {
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
-    angleText.innerText = "Yaw: " + Math.round(currentYaw);
-    targetText.innerText = `Target: ${target}° | ${row.name}`;
+    targetText.innerText = `${row.name} | ${target}°`;
 
     updateDot(target, row.pitch);
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
-        holding = false;
-        statusText.innerText = `Adjust ${row.name} (tilt phone)`;
+        statusText.innerText = "Adjust tilt";
         return;
     }
 
@@ -166,9 +161,7 @@ function handleOrientation(e) {
                 capturedFlags = new Array(targets.length).fill(false);
 
                 if (rowIndex >= rows.length) {
-                    window.removeEventListener('deviceorientation', handleOrientation);
-                    statusText.innerText = "✅ 32 images captured!";
-                    downloadBtn.style.display = "block";
+                    finishCapture();
                     return;
                 }
             }
@@ -176,36 +169,37 @@ function handleOrientation(e) {
 
     } else {
         holding = false;
-        statusText.innerText = "Follow arrow to align";
+        statusText.innerText = "Follow arrows";
     }
 }
 
-// START
-startBtn.onclick = async () => {
+// COMPLETE FLOW
+function finishCapture() {
+    window.removeEventListener('deviceorientation', handleOrientation);
 
-    if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        let res = await DeviceOrientationEvent.requestPermission();
-        if (res !== "granted") return;
-    }
+    cameraScreen.classList.add("hidden");
+    resultScreen.classList.remove("hidden");
+}
 
-    window.addEventListener("deviceorientation", handleOrientation);
-
-    statusText.innerText = "Start capturing";
-};
-
-// PREVIEW CLOSE
-previewModal.onclick = () => {
-    previewModal.style.display = "none";
-};
-
-// DOWNLOAD
-downloadBtn.onclick = () => {
+// DOWNLOAD ZIP
+downloadBtn.onclick = async () => {
+    const zip = new JSZip();
     const imgs = gallery.querySelectorAll("img");
 
     imgs.forEach((img, i) => {
-        const a = document.createElement("a");
-        a.href = img.src;
-        a.download = `photo_${i}.png`;
-        a.click();
+        const base64 = img.src.split(",")[1];
+        zip.file(`img_${i}.png`, base64, { base64: true });
     });
+
+    const content = await zip.generateAsync({ type: "blob" });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = "photosphere.zip";
+    a.click();
+};
+
+// RETAKE
+retakeBtn.onclick = () => {
+    location.reload();
 };
