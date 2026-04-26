@@ -10,6 +10,7 @@ const gallery = document.getElementById('gallery');
 
 const previewModal = document.getElementById('previewModal');
 const previewImg = document.getElementById('previewImg');
+previewModal.style.display = "none";
 
 const statusText = document.getElementById('statusText');
 const targetText = document.getElementById('targetText');
@@ -28,7 +29,7 @@ let captureComplete = false;
 let currentYaw = 0;
 let currentPitch = 0;
 
-const targets = [0,45,90,135,180,225,270,315];
+const targets = [0, 45, 90, 135, 180, 225, 270, 315];
 
 const rows = [
     { name: "LOWER", pitch: -75 },
@@ -58,7 +59,7 @@ async function startCamera() {
 
 // START
 startBtn.onclick = async () => {
-
+    previewModal.style.display = "none";
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
@@ -84,7 +85,7 @@ startBtn.onclick = async () => {
     }
 
     window.addEventListener("deviceorientation", handleOrientation);
-    previewModal.style.display = "none";
+
 };
 
 // CAPTURE
