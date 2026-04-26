@@ -15,14 +15,15 @@ const previewImg = document.getElementById('previewImg');
 let currentAngle = 0;
 let currentPitch = 0;
 
-// 30% overlap (horizontal)
-const targets = [0, 60, 120, 180, 240, 300];
+// ✅ 8 directions (45° step)
+const targets = [0,45,90,135,180,225,270,315];
 
-// ✅ Correct rows (absolute pitch)
+// ✅ 4 rows
 const rows = [
-    { name: "TOP", pitch: 45 },
-    { name: "MIDDLE", pitch: 0 },
-    { name: "BOTTOM", pitch: -45 }
+    { name: "LOWER", pitch: -60 },
+    { name: "BOTTOM_LOW", pitch: -20 },
+    { name: "BOTTOM_UP", pitch: 20 },
+    { name: "TOP", pitch: 60 }
 ];
 
 let currentRowIndex = 0;
@@ -39,26 +40,22 @@ const TILT_TOLERANCE = 12;
 
 let allImages = [];
 
-// ---------- CAMERA ----------
+// CAMERA
 async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
-        video.srcObject = stream;
-    } catch (err) {
-        alert("Camera error: " + err.message);
-    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+    });
+    video.srcObject = stream;
 }
 startCamera();
 
-// ---------- NORMALIZE ----------
+// NORMALIZE
 function normalize(angle) {
     return (angle + 360) % 360;
 }
 
-// ---------- CAPTURE ----------
+// CAPTURE
 function capturePhoto(index) {
     const ctx = canvas.getContext('2d');
 
@@ -83,7 +80,7 @@ function capturePhoto(index) {
     capturedFlags[index] = true;
 }
 
-// ---------- ORIENTATION ----------
+// ORIENTATION
 function handleOrientation(event) {
 
     let alpha = event.alpha;
@@ -92,10 +89,8 @@ function handleOrientation(event) {
 
     if (alpha === null) return;
 
-    // YAW (horizontal)
     currentAngle = normalize(alpha);
 
-    // ✅ Stable pitch calculation
     let x = beta * Math.PI / 180;
     let y = gamma * Math.PI / 180;
 
@@ -107,39 +102,29 @@ function handleOrientation(event) {
     let row = rows[currentRowIndex];
     let target = targets[currentTargetIndex];
 
-    angleText.innerText = "Yaw: " + Math.round(currentAngle);
+    angleText.innerText = `Yaw: ${Math.round(currentAngle)}`;
     targetText.innerText = `Target: ${target}° | ${row.name}`;
 
-    // ---------- PITCH CHECK ----------
+    // PITCH CHECK
     let tiltDiff = Math.abs(currentPitch - row.pitch);
 
     if (tiltDiff > TILT_TOLERANCE) {
         holding = false;
-
-        statusText.innerText =
-            `Adjust ${row.name} (${Math.round(currentPitch)}°)`;
-        statusText.style.color = "#ff9800";
-
-        progressEl.style.background =
-            `conic-gradient(#888 0deg, transparent 0deg)`;
-
+        statusText.innerText = `Adjust ${row.name}`;
         return;
     }
 
-    // ---------- ANGLE CHECK ----------
+    // ANGLE CHECK
     let diff = Math.abs(currentAngle - target);
     if (diff > 180) diff = 360 - diff;
 
     if (diff < ANGLE_TOLERANCE) {
 
         statusText.innerText = "Hold steady...";
-        statusText.style.color = "#00c853";
 
         if (!holding && !capturedFlags[currentTargetIndex]) {
             holding = true;
             holdStartTime = Date.now();
-
-            if (navigator.vibrate) navigator.vibrate(50);
         }
 
         let elapsed = Date.now() - holdStartTime;
@@ -156,12 +141,8 @@ function handleOrientation(event) {
             progressEl.style.background =
                 `conic-gradient(#888 0deg, transparent 0deg)`;
 
-            statusText.innerText = "Captured!";
-            statusText.style.color = "#fff";
-
             currentTargetIndex++;
 
-            // ---------- NEXT ----------
             if (currentTargetIndex >= targets.length) {
 
                 currentRowIndex++;
@@ -171,27 +152,22 @@ function handleOrientation(event) {
                 if (currentRowIndex >= rows.length) {
                     window.removeEventListener('deviceorientation', handleOrientation);
 
-                    statusText.innerText = "Capture Complete!";
+                    statusText.innerText = "✅ 32 Images Captured!";
                     downloadBtn.classList.remove("hidden");
                     return;
                 }
 
-                statusText.innerText = `Move to ${rows[currentRowIndex].name}`;
+                statusText.innerText = `➡️ Move to ${rows[currentRowIndex].name}`;
             }
         }
 
     } else {
         holding = false;
-
         statusText.innerText = "Move to target";
-        statusText.style.color = "#ccc";
-
-        progressEl.style.background =
-            `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 }
 
-// ---------- START ----------
+// START
 startGuideBtn.addEventListener('click', () => {
 
     currentRowIndex = 0;
@@ -203,7 +179,6 @@ startGuideBtn.addEventListener('click', () => {
     downloadBtn.classList.add("hidden");
 
     statusText.innerText = "Start capturing";
-    statusText.style.color = "#00c853";
 
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
@@ -217,12 +192,12 @@ startGuideBtn.addEventListener('click', () => {
     }
 });
 
-// ---------- PREVIEW ----------
+// PREVIEW
 previewModal.onclick = () => {
     previewModal.style.display = "none";
 };
 
-// ---------- DOWNLOAD ----------
+// DOWNLOAD
 downloadBtn.onclick = () => {
     allImages.forEach((img, i) => {
         const a = document.createElement("a");
