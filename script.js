@@ -3,7 +3,6 @@ const retakeBtn = document.getElementById('retake');
 
 const startScreen = document.getElementById('startScreen');
 const cameraScreen = document.getElementById('cameraScreen');
-const resultScreen = document.getElementById('resultScreen');
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
@@ -20,6 +19,8 @@ const arrow = document.getElementById('arrow');
 
 const progressEl = document.getElementById('progress');
 const downloadBtn = document.getElementById('downloadAll');
+
+const actionBar = document.getElementById('actionBar');
 
 let capturedImages = [];
 let captureComplete = false;
@@ -57,8 +58,23 @@ async function startCamera() {
 
 // START
 startBtn.onclick = async () => {
+
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
+
+    // RESET STATE (important)
+    gallery.innerHTML = "";
+    capturedImages = [];
+    captureComplete = false;
+
+    rowIndex = 0;
+    targetIndex = 0;
+    capturedFlags = new Array(targets.length).fill(false);
+
+    actionBar.classList.add("hidden");
+
+    // SHOW CAMERA AGAIN (in case of retake)
+    document.querySelector(".camera-container").style.display = "block";
 
     await startCamera();
 
@@ -92,9 +108,9 @@ function capture() {
     statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
-// GALLERY CLICK (ONLY AFTER COMPLETE)
+// GALLERY CLICK → ALWAYS PREVIEW
 gallery.addEventListener("click", (e) => {
-    
+
     const img = e.target;
 
     if (img.tagName === "IMG") {
@@ -136,6 +152,8 @@ function updateDot(targetYaw, targetPitch) {
 // ORIENTATION
 function handleOrientation(e) {
 
+    if (captureComplete) return; // safety
+
     if (e.alpha == null) return;
 
     currentYaw = (e.alpha + 360) % 360;
@@ -144,7 +162,10 @@ function handleOrientation(e) {
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
-    targetText.innerText = `${row.name} | ${target}°`;
+    // SAFE TEXT UPDATE
+    if (targetText) {
+        targetText.innerText = `${row.name} | ${target}°`;
+    }
 
     updateDot(target, row.pitch);
 
@@ -209,8 +230,11 @@ function finishCapture() {
 
     captureComplete = true;
 
-    cameraScreen.classList.add("hidden");
-    resultScreen.classList.remove("hidden");
+    // HIDE CAMERA ONLY
+    document.querySelector(".camera-container").style.display = "none";
+
+    // SHOW BUTTONS
+    actionBar.classList.remove("hidden");
 
     statusText.innerText = "✅ Capture complete";
 }
