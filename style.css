@@ -107,10 +107,6 @@ video {
     cursor: pointer;
 }
 
-/* =========================
-   ✅ FINAL MODAL FIX
-   ========================= */
-
 .modal {
     position: fixed;
     inset: 0;
@@ -127,7 +123,6 @@ video {
     display: flex;
 }
 
-/* 🔥 CRITICAL FIX */
 #previewImg {
     max-width: 90%;
     max-height: 90%;
@@ -137,10 +132,10 @@ video {
     left: 50%;
     transform: translate(-50%, -50%);
 
-    visibility: hidden;   /* prevents ghost preview */
+    visibility: hidden; 
 }
 
-/* show only when modal active */
+
 .modal.show #previewImg {
     visibility: visible;
 }

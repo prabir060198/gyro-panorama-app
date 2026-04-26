@@ -60,6 +60,8 @@ startBtn.onclick = async () => {
 
     previewModal.classList.remove("show");
     previewImg.src = "";
+    document.body.classList.remove("modal-open");
+
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
@@ -112,6 +114,7 @@ gallery.addEventListener("click", (e) => {
 
         previewImg.src = capturedImages[index];
         previewModal.classList.add("show");
+        document.body.classList.add("modal-open");
     }
 });
 
@@ -119,7 +122,8 @@ gallery.addEventListener("click", (e) => {
 previewModal.onclick = () => {
 
     previewModal.classList.remove("show");
-     previewImg.src = "";
+    previewImg.src = "";
+    document.body.classList.remove("modal-open");
 };
 
 // DOT
