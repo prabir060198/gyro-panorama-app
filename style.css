@@ -1,135 +1,99 @@
 body {
     margin: 0;
     font-family: Arial;
-    background: black;
+    background: #111;
     color: white;
     text-align: center;
+}
+
+.hidden { display: none; }
+
+.camera-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    aspect-ratio: 3/4;
+    margin: auto;
     overflow: hidden;
 }
 
-.hidden {
-    display: none;
-}
-
-/* 🔥 CAMERA FULL AREA */
-.camera-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-top: 60px;
-}
-
-/* 🔥 GRID BACKGROUND */
-.bg-grid {
-    position: absolute;
+video {
     width: 100%;
     height: 100%;
-    background-image: radial-gradient(#333 1px, transparent 1px);
-    background-size: 25px 25px;
-    opacity: 0.4;
-}
-
-/* 🔥 CENTER CAMERA BOX */
-video {
-    width: 260px;
-    height: 340px;
     object-fit: cover;
-
-    border: 4px solid white;
-    border-radius: 12px;
-    z-index: 2;
 }
 
-/* GUIDE DOT */
-#dot {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: white;
-    z-index: 3;
-}
-
-/* ARROW */
-#arrow {
-    position: absolute;
-    top: 10%;
-    font-size: 32px;
-    z-index: 3;
-}
-
-/* CAPTURE BUTTON */
+/* Circle */
 .capture-ui {
-    position: fixed;
-    bottom: 130px;
-    width: 100%;
-    text-align: center;
-    z-index: 5;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .circle {
-    width: 90px;
-    height: 90px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
-    border: 3px solid rgba(255, 255, 255, 0.5);
-    margin: auto;
+    border: 3px solid rgba(255,255,255,0.5);
 }
 
 .progress {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: conic-gradient(#00c853 0deg, transparent 0deg);
+    background: conic-gradient(#888 0deg, transparent 0deg);
+    transform: rotate(-90deg);
 }
 
-/* 🔥 GALLERY */
+/* Dot */
+#dot {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Arrow */
+#arrow {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 36px;
+    font-weight: bold;
+}
+
+/* Gallery */
 .gallery {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 100px;
     display: flex;
-    overflow-x: auto;
-    background: #111;
-    z-index: 10;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .gallery img {
-    height: 80px;
-    margin: 10px;
-    border-radius: 8px;
+    width: 70px;
+    margin: 4px;
+    border-radius: 6px;
+    opacity: 0.95;
 }
 
-/* RESULT */
-#resultScreen {
-    position: fixed;
-    top: 20px;
-    width: 100%;
-    z-index: 20;
-}
-
-/* PREVIEW MODAL */
+/* Preview */
 .modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.9);
+    display:none;
+    justify-content:center;
+    align-items:center;
 }
 
 .modal img {
-    max-width: 95%;
-    max-height: 95%;
-    border-radius: 10px;
+    max-width:90%;
+    max-height:90%;
 }

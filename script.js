@@ -27,7 +27,6 @@ let captureComplete = false;
 let currentYaw = 0;
 let currentPitch = 0;
 
-// ✅ ORIGINAL DATA (UNCHANGED)
 const targets = [0,45,90,135,180,225,270,315];
 
 const rows = [
@@ -48,41 +47,31 @@ const HOLD_TIME = 1000;
 const ANGLE_TOL = 8;
 const PITCH_TOL = 15;
 
-// 🎥 CAMERA
+// CAMERA
 async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" }
     });
     video.srcObject = stream;
-
-    await new Promise(resolve => {
-        video.onloadedmetadata = () => resolve();
-    });
 }
 
-// 🚀 START
+// START
 startBtn.onclick = async () => {
-
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
     await startCamera();
 
-    // 🔥 permission fix
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        try {
-            const res = await DeviceOrientationEvent.requestPermission();
-            if (res !== "granted") return;
-        } catch (e) {}
+        let res = await DeviceOrientationEvent.requestPermission();
+        if (res !== "granted") return;
     }
 
-    window.addEventListener("deviceorientation", handleOrientation, true);
+    window.addEventListener("deviceorientation", handleOrientation);
 };
 
-// 📸 CAPTURE
+// CAPTURE
 function capture() {
-
-    if (video.videoWidth === 0) return;
 
     const ctx = canvas.getContext("2d");
 
@@ -100,24 +89,25 @@ function capture() {
 
     gallery.appendChild(img);
 
-    if (statusText)
-        statusText.innerText = `${capturedImages.length} / 32 captured`;
+    statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
-// 🖼️ PREVIEW
+// GALLERY CLICK (ONLY AFTER COMPLETE)
 gallery.addEventListener("click", (e) => {
-    if (e.target.tagName === "IMG") {
-        const index = Array.from(gallery.children).indexOf(e.target);
-        previewImg.src = capturedImages[index];
+
+    if (!captureComplete) return;
+
+    const img = e.target;
+
+    if (img.tagName === "IMG") {
+        const index = Array.from(gallery.children).indexOf(img);
+
         previewModal.style.display = "flex";
+        previewImg.src = capturedImages[index];
     }
 });
 
-previewModal.onclick = () => {
-    previewModal.style.display = "none";
-};
-
-// 🎯 DOT + ARROW
+// DOT + ARROW
 function updateDot(targetYaw, targetPitch) {
 
     let yawDiff = currentYaw - targetYaw;
@@ -145,7 +135,7 @@ function updateDot(targetYaw, targetPitch) {
     arrow.innerText = arrowText;
 }
 
-// 📡 ORIENTATION
+// ORIENTATION
 function handleOrientation(e) {
 
     if (e.alpha == null) return;
@@ -156,13 +146,13 @@ function handleOrientation(e) {
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
-    if (targetText)
-        targetText.innerText = `${row.name} | ${target}°`;
+    targetText.innerText = `${row.name} | ${target}°`;
 
     updateDot(target, row.pitch);
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
         holding = false;
+        statusText.innerText = "Adjust tilt";
         return;
     }
 
@@ -207,12 +197,14 @@ function handleOrientation(e) {
 
     } else {
         holding = false;
+        statusText.innerText = "Follow arrows";
+
         progressEl.style.background =
             `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 }
 
-// ✅ FINISH
+// FINISH
 function finishCapture() {
 
     window.removeEventListener('deviceorientation', handleOrientation);
@@ -222,9 +214,13 @@ function finishCapture() {
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
 
-    if (statusText)
-        statusText.innerText = "✅ Capture complete";
+    statusText.innerText = "✅ Capture complete";
 }
+
+// CLOSE PREVIEW
+previewModal.onclick = () => {
+    previewModal.style.display = "none";
+};
 
 // DOWNLOAD
 downloadBtn.onclick = async () => {
