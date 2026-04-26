@@ -55,7 +55,6 @@ async function startCamera() {
     });
     video.srcObject = stream;
 
-    // 🔥 wait for video ready
     await new Promise(resolve => {
         video.onloadedmetadata = () => resolve();
     });
@@ -69,21 +68,14 @@ startBtn.onclick = async () => {
 
     await startCamera();
 
-    // 🔥 permission fix (important)
+    // 🔥 permission fix
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
         try {
             const res = await DeviceOrientationEvent.requestPermission();
-            if (res !== "granted") {
-                alert("Gyroscope permission denied");
-                return;
-            }
-        } catch (e) {
-            alert("Permission error");
-            return;
-        }
+            if (res !== "granted") return;
+        } catch (e) {}
     }
 
-    // 🔥 important (useCapture true)
     window.addEventListener("deviceorientation", handleOrientation, true);
 };
 
@@ -108,22 +100,24 @@ function capture() {
 
     gallery.appendChild(img);
 
-    statusText.innerText = `${capturedImages.length} / 32 captured`;
+    if (statusText)
+        statusText.innerText = `${capturedImages.length} / 32 captured`;
 }
 
-// 🖼️ PREVIEW CLICK
+// 🖼️ PREVIEW
 gallery.addEventListener("click", (e) => {
-    const img = e.target;
-
-    if (img.tagName === "IMG") {
-        const index = Array.from(gallery.children).indexOf(img);
-
-        previewModal.style.display = "flex";
+    if (e.target.tagName === "IMG") {
+        const index = Array.from(gallery.children).indexOf(e.target);
         previewImg.src = capturedImages[index];
+        previewModal.style.display = "flex";
     }
 });
 
-// 🔵 DOT + ARROW
+previewModal.onclick = () => {
+    previewModal.style.display = "none";
+};
+
+// 🎯 DOT + ARROW
 function updateDot(targetYaw, targetPitch) {
 
     let yawDiff = currentYaw - targetYaw;
@@ -151,7 +145,7 @@ function updateDot(targetYaw, targetPitch) {
     arrow.innerText = arrowText;
 }
 
-// 🎯 ORIENTATION
+// 📡 ORIENTATION
 function handleOrientation(e) {
 
     if (e.alpha == null) return;
@@ -162,13 +156,13 @@ function handleOrientation(e) {
     let row = rows[rowIndex];
     let target = targets[targetIndex];
 
-    targetText.innerText = `${row.name} | ${target}°`;
+    if (targetText)
+        targetText.innerText = `${row.name} | ${target}°`;
 
     updateDot(target, row.pitch);
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
         holding = false;
-        statusText.innerText = "Adjust tilt";
         return;
     }
 
@@ -213,8 +207,6 @@ function handleOrientation(e) {
 
     } else {
         holding = false;
-        statusText.innerText = "Follow arrows";
-
         progressEl.style.background =
             `conic-gradient(#888 0deg, transparent 0deg)`;
     }
@@ -230,13 +222,9 @@ function finishCapture() {
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
 
-    statusText.innerText = "✅ Capture complete";
+    if (statusText)
+        statusText.innerText = "✅ Capture complete";
 }
-
-// CLOSE PREVIEW
-previewModal.onclick = () => {
-    previewModal.style.display = "none";
-};
 
 // DOWNLOAD
 downloadBtn.onclick = async () => {
