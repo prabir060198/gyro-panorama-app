@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Capture (Stable)</title>
+<title>360 Capture</title>
 
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h2>📸 360 Capture (30% Overlap)</h2>
+<h2>📸 360 Capture</h2>
 
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
@@ -31,10 +31,16 @@
     <p id="statusText">➡️ Move to target</p>
 </div>
 
-<button id="startGuide">Start Guided Capture</button>
+<button id="startGuide">Start Capture</button>
+<button id="downloadAll" class="hidden">Download All</button>
 
 <h3>Gallery</h3>
 <div class="gallery" id="gallery"></div>
+
+<!-- Fullscreen Preview -->
+<div id="previewModal" class="modal">
+    <img id="previewImg">
+</div>
 
 <script src="script.js"></script>
 </body>

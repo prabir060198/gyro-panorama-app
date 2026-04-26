@@ -6,23 +6,22 @@ body {
     text-align: center;
 }
 
+/* Title */
 h2 {
     margin: 10px;
 }
 
+/* Camera */
 .camera-container {
     position: relative;
-    display: inline-block;
+    width: 100%;
+    max-width: 500px;
+    margin: auto;
 }
 
 video {
-    width: 90%;
-    max-width: 400px;
+    width: 100%;
     border-radius: 10px;
-}
-
-canvas {
-    display: none;
 }
 
 /* Capture Circle */
@@ -31,13 +30,12 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    pointer-events: none;
 }
 
 .circle {
-    width: 120px;
-    height: 120px;
-    border: 4px solid rgba(255,255,255,0.3);
+    width: 90px;
+    height: 90px;
+    border: 3px solid rgba(255,255,255,0.3);
     border-radius: 50%;
 }
 
@@ -49,17 +47,17 @@ canvas {
     transform: rotate(-90deg);
 }
 
+canvas {
+    display: none;
+}
+
 /* Info */
 .info {
     margin: 10px;
-    font-size: 18px;
+    font-size: 16px;
 }
 
-#statusText {
-    margin-top: 5px;
-    color: #ccc;
-}
-
+/* Buttons */
 button {
     padding: 12px 18px;
     border: none;
@@ -67,7 +65,11 @@ button {
     background: #00c853;
     color: white;
     font-size: 16px;
-    margin: 10px;
+    margin: 8px;
+}
+
+.hidden {
+    display: none;
 }
 
 /* Gallery */
@@ -78,9 +80,41 @@ button {
 }
 
 .gallery img {
-    width: 100px;
-    height: 80px;
+    width: 70px;
+    height: 55px;
     margin: 5px;
     border-radius: 6px;
     object-fit: cover;
+    cursor: pointer;
+}
+
+/* Preview Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal img {
+    max-width: 95%;
+    max-height: 95%;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .circle {
+        width: 120px;
+        height: 120px;
+    }
+
+    .gallery img {
+        width: 90px;
+        height: 70px;
+    }
 }
