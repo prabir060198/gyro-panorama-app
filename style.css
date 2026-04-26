@@ -1,100 +1,35 @@
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #111;
-    color: white;
-    text-align: center;
-}
+body { background:#111; color:white; text-align:center; }
 
-.hidden { display: none; }
+.hidden { display:none; }
 
-.camera-container {
-    position: relative;
-    width: 100%;
-    max-width: 500px;
-    aspect-ratio: 3/4;
-    margin: auto;
-    overflow: hidden;
-}
-
-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Circle */
-.capture-ui {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
+video { width:100%; max-height:60vh; }
 
 .circle {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    border: 3px solid rgba(255,255,255,0.5);
+    width:80px; height:80px;
+    border:3px solid white;
+    border-radius:50%;
+    margin:auto;
 }
 
-.progress {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
+#progress {
+    width:100%; height:100%;
+    border-radius:50%;
     background: conic-gradient(#888 0deg, transparent 0deg);
-    transform: rotate(-90deg);
 }
 
-/* Dot */
-#dot {
-    position: absolute;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: white;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+#gallery img {
+    width:60px;
+    margin:4px;
 }
 
-/* Arrow */
-#arrow {
-    position: absolute;
-    top: 12%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 36px;
-    font-weight: bold;
-}
-
-/* Gallery */
-.gallery {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.gallery img {
-    width: 70px;
-    margin: 4px;
-    border-radius: 6px;
-    cursor: pointer;
-    opacity: 0.95;
-}
-
-/* Preview */
-.modal {
-    position: fixed;
+#previewModal {
+    position:fixed;
     top:0; left:0;
     width:100%; height:100%;
-    background: rgba(0,0,0,0.9);
+    background:black;
     display:none;
-    justify-content:center;
-    align-items:center;
 }
 
-.modal img {
-    max-width:90%;
-    max-height:90%;
+#previewModal img {
+    width:100%;
 }

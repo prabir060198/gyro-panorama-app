@@ -1,47 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Capture</title>
 <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<div id="startScreen">
-    <h2>📸 Capture 360</h2>
-    <button id="startCapture">Start</button>
-</div>
+<button id="startCapture">Start</button>
 
 <div id="cameraScreen" class="hidden">
+    <video id="video" autoplay playsinline></video>
 
-    <div class="camera-container">
-        <video id="video" autoplay playsinline></video>
-
-        <div class="capture-ui">
-            <div class="circle">
-                <div class="progress" id="progress"></div>
-            </div>
-        </div>
-
-        <div id="dot"></div>
-        <div id="arrow"></div>
+    <div class="circle">
+        <div id="progress"></div>
     </div>
 
-    <p id="targetText"></p>
-    <p id="statusText">Align</p>
-
-    <div id="gallery" class="gallery"></div>
+    <div id="gallery"></div>
 </div>
 
 <div id="resultScreen" class="hidden">
-    <h3>Gallery</h3>
     <button id="downloadAll">Download</button>
     <button id="retake">Retake</button>
 </div>
 
-<div id="previewModal" class="modal">
+<div id="previewModal">
     <img id="previewImg">
 </div>
 
