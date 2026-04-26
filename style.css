@@ -6,7 +6,7 @@ body {
     text-align: center;
 }
 
-/* ONLY used for screens like start/camera */
+/* hide screens only */
 .hidden {
     display: none !important;
 }
@@ -108,7 +108,7 @@ video {
 }
 
 /* =========================
-   ✅ FINAL MODAL (NO BUG)
+   ✅ FINAL MODAL FIX
    ========================= */
 
 .modal {
@@ -127,9 +127,20 @@ video {
     display: flex;
 }
 
-
+/* 🔥 CRITICAL FIX */
 #previewImg {
     max-width: 90%;
     max-height: 90%;
-    display: block;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    visibility: hidden;   /* prevents ghost preview */
+}
+
+/* show only when modal active */
+.modal.show #previewImg {
+    visibility: visible;
 }
