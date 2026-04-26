@@ -37,6 +37,8 @@ let capturedFlags = new Array(targets.length).fill(false);
 let holding = false;
 let holdStart = 0;
 
+let capturedImages = [];
+
 const HOLD_TIME = 1000;
 const ANGLE_TOL = 8;
 const PITCH_TOL = 15;
@@ -51,6 +53,7 @@ async function startCamera() {
 
 // START FLOW
 startBtn.onclick = async () => {
+
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
@@ -64,8 +67,9 @@ startBtn.onclick = async () => {
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-// CAPTURE
+// CAPTURE (store only)
 function capture() {
+
     const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
@@ -73,10 +77,9 @@ function capture() {
 
     ctx.drawImage(video, 0, 0);
 
-    const img = document.createElement("img");
-    img.src = canvas.toDataURL("image/png");
+    const imgData = canvas.toDataURL("image/png");
 
-    gallery.appendChild(img);
+    capturedImages.push(imgData);
 }
 
 // DOT + ARROW
@@ -123,6 +126,7 @@ function handleOrientation(e) {
     updateDot(target, row.pitch);
 
     if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
+        holding = false;
         statusText.innerText = "Adjust tilt";
         return;
     }
@@ -173,9 +177,18 @@ function handleOrientation(e) {
     }
 }
 
-// COMPLETE FLOW
+// FINISH
 function finishCapture() {
+
     window.removeEventListener('deviceorientation', handleOrientation);
+
+    gallery.innerHTML = "";
+
+    capturedImages.forEach(imgData => {
+        const img = document.createElement("img");
+        img.src = imgData;
+        gallery.appendChild(img);
+    });
 
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
@@ -183,11 +196,11 @@ function finishCapture() {
 
 // DOWNLOAD ZIP
 downloadBtn.onclick = async () => {
-    const zip = new JSZip();
-    const imgs = gallery.querySelectorAll("img");
 
-    imgs.forEach((img, i) => {
-        const base64 = img.src.split(",")[1];
+    const zip = new JSZip();
+
+    capturedImages.forEach((imgData, i) => {
+        const base64 = imgData.split(",")[1];
         zip.file(`img_${i}.png`, base64, { base64: true });
     });
 
@@ -200,6 +213,4 @@ downloadBtn.onclick = async () => {
 };
 
 // RETAKE
-retakeBtn.onclick = () => {
-    location.reload();
-};
+retakeBtn.onclick = () => location.reload();
