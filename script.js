@@ -58,6 +58,8 @@ async function startCamera() {
 // START
 startBtn.onclick = async () => {
 
+    previewModal.classList.remove("show");
+    previewImg.src = "";
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
@@ -72,7 +74,7 @@ startBtn.onclick = async () => {
     actionBar.classList.add("hidden");
 
     document.querySelector(".camera-container").style.display = "block";
-
+    window.removeEventListener("deviceorientation", handleOrientation);
     await startCamera();
 
     window.addEventListener("deviceorientation", handleOrientation);
@@ -109,7 +111,6 @@ gallery.addEventListener("click", (e) => {
         const index = Array.from(gallery.children).indexOf(img);
 
         previewImg.src = capturedImages[index];
-        previewImg.style.display = "block";
         previewModal.classList.add("show");
     }
 });
@@ -118,8 +119,6 @@ gallery.addEventListener("click", (e) => {
 previewModal.onclick = () => {
 
     previewModal.classList.remove("show");
-    previewImg.style.display = "none";
-    previewImg.src = "";
 };
 
 // DOT

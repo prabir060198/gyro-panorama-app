@@ -6,7 +6,10 @@ body {
     text-align: center;
 }
 
-.hidden { display: none; }
+/* SAFE HIDE (used for screens only) */
+.hidden {
+    display: none !important;
+}
 
 /* CAMERA */
 .camera-container {
@@ -101,30 +104,32 @@ video {
     border-radius: 6px;
     background: #00c853;
     color: white;
+    cursor: pointer;
 }
-
-/* ✅ MODAL FIX (IMPORTANT) */
 .modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(0,0,0,0.95);
 
-    display: none;
+    display: flex;
     justify-content: center;
     align-items: center;
+
+    opacity: 0;
+    pointer-events: none;
 
     z-index: 99999;
 }
 
+/* visible state */
 .modal.show {
-    display: flex !important;
+    opacity: 1;
+    pointer-events: auto;
 }
 
+/* PREVIEW IMAGE */
 #previewImg {
     max-width: 90%;
     max-height: 90%;
-      display: none;
+    display: block;
 }
