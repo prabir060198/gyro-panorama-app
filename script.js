@@ -15,18 +15,19 @@ const previewImg = document.getElementById('previewImg');
 let currentAngle = 0;
 let currentPitch = 0;
 
-// horizontal angles (30% overlap)
+// 30% overlap (horizontal)
 const targets = [0, 60, 120, 180, 240, 300];
 
-// vertical rows (pitch based)
+// ✅ Correct rows (absolute pitch)
 const rows = [
-    { name: "TOP", tilt: 25 },
-    { name: "MIDDLE", tilt: 0 },
-    { name: "BOTTOM", tilt: -25 }
+    { name: "TOP", pitch: 45 },
+    { name: "MIDDLE", pitch: 0 },
+    { name: "BOTTOM", pitch: -45 }
 ];
 
 let currentRowIndex = 0;
 let currentTargetIndex = 0;
+
 let capturedFlags = new Array(targets.length).fill(false);
 
 let holding = false;
@@ -34,22 +35,21 @@ let holdStartTime = null;
 
 const HOLD_TIME = 1000;
 const ANGLE_TOLERANCE = 8;
-const TILT_TOLERANCE = 10;
-
-// calibration
-let basePitch = 0;
-let isCalibrating = false;
-let calibrationSamples = [];
+const TILT_TOLERANCE = 12;
 
 let allImages = [];
 
 // ---------- CAMERA ----------
 async function startCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-    });
-    video.srcObject = stream;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+        });
+        video.srcObject = stream;
+    } catch (err) {
+        alert("Camera error: " + err.message);
+    }
 }
 startCamera();
 
@@ -92,9 +92,10 @@ function handleOrientation(event) {
 
     if (alpha === null) return;
 
+    // YAW (horizontal)
     currentAngle = normalize(alpha);
 
-    // ✅ FIXED pitch calculation
+    // ✅ Stable pitch calculation
     let x = beta * Math.PI / 180;
     let y = gamma * Math.PI / 180;
 
@@ -103,27 +104,20 @@ function handleOrientation(event) {
         Math.cos(x) * Math.cos(y)
     ) * (180 / Math.PI);
 
-    // ---------- CALIBRATION ----------
-    if (isCalibrating) {
-        calibrationSamples.push(currentPitch);
-        return;
-    }
-
-    let relativePitch = currentPitch - basePitch;
-
     let row = rows[currentRowIndex];
     let target = targets[currentTargetIndex];
 
-    angleText.innerText = "Angle: " + Math.round(currentAngle);
+    angleText.innerText = "Yaw: " + Math.round(currentAngle);
     targetText.innerText = `Target: ${target}° | ${row.name}`;
 
-    // ---------- TILT CHECK ----------
-    let tiltDiff = Math.abs(relativePitch - row.tilt);
+    // ---------- PITCH CHECK ----------
+    let tiltDiff = Math.abs(currentPitch - row.pitch);
 
     if (tiltDiff > TILT_TOLERANCE) {
         holding = false;
 
-        statusText.innerText = `Tilt ${row.name} (${Math.round(relativePitch)}°)`;
+        statusText.innerText =
+            `Adjust ${row.name} (${Math.round(currentPitch)}°)`;
         statusText.style.color = "#ff9800";
 
         progressEl.style.background =
@@ -208,11 +202,8 @@ startGuideBtn.addEventListener('click', () => {
     gallery.innerHTML = "";
     downloadBtn.classList.add("hidden");
 
-    calibrationSamples = [];
-    isCalibrating = true;
-
-    statusText.innerText = "Calibrating...";
-    statusText.style.color = "#ffc107";
+    statusText.innerText = "Start capturing";
+    statusText.style.color = "#00c853";
 
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
@@ -224,17 +215,6 @@ startGuideBtn.addEventListener('click', () => {
     } else {
         window.addEventListener('deviceorientation', handleOrientation);
     }
-
-    setTimeout(() => {
-
-        basePitch = calibrationSamples.reduce((a, b) => a + b, 0) / calibrationSamples.length;
-
-        isCalibrating = false;
-
-        statusText.innerText = "Start capturing";
-        statusText.style.color = "#00c853";
-
-    }, 1000);
 });
 
 // ---------- PREVIEW ----------
