@@ -41,11 +41,11 @@ let holdStart = 0;
 
 // ===== RING PATTERN =====
 const rings = [
-  { pitch: 75, yaws: [45, 225] },
-  { pitch: 45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
-  { pitch: 0, yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
-  { pitch: -45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
-  { pitch: -75, yaws: [135,315] }
+    { pitch: 75, yaws: [45, 225] },
+    { pitch: 45, yaws: [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5] },
+    { pitch: 0, yaws: [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330] },
+    { pitch: -45, yaws: [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5] },
+    { pitch: -75, yaws: [135, 315] }
 ];
 
 // ===== START CAMERA =====
@@ -95,8 +95,8 @@ function handleOrientation(e) {
 
     // ----- PITCH (CRITICAL FIX) -----
     // Convert device beta → camera pitch (-90 to +90)
-    currentPitch = -(e.beta - 90);
-    currentPitch = clamp(currentPitch, -90, 90);
+    currentPitch = (e.beta - 90);
+    currentPitch = Math.max(-90, Math.min(90, currentPitch));
 
     // ----- ROLL -----
     currentRoll = e.gamma || 0;
@@ -117,8 +117,8 @@ function handleOrientation(e) {
     // green when aligned
     debugBox.style.border =
         (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8)
-        ? "2px solid lime"
-        : "2px solid red";
+            ? "2px solid lime"
+            : "2px solid red";
 
     // ===== DOT (FIXED MAPPING) =====
     const maxOffset = 80;
@@ -132,7 +132,7 @@ function handleOrientation(e) {
     // ===== ARROW (FIXED DIRECTION) =====
     arrow.innerText =
         Math.abs(yawDiff) > 6 ? (yawDiff > 0 ? "➡" : "⬅") :
-        Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
+            Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
 
     // ===== HOLD CAPTURE =====
     if (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8) {
@@ -233,7 +233,7 @@ document.getElementById("downloadBtn").onclick = async () => {
     const zip = new JSZip();
 
     capturedImages.forEach((img, i) => {
-        zip.file(`img_${i+1}.png`, img.split(",")[1], { base64: true });
+        zip.file(`img_${i + 1}.png`, img.split(",")[1], { base64: true });
     });
 
     zip.file("metadata.json", JSON.stringify({
