@@ -15,6 +15,13 @@ const statusText = document.getElementById("statusText");
 const previewPopup = document.getElementById("previewPopup");
 const previewImg = document.getElementById("previewImg");
 
+/* DEBUG */
+const dbgYaw = document.getElementById("dbgYaw");
+const dbgPitch = document.getElementById("dbgPitch");
+const dbgTargetYaw = document.getElementById("dbgTargetYaw");
+const dbgTargetPitch = document.getElementById("dbgTargetPitch");
+const debugBox = document.getElementById("debugBox");
+
 let capturedImages = [];
 let captureData = [];
 
@@ -76,17 +83,19 @@ function handleOrientation(e) {
     let yawDiff = ((currentYaw - targetYaw + 540) % 360) - 180;
     let pitchDiff = currentPitch - targetPitch;
 
-    /* DEBUG */
-    console.log(
-        "Yaw:", currentYaw.toFixed(2),
-        "Pitch:", currentPitch.toFixed(2),
-        "TargetYaw:", targetYaw,
-        "TargetPitch:", targetPitch
-    );
+    /* DEBUG UI */
+    dbgYaw.innerText = currentYaw.toFixed(1);
+    dbgPitch.innerText = currentPitch.toFixed(1);
+    dbgTargetYaw.innerText = targetYaw;
+    dbgTargetPitch.innerText = targetPitch;
+
+    debugBox.style.border =
+        (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8)
+        ? "2px solid lime"
+        : "2px solid red";
 
     /* DOT FIX */
     const maxOffset = 80;
-
     const x = Math.max(-maxOffset, Math.min(maxOffset, (yawDiff / 30) * maxOffset));
     const y = Math.max(-maxOffset, Math.min(maxOffset, (pitchDiff / 30) * maxOffset));
 
@@ -183,7 +192,7 @@ function finish() {
 /* PREVIEW CLOSE */
 previewPopup.onclick = () => previewPopup.classList.add("hidden");
 
-/* DOWNLOAD FIX */
+/* DOWNLOAD */
 document.getElementById("downloadBtn").onclick = async () => {
 
     const zip = new JSZip();
