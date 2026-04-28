@@ -35,7 +35,7 @@ const rings = [
   { pitch: -75, yaws: [135,315] }
 ];
 
-/* START CAMERA — FIXED */
+/* START CAMERA */
 document.getElementById("startBtn").onclick = async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -43,11 +43,8 @@ document.getElementById("startBtn").onclick = async () => {
         });
 
         video.srcObject = stream;
-
-        /* 🔥 IMPORTANT FIX */
         await video.play();
 
-        /* Show UI AFTER play */
         startScreen.classList.add("hidden");
         cameraScreen.classList.remove("hidden");
 
@@ -79,12 +76,27 @@ function handleOrientation(e) {
     let yawDiff = ((currentYaw - targetYaw + 540) % 360) - 180;
     let pitchDiff = currentPitch - targetPitch;
 
-    dot.style.transform =
-        `translate(calc(-50% + ${yawDiff * 2}px), calc(-50% + ${pitchDiff * 2}px))`;
+    /* DEBUG */
+    console.log(
+        "Yaw:", currentYaw.toFixed(2),
+        "Pitch:", currentPitch.toFixed(2),
+        "TargetYaw:", targetYaw,
+        "TargetPitch:", targetPitch
+    );
 
+    /* DOT FIX */
+    const maxOffset = 80;
+
+    const x = Math.max(-maxOffset, Math.min(maxOffset, (yawDiff / 30) * maxOffset));
+    const y = Math.max(-maxOffset, Math.min(maxOffset, (pitchDiff / 30) * maxOffset));
+
+    dot.style.transform =
+        `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+
+    /* ARROW FIX */
     arrow.innerText =
-        Math.abs(yawDiff) > 6 ? (yawDiff > 0 ? "⬅" : "➡") :
-        Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬆" : "⬇") : "●";
+        Math.abs(yawDiff) > 6 ? (yawDiff > 0 ? "➡" : "⬅") :
+        Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
 
     if (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8) {
 
@@ -168,6 +180,36 @@ function finish() {
     });
 }
 
+/* PREVIEW CLOSE */
 previewPopup.onclick = () => previewPopup.classList.add("hidden");
+
+/* DOWNLOAD FIX */
+document.getElementById("downloadBtn").onclick = async () => {
+
+    const zip = new JSZip();
+
+    capturedImages.forEach((img, i) => {
+        zip.file(`img_${i+1}.png`, img.split(",")[1], { base64: true });
+    });
+
+    zip.file("metadata.json", JSON.stringify({
+        total: capturedImages.length,
+        images: captureData
+    }, null, 2));
+
+    const blob = await zip.generateAsync({ type: "blob" });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "photosphere.zip";
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+};
 
 document.getElementById("retakeBtn").onclick = () => location.reload();
