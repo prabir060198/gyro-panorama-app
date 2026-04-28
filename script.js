@@ -1,236 +1,173 @@
-const startBtn = document.getElementById('startCapture');
-const retakeBtn = document.getElementById('retake');
+const startBtn = document.getElementById("startBtn");
+const captureBtn = document.getElementById("captureBtn");
+const gyroMsg = document.getElementById("gyroMsg");
 
-const startScreen = document.getElementById('startScreen');
-const cameraScreen = document.getElementById('cameraScreen');
+const startScreen = document.getElementById("startScreen");
+const cameraScreen = document.getElementById("cameraScreen");
 
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const gallery = document.getElementById('gallery');
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
 
-const previewModal = document.getElementById('previewModal');
-const previewImg = document.getElementById('previewImg');
+const dot = document.getElementById("dot");
+const arrow = document.getElementById("arrow");
 
-const statusText = document.getElementById('statusText');
-const targetText = document.getElementById('targetText');
+const gallery = document.getElementById("gallery");
+const status = document.getElementById("status");
 
-const dot = document.getElementById('dot');
-const arrow = document.getElementById('arrow');
+const actionBar = document.getElementById("actionBar");
+const downloadBtn = document.getElementById("downloadBtn");
+const retakeBtn = document.getElementById("retakeBtn");
 
-const progressEl = document.getElementById('progress');
-const downloadBtn = document.getElementById('downloadAll');
-const actionBar = document.getElementById('actionBar');
-
+let capturing = false;
 let capturedImages = [];
-let captureComplete = false;
+let captureData = [];
 
 let currentYaw = 0;
 let currentPitch = 0;
 
-const targets = [0, 45, 90, 135, 180, 225, 270, 315];
-
+// ROW STRUCTURE
 const rows = [
-    { name: "LOWER", pitch: -75 },
-    { name: "BOTTOM_LOW", pitch: -25 },
-    { name: "BOTTOM_UP", pitch: 25 },
-    { name: "TOP", pitch: 75 }
+    { name: "TOP", pitch: -80, count: 2 },
+    { name: "UPPER", pitch: -40, count: 8 },
+    { name: "MIDDLE", pitch: 0, count: 12 },
+    { name: "LOWER", pitch: 40, count: 8 },
+    { name: "BOTTOM", pitch: 80, count: 2 }
 ];
 
 let rowIndex = 0;
+let targets = [];
 let targetIndex = 0;
-let capturedFlags = new Array(targets.length).fill(false);
 
-let holding = false;
-let holdStart = 0;
+const HFOV = 70;
+const OVERLAP = 0.3;
 
-const HOLD_TIME = 1000;
-const ANGLE_TOL = 8;
-const PITCH_TOL = 15;
+function generateTargets(row) {
+    const pitchRad = row.pitch * Math.PI / 180;
+    const effectiveFOV = HFOV * Math.cos(pitchRad);
+    const step = effectiveFOV * (1 - OVERLAP);
 
-// CAMERA
-async function startCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-    });
-    video.srcObject = stream;
+    let arr = [];
+    let angle = 0;
+
+    while (angle < 360) {
+        arr.push(angle);
+        angle += step;
+    }
+
+    return arr;
 }
 
-// START
+// GYRO CHECK
 startBtn.onclick = async () => {
-
-    previewModal.classList.remove("show");
-    previewImg.src = "";
-    document.body.classList.remove("modal-open");
+    if (!window.DeviceOrientationEvent) {
+        gyroMsg.innerText = "❌ Gyroscope not supported";
+        return;
+    }
 
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
-    gallery.innerHTML = "";
-    capturedImages = [];
-    captureComplete = false;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream;
+};
 
-    rowIndex = 0;
-    targetIndex = 0;
-    capturedFlags = new Array(targets.length).fill(false);
+// START CAPTURE
+captureBtn.onclick = () => {
+    capturing = true;
+    captureBtn.style.display = "none";
 
-    actionBar.classList.add("hidden");
-
-    document.querySelector(".camera-container").style.display = "block";
-    window.removeEventListener("deviceorientation", handleOrientation);
-    await startCamera();
-
+    targets = generateTargets(rows[rowIndex]);
     window.addEventListener("deviceorientation", handleOrientation);
 };
+
+// ORIENTATION
+function handleOrientation(e) {
+    if (!capturing) return;
+
+    currentYaw = (e.alpha + 360) % 360;
+    currentPitch = e.beta - 90;
+
+    const targetYaw = targets[targetIndex];
+    const targetPitch = rows[rowIndex].pitch;
+
+    // DOT MOVEMENT
+    let dx = currentYaw - targetYaw;
+    let dy = currentPitch - targetPitch;
+
+    dot.style.transform = `translate(${dx * 2}px, ${dy * 2}px)`;
+
+    // ARROW DIRECTION
+    if (Math.abs(dx) > 10) {
+        arrow.innerText = dx > 0 ? "⬅" : "➡";
+    } else if (Math.abs(dy) > 10) {
+        arrow.innerText = dy > 0 ? "⬆" : "⬇";
+    } else {
+        arrow.innerText = "✔";
+        capture();
+    }
+
+    status.innerText = `${capturedImages.length}/32`;
+}
 
 // CAPTURE
 function capture() {
 
     const ctx = canvas.getContext("2d");
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     ctx.drawImage(video, 0, 0);
 
-    const imgData = canvas.toDataURL("image/png");
+    const img = canvas.toDataURL("image/png");
 
-    capturedImages.push(imgData);
+    const name = `img_${capturedImages.length}.png`;
 
-    const img = document.createElement("img");
-    img.src = imgData;
+    capturedImages.push(img);
 
-    gallery.appendChild(img);
+    captureData.push({
+        name,
+        yaw: currentYaw,
+        pitch: currentPitch,
+        row: rows[rowIndex].name
+    });
 
-    statusText.innerText = `${capturedImages.length} / 32 captured`;
-    previewModal.classList.remove("show");
-    previewImg.src = "";
-    document.body.classList.remove("modal-open");
-}
+    const im = document.createElement("img");
+    im.src = img;
+    gallery.appendChild(im);
 
-// PREVIEW CLICK
-gallery.addEventListener("click", (e) => {
+    targetIndex++;
 
-    const img = e.target;
+    if (targetIndex >= targets.length) {
+        rowIndex++;
 
-    if (img.tagName === "IMG") {
-        const index = Array.from(gallery.children).indexOf(img);
-
-        previewImg.src = capturedImages[index];
-        previewModal.classList.add("show");
-        document.body.classList.add("modal-open");
-    }
-});
-
-// CLOSE PREVIEW
-previewModal.onclick = () => {
-
-    previewModal.classList.remove("show");
-    previewImg.src = "";
-    document.body.classList.remove("modal-open");
-};
-
-// DOT
-function updateDot(targetYaw, targetPitch) {
-
-    let yawDiff = currentYaw - targetYaw;
-    if (yawDiff > 180) yawDiff -= 360;
-    if (yawDiff < -180) yawDiff += 360;
-
-    let pitchDiff = currentPitch - targetPitch;
-
-    dot.style.transform =
-        `translate(calc(-50% + ${yawDiff * 2}px), calc(-50% + ${pitchDiff * 2}px))`;
-
-    arrow.innerText = "";
-}
-
-// ORIENTATION
-function handleOrientation(e) {
-
-    if (captureComplete) return;
-    if (e.alpha == null) return;
-
-    currentYaw = (e.alpha + 360) % 360;
-    currentPitch = e.beta - 90;
-
-    let row = rows[rowIndex];
-    let target = targets[targetIndex];
-
-    if (targetText) {
-        targetText.innerText = `${row.name} | ${target}°`;
-    }
-
-    updateDot(target, row.pitch);
-
-    if (Math.abs(currentPitch - row.pitch) > PITCH_TOL) {
-        holding = false;
-        return;
-    }
-
-    let diff = Math.abs(currentYaw - target);
-    if (diff > 180) diff = 360 - diff;
-
-    if (diff < ANGLE_TOL) {
-
-        if (!holding && !capturedFlags[targetIndex]) {
-            holding = true;
-            holdStart = Date.now();
+        if (rowIndex >= rows.length) {
+            finish();
+            return;
         }
 
-        let progress = Math.min((Date.now() - holdStart) / HOLD_TIME, 1);
-
-        progressEl.style.background =
-            `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
-
-        if (progress >= 1) {
-
-            capture();
-
-            holding = false;
-
-            progressEl.style.background =
-                `conic-gradient(#888 0deg, transparent 0deg)`;
-
-            capturedFlags[targetIndex]++;
-            targetIndex++;
-
-            if (targetIndex >= targets.length) {
-                rowIndex++;
-                targetIndex = 0;
-                capturedFlags = new Array(targets.length).fill(false);
-
-                if (rowIndex >= rows.length) {
-                    finishCapture();
-                }
-            }
-        }
-
-    } else {
-        holding = false;
+        targets = generateTargets(rows[rowIndex]);
+        targetIndex = 0;
     }
 }
 
 // FINISH
-function finishCapture() {
+function finish() {
+    capturing = false;
+    window.removeEventListener("deviceorientation", handleOrientation);
 
-    window.removeEventListener('deviceorientation', handleOrientation);
-
-    captureComplete = true;
-
-    document.querySelector(".camera-container").style.display = "none";
+    status.innerText = "✅ Done";
     actionBar.classList.remove("hidden");
-
-    statusText.innerText = "✅ Capture complete";
 }
 
 // DOWNLOAD
 downloadBtn.onclick = async () => {
-
     const zip = new JSZip();
 
     capturedImages.forEach((img, i) => {
         zip.file(`img_${i}.png`, img.split(",")[1], { base64: true });
     });
+
+    zip.file("metadata.json", JSON.stringify(captureData, null, 2));
 
     const blob = await zip.generateAsync({ type: "blob" });
 

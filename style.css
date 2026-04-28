@@ -1,141 +1,67 @@
 body {
     margin: 0;
-    font-family: Arial;
-    background: #111;
+    background: black;
     color: white;
     text-align: center;
+    font-family: Arial;
 }
 
-/* hide screens only */
-.hidden {
-    display: none !important;
-}
-
-/* CAMERA */
-.camera-container {
-    position: relative;
-    width: 90%;
-    max-width: 420px;
-    aspect-ratio: 3/4;
-    margin: 15px auto;
-    overflow: hidden;
-    border-radius: 12px;
-    border: 2px solid #333;
-}
+.hidden { display: none; }
 
 video {
     width: 100%;
-    height: 100%;
+    height: 60vh;
     object-fit: cover;
 }
 
-/* CENTER UI */
-.capture-ui {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+/* GUIDE UI */
+#guide {
+    position: relative;
+    margin-top: -200px;
 }
 
-.circle {
-    width: 80px;
-    height: 80px;
+#circle {
+    width: 120px;
+    height: 120px;
+    border: 2px solid white;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.3);
+    margin: auto;
 }
 
-.progress {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: conic-gradient(#00c853 0deg, transparent 0deg);
-    transform: rotate(-90deg);
-}
-
-/* DOT */
 #dot {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    background: white;
+    width: 15px;
+    height: 15px;
+    background: red;
     border-radius: 50%;
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
 
-/* ARROW */
 #arrow {
-    position: absolute;
-    top: 10%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 28px;
+    font-size: 40px;
+    margin-top: 10px;
 }
 
-/* TEXT */
-#statusText {
-    margin: 10px 0;
+/* BUTTON */
+button {
+    padding: 12px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #00c853;
+    color: white;
 }
 
 /* GALLERY */
-.gallery {
+#gallery {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
 }
 
-.gallery img {
-    width: 70px;
+#gallery img {
+    width: 60px;
     margin: 4px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-/* ACTION BUTTONS */
-#actionBar {
-    margin-top: 10px;
-}
-
-#actionBar button {
-    padding: 10px 18px;
-    margin: 5px;
-    border: none;
-    border-radius: 6px;
-    background: #00c853;
-    color: white;
-    cursor: pointer;
-}
-
-.modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.95);
-
-    display: none;
-    justify-content: center;
-    align-items: center;
-
-    z-index: 99999;
-}
-
-.modal.show {
-    display: flex;
-}
-
-#previewImg {
-    max-width: 90%;
-    max-height: 90%;
-
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    visibility: hidden; 
-}
-
-
-.modal.show #previewImg {
-    visibility: visible;
 }

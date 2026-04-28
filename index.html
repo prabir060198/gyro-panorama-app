@@ -9,43 +9,36 @@
 
 <body>
 
-<!-- START -->
+<!-- START SCREEN -->
 <div id="startScreen">
-    <h2>📸 Capture 360</h2>
-    <button id="startCapture">Start</button>
+    <h2>📸 360 Capture</h2>
+    <button id="startBtn">Start</button>
+    <p id="gyroMsg"></p>
 </div>
 
-<!-- CAMERA + GALLERY -->
+<!-- CAMERA SCREEN -->
 <div id="cameraScreen" class="hidden">
 
-    <div class="camera-container">
-        <video id="video" autoplay playsinline></video>
+    <video id="video" autoplay playsinline></video>
 
-        <div class="capture-ui">
-            <div class="circle">
-                <div class="progress" id="progress"></div>
-            </div>
-        </div>
-
+    <!-- GUIDANCE -->
+    <div id="guide">
+        <div id="circle"></div>
         <div id="dot"></div>
-        <div id="arrow"></div>
+        <div id="arrow">⬆</div>
     </div>
 
-    <p id="targetText"></p>
-    <p id="statusText">Align</p>
+    <p id="status">Press Start Capture</p>
 
-    <div id="gallery" class="gallery"></div>
+    <button id="captureBtn">Start Capture</button>
+
+    <div id="gallery"></div>
 
     <div id="actionBar" class="hidden">
-        <button id="downloadAll">Download</button>
-        <button id="retake">Retake</button>
+        <button id="downloadBtn">Download</button>
+        <button id="retakeBtn">Retake</button>
     </div>
 
-</div>
-
-<!-- ✅ FIXED MODAL (NO hidden CLASS HERE) -->
-<div id="previewModal" class="modal">
-    <img id="previewImg" />
 </div>
 
 <canvas id="canvas"></canvas>
