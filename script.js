@@ -1,12 +1,9 @@
-const startBtn = document.getElementById("startBtn");
-const captureBtn = document.getElementById("captureBtn");
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
 
 const startScreen = document.getElementById("startScreen");
 const cameraScreen = document.getElementById("cameraScreen");
 const resultScreen = document.getElementById("resultScreen");
-
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
 
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
@@ -18,10 +15,6 @@ const statusText = document.getElementById("statusText");
 const previewPopup = document.getElementById("previewPopup");
 const previewImg = document.getElementById("previewImg");
 
-const downloadBtn = document.getElementById("downloadBtn");
-const retakeBtn = document.getElementById("retakeBtn");
-
-let capturing = false;
 let capturedImages = [];
 let captureData = [];
 
@@ -29,7 +22,11 @@ let currentYaw = 0;
 let currentPitch = 0;
 let currentRoll = 0;
 
-/* ✅ FIXED PATTERN */
+let capturing = false;
+let ringIndex = 0;
+let targetIndex = 0;
+
+/* FIXED RINGS */
 const rings = [
   { pitch: 75, yaws: [45, 225] },
   { pitch: 45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
@@ -38,31 +35,29 @@ const rings = [
   { pitch: -75, yaws: [135,315] }
 ];
 
-let ringIndex = 0;
-let targetIndex = 0;
+/* START CAMERA */
+document.getElementById("startBtn").onclick = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
 
-/* START */
-startBtn.onclick = async () => {
+        video.srcObject = stream;
 
-    if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        const res = await DeviceOrientationEvent.requestPermission();
-        if (res !== "granted") return;
+        video.onloadedmetadata = async () => {
+            await video.play();
+            startScreen.classList.add("hidden");
+            cameraScreen.classList.remove("hidden");
+        };
+
+    } catch (e) {
+        alert("Camera error");
     }
-
-    startScreen.classList.add("hidden");
-    cameraScreen.classList.remove("hidden");
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-    });
-
-    video.srcObject = stream;
 };
 
 /* START CAPTURE */
-captureBtn.onclick = () => {
+document.getElementById("captureBtn").onclick = () => {
     capturing = true;
-    captureBtn.style.display = "none";
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
@@ -81,22 +76,15 @@ function handleOrientation(e) {
     const targetYaw = rings[ringIndex].yaws[targetIndex];
     const targetPitch = rings[ringIndex].pitch;
 
-    let yawDiff = currentYaw - targetYaw;
-    if (yawDiff > 180) yawDiff -= 360;
-    if (yawDiff < -180) yawDiff += 360;
-
+    let yawDiff = ((currentYaw - targetYaw + 540) % 360) - 180;
     let pitchDiff = currentPitch - targetPitch;
 
     dot.style.transform =
         `translate(calc(-50% + ${yawDiff * 2}px), calc(-50% + ${pitchDiff * 2}px))`;
 
-    if (Math.abs(yawDiff) > 6) {
-        arrow.innerText = yawDiff > 0 ? "⬅" : "➡";
-    } else if (Math.abs(pitchDiff) > 8) {
-        arrow.innerText = pitchDiff > 0 ? "⬆" : "⬇";
-    } else {
-        arrow.innerText = "●";
-    }
+    arrow.innerText =
+        Math.abs(yawDiff) > 6 ? (yawDiff > 0 ? "⬅" : "➡") :
+        Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬆" : "⬇") : "●";
 
     if (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8) {
 
@@ -112,7 +100,7 @@ function handleOrientation(e) {
 
         if (progress >= 1) {
 
-            capture(targetYaw, targetPitch, ringIndex);
+            capture(targetYaw, targetPitch);
 
             holding = false;
             progressEl.style.background =
@@ -124,10 +112,7 @@ function handleOrientation(e) {
                 ringIndex++;
                 targetIndex = 0;
 
-                if (ringIndex >= rings.length) {
-                    finish();
-                    return;
-                }
+                if (ringIndex >= rings.length) finish();
             }
         }
 
@@ -137,11 +122,11 @@ function handleOrientation(e) {
             `conic-gradient(#888 0deg, transparent 0deg)`;
     }
 
-    statusText.innerText = `${capturedImages.length} / 32`;
+    statusText.innerText = `${capturedImages.length}/32`;
 }
 
 /* CAPTURE */
-function capture(targetYaw, targetPitch, ringIndex) {
+function capture(targetYaw, targetPitch) {
 
     const ctx = canvas.getContext("2d");
     canvas.width = video.videoWidth;
@@ -151,20 +136,13 @@ function capture(targetYaw, targetPitch, ringIndex) {
 
     const img = canvas.toDataURL("image/png");
 
-    const name = `img_${capturedImages.length + 1}.png`;
-
     capturedImages.push(img);
 
     captureData.push({
-        name,
-        ring: ringIndex,
+        name: `img_${capturedImages.length}.png`,
         target: { yaw: targetYaw, pitch: targetPitch },
-        actual: {
-            yaw: currentYaw,
-            pitch: currentPitch,
-            roll: currentRoll
-        },
-        timestamp: Date.now()
+        actual: { yaw: currentYaw, pitch: currentPitch, roll: currentRoll },
+        time: Date.now()
     });
 }
 
@@ -178,25 +156,21 @@ function finish() {
     resultScreen.classList.remove("hidden");
 
     capturedImages.forEach(img => {
-        const i = document.createElement("img");
-        i.src = img;
-
-        i.onclick = () => {
+        const el = document.createElement("img");
+        el.src = img;
+        el.onclick = () => {
             previewImg.src = img;
             previewPopup.classList.remove("hidden");
         };
-
-        gallery.appendChild(i);
+        gallery.appendChild(el);
     });
 }
 
 /* PREVIEW CLOSE */
-previewPopup.onclick = () => {
-    previewPopup.classList.add("hidden");
-};
+previewPopup.onclick = () => previewPopup.classList.add("hidden");
 
 /* DOWNLOAD */
-downloadBtn.onclick = async () => {
+document.getElementById("downloadBtn").onclick = async () => {
 
     const zip = new JSZip();
 
@@ -204,17 +178,10 @@ downloadBtn.onclick = async () => {
         zip.file(`img_${i+1}.png`, img.split(",")[1], { base64: true });
     });
 
-    const json = {
-        device: { hfov: 70, vfov: 60 },
-        totalImages: capturedImages.length,
-        rings: rings.map(r => ({
-            pitch: r.pitch,
-            count: r.yaws.length
-        })),
+    zip.file("metadata.json", JSON.stringify({
+        total: capturedImages.length,
         images: captureData
-    };
-
-    zip.file("metadata.json", JSON.stringify(json, null, 2));
+    }, null, 2));
 
     const blob = await zip.generateAsync({ type: "blob" });
 
@@ -224,4 +191,4 @@ downloadBtn.onclick = async () => {
     a.click();
 };
 
-retakeBtn.onclick = () => location.reload();
+document.getElementById("retakeBtn").onclick = () => location.reload();

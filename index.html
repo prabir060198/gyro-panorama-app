@@ -8,16 +8,14 @@
 
 <body>
 
-<!-- START -->
 <div id="startScreen">
     <h2>📸 360 Capture</h2>
     <button id="startBtn">Start</button>
 </div>
 
-<!-- CAMERA -->
 <div id="cameraScreen" class="hidden">
     <div id="cameraContainer">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
 
         <div id="circle"><div id="progress"></div></div>
         <div id="dot"></div>
@@ -28,7 +26,6 @@
     <button id="captureBtn">Start Capture</button>
 </div>
 
-<!-- RESULT -->
 <div id="resultScreen" class="hidden">
     <h3>Capture Complete</h3>
     <div id="gallery"></div>
@@ -37,7 +34,6 @@
     <button id="retakeBtn">Retake</button>
 </div>
 
-<!-- PREVIEW -->
 <div id="previewPopup" class="hidden">
     <img id="previewImg">
 </div>
