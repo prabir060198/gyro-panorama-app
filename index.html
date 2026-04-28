@@ -8,22 +8,27 @@
 
 <body>
 
+<!-- START -->
 <div id="startScreen">
     <h2>📸 360 Capture</h2>
     <button id="startBtn">Start</button>
-    <p id="gyroMsg"></p>
 </div>
 
+<!-- CAMERA -->
 <div id="cameraScreen" class="hidden">
 
     <div id="cameraContainer">
         <video id="video" autoplay playsinline></video>
 
+        <!-- CIRCLE -->
         <div id="circle">
             <div id="progress"></div>
         </div>
 
+        <!-- DOT -->
         <div id="dot"></div>
+
+        <!-- ARROW (ONLY TOP) -->
         <div id="arrow">⬆</div>
     </div>
 
@@ -33,9 +38,9 @@
 
 </div>
 
+<!-- RESULT -->
 <div id="resultScreen" class="hidden">
     <h3>Capture Complete</h3>
-
     <div id="gallery"></div>
 
     <button id="downloadBtn">Download</button>

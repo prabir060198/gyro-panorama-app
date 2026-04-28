@@ -25,7 +25,7 @@ let captureData = [];
 let currentYaw = 0;
 let currentPitch = 0;
 
-// ✅ REQUIRED STRUCTURE
+// ROW STRUCTURE
 const rows = [
     { name: "TOP", pitch: -80, count: 2 },
     { name: "UPPER", pitch: -40, count: 8 },
@@ -38,22 +38,18 @@ let rowIndex = 0;
 let targetIndex = 0;
 let targets = [];
 
-// FOV SETTINGS
 const HFOV = 70;
 const OVERLAP = 0.3;
 
 function generateTargets(row) {
-
     const rad = row.pitch * Math.PI / 180;
     const effectiveFOV = HFOV * Math.cos(rad);
     const step = effectiveFOV * (1 - OVERLAP);
 
     let arr = [];
-
     for (let i = 0; i < row.count; i++) {
         arr.push((i * step) % 360);
     }
-
     return arr;
 }
 
@@ -121,7 +117,7 @@ function handleOrientation(e) {
         arrow.innerText = "●";
     }
 
-    // HOLD
+    // HOLD CAPTURE
     if (Math.abs(yawDiff) < 8 && Math.abs(pitchDiff) < 15) {
 
         if (!holding) {
@@ -168,7 +164,7 @@ function handleOrientation(e) {
     statusText.innerText = `${capturedImages.length} / 32`;
 }
 
-// CAPTURE
+// CAPTURE (NO preview / NO gallery here)
 function capture() {
 
     const ctx = canvas.getContext("2d");
@@ -178,12 +174,11 @@ function capture() {
     ctx.drawImage(video, 0, 0);
 
     const img = canvas.toDataURL("image/png");
-    const name = `img_${capturedImages.length}.png`;
 
     capturedImages.push(img);
 
     captureData.push({
-        name,
+        name: `img_${capturedImages.length}.png`,
         yaw: currentYaw,
         pitch: currentPitch,
         row: rows[rowIndex].name
@@ -198,6 +193,8 @@ function finish() {
 
     cameraScreen.classList.add("hidden");
     resultScreen.classList.remove("hidden");
+
+    gallery.innerHTML = "";
 
     capturedImages.forEach(img => {
         const i = document.createElement("img");
@@ -225,5 +222,4 @@ downloadBtn.onclick = async () => {
     a.click();
 };
 
-// RETAKE
 retakeBtn.onclick = () => location.reload();

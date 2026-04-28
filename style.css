@@ -8,6 +8,7 @@ body {
 
 .hidden { display: none; }
 
+/* CAMERA */
 #cameraContainer {
     position: relative;
     width: 90%;
@@ -20,7 +21,7 @@ video {
     border-radius: 10px;
 }
 
-/* GUIDE */
+/* CIRCLE */
 #circle {
     position: absolute;
     top: 50%;
@@ -39,22 +40,28 @@ video {
     background: conic-gradient(#00c853 0deg, transparent 0deg);
 }
 
+/* DOT (FIXED) */
 #dot {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 15px;
-    height: 15px;
-    background: red;
+    width: 18px;
+    height: 18px;
+    background: white;
     border-radius: 50%;
     transform: translate(-50%, -50%);
 }
 
+/* ARROW (PERFECT POSITION) */
 #arrow {
-    font-size: 32px;
-    margin-top: 10px;
+    position: absolute;
+    top: calc(50% - 80px); /* above circle */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 30px;
 }
 
+/* RESULT */
 #gallery {
     display: flex;
     flex-wrap: wrap;
@@ -67,6 +74,7 @@ video {
     border-radius: 6px;
 }
 
+/* BUTTON */
 button {
     padding: 10px 18px;
     margin: 10px;
