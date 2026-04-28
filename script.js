@@ -1,20 +1,20 @@
 const startBtn = document.getElementById("startBtn");
 const captureBtn = document.getElementById("captureBtn");
-const gyroMsg = document.getElementById("gyroMsg");
 
 const startScreen = document.getElementById("startScreen");
 const cameraScreen = document.getElementById("cameraScreen");
+const resultScreen = document.getElementById("resultScreen");
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
+const progressEl = document.getElementById("progress");
 
 const gallery = document.getElementById("gallery");
-const status = document.getElementById("status");
+const statusText = document.getElementById("statusText");
 
-const actionBar = document.getElementById("actionBar");
 const downloadBtn = document.getElementById("downloadBtn");
 const retakeBtn = document.getElementById("retakeBtn");
 
@@ -25,7 +25,7 @@ let captureData = [];
 let currentYaw = 0;
 let currentPitch = 0;
 
-// ROW STRUCTURE
+// ✅ REQUIRED STRUCTURE
 const rows = [
     { name: "TOP", pitch: -80, count: 2 },
     { name: "UPPER", pitch: -40, count: 8 },
@@ -35,39 +35,46 @@ const rows = [
 ];
 
 let rowIndex = 0;
-let targets = [];
 let targetIndex = 0;
+let targets = [];
 
+// FOV SETTINGS
 const HFOV = 70;
 const OVERLAP = 0.3;
 
 function generateTargets(row) {
-    const pitchRad = row.pitch * Math.PI / 180;
-    const effectiveFOV = HFOV * Math.cos(pitchRad);
+
+    const rad = row.pitch * Math.PI / 180;
+    const effectiveFOV = HFOV * Math.cos(rad);
     const step = effectiveFOV * (1 - OVERLAP);
 
     let arr = [];
-    let angle = 0;
 
-    while (angle < 360) {
-        arr.push(angle);
-        angle += step;
+    for (let i = 0; i < row.count; i++) {
+        arr.push((i * step) % 360);
     }
 
     return arr;
 }
 
-// GYRO CHECK
+// START
 startBtn.onclick = async () => {
-    if (!window.DeviceOrientationEvent) {
-        gyroMsg.innerText = "❌ Gyroscope not supported";
-        return;
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== "granted") {
+            alert("Gyro permission needed");
+            return;
+        }
     }
 
     startScreen.classList.add("hidden");
     cameraScreen.classList.remove("hidden");
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+    });
+
     video.srcObject = stream;
 };
 
@@ -80,9 +87,14 @@ captureBtn.onclick = () => {
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-// ORIENTATION
+// HOLD SYSTEM
+let holding = false;
+let holdStart = 0;
+
 function handleOrientation(e) {
+
     if (!capturing) return;
+    if (e.alpha == null) return;
 
     currentYaw = (e.alpha + 360) % 360;
     currentPitch = e.beta - 90;
@@ -90,23 +102,70 @@ function handleOrientation(e) {
     const targetYaw = targets[targetIndex];
     const targetPitch = rows[rowIndex].pitch;
 
-    // DOT MOVEMENT
-    let dx = currentYaw - targetYaw;
-    let dy = currentPitch - targetPitch;
+    let yawDiff = currentYaw - targetYaw;
+    if (yawDiff > 180) yawDiff -= 360;
+    if (yawDiff < -180) yawDiff += 360;
 
-    dot.style.transform = `translate(${dx * 2}px, ${dy * 2}px)`;
+    let pitchDiff = currentPitch - targetPitch;
 
-    // ARROW DIRECTION
-    if (Math.abs(dx) > 10) {
-        arrow.innerText = dx > 0 ? "⬅" : "➡";
-    } else if (Math.abs(dy) > 10) {
-        arrow.innerText = dy > 0 ? "⬆" : "⬇";
+    // DOT
+    dot.style.transform =
+        `translate(calc(-50% + ${yawDiff * 2}px), calc(-50% + ${pitchDiff * 2}px))`;
+
+    // ARROW
+    if (Math.abs(yawDiff) > 8) {
+        arrow.innerText = yawDiff > 0 ? "⬅" : "➡";
+    } else if (Math.abs(pitchDiff) > 15) {
+        arrow.innerText = pitchDiff > 0 ? "⬆" : "⬇";
     } else {
-        arrow.innerText = "✔";
-        capture();
+        arrow.innerText = "●";
     }
 
-    status.innerText = `${capturedImages.length}/32`;
+    // HOLD
+    if (Math.abs(yawDiff) < 8 && Math.abs(pitchDiff) < 15) {
+
+        if (!holding) {
+            holding = true;
+            holdStart = Date.now();
+        }
+
+        let progress = Math.min((Date.now() - holdStart) / 1000, 1);
+
+        progressEl.style.background =
+            `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
+
+        if (progress >= 1) {
+
+            capture();
+
+            holding = false;
+
+            progressEl.style.background =
+                `conic-gradient(#888 0deg, transparent 0deg)`;
+
+            targetIndex++;
+
+            if (targetIndex >= targets.length) {
+
+                rowIndex++;
+
+                if (rowIndex >= rows.length) {
+                    finish();
+                    return;
+                }
+
+                targets = generateTargets(rows[rowIndex]);
+                targetIndex = 0;
+            }
+        }
+
+    } else {
+        holding = false;
+        progressEl.style.background =
+            `conic-gradient(#888 0deg, transparent 0deg)`;
+    }
+
+    statusText.innerText = `${capturedImages.length} / 32`;
 }
 
 // CAPTURE
@@ -119,7 +178,6 @@ function capture() {
     ctx.drawImage(video, 0, 0);
 
     const img = canvas.toDataURL("image/png");
-
     const name = `img_${capturedImages.length}.png`;
 
     capturedImages.push(img);
@@ -130,37 +188,27 @@ function capture() {
         pitch: currentPitch,
         row: rows[rowIndex].name
     });
-
-    const im = document.createElement("img");
-    im.src = img;
-    gallery.appendChild(im);
-
-    targetIndex++;
-
-    if (targetIndex >= targets.length) {
-        rowIndex++;
-
-        if (rowIndex >= rows.length) {
-            finish();
-            return;
-        }
-
-        targets = generateTargets(rows[rowIndex]);
-        targetIndex = 0;
-    }
 }
 
 // FINISH
 function finish() {
+
     capturing = false;
     window.removeEventListener("deviceorientation", handleOrientation);
 
-    status.innerText = "✅ Done";
-    actionBar.classList.remove("hidden");
+    cameraScreen.classList.add("hidden");
+    resultScreen.classList.remove("hidden");
+
+    capturedImages.forEach(img => {
+        const i = document.createElement("img");
+        i.src = img;
+        gallery.appendChild(i);
+    });
 }
 
 // DOWNLOAD
 downloadBtn.onclick = async () => {
+
     const zip = new JSZip();
 
     capturedImages.forEach((img, i) => {

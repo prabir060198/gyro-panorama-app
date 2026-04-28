@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>360 Capture</title>
 <link rel="stylesheet" href="style.css">
@@ -9,36 +8,38 @@
 
 <body>
 
-<!-- START SCREEN -->
 <div id="startScreen">
     <h2>📸 360 Capture</h2>
     <button id="startBtn">Start</button>
     <p id="gyroMsg"></p>
 </div>
 
-<!-- CAMERA SCREEN -->
 <div id="cameraScreen" class="hidden">
 
-    <video id="video" autoplay playsinline></video>
+    <div id="cameraContainer">
+        <video id="video" autoplay playsinline></video>
 
-    <!-- GUIDANCE -->
-    <div id="guide">
-        <div id="circle"></div>
+        <div id="circle">
+            <div id="progress"></div>
+        </div>
+
         <div id="dot"></div>
         <div id="arrow">⬆</div>
     </div>
 
-    <p id="status">Press Start Capture</p>
+    <p id="statusText">Press Start Capture</p>
 
     <button id="captureBtn">Start Capture</button>
 
+</div>
+
+<div id="resultScreen" class="hidden">
+    <h3>Capture Complete</h3>
+
     <div id="gallery"></div>
 
-    <div id="actionBar" class="hidden">
-        <button id="downloadBtn">Download</button>
-        <button id="retakeBtn">Retake</button>
-    </div>
-
+    <button id="downloadBtn">Download</button>
+    <button id="retakeBtn">Retake</button>
 </div>
 
 <canvas id="canvas"></canvas>
