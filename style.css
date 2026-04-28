@@ -8,7 +8,6 @@ body {
 
 .hidden { display: none; }
 
-/* CAMERA */
 #cameraContainer {
     position: relative;
     width: 90%;
@@ -40,28 +39,28 @@ video {
     background: conic-gradient(#00c853 0deg, transparent 0deg);
 }
 
-/* DOT (FIXED) */
+/* DOT */
 #dot {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     background: white;
     border-radius: 50%;
     transform: translate(-50%, -50%);
 }
 
-/* ARROW (PERFECT POSITION) */
+/* ARROW */
 #arrow {
     position: absolute;
-    top: calc(50% - 80px); /* above circle */
+    top: calc(50% - 80px);
     left: 50%;
     transform: translateX(-50%);
-    font-size: 30px;
+    font-size: 28px;
 }
 
-/* RESULT */
+/* GALLERY */
 #gallery {
     display: flex;
     flex-wrap: wrap;
@@ -72,6 +71,24 @@ video {
     width: 70px;
     margin: 4px;
     border-radius: 6px;
+}
+
+/* POPUP */
+#previewPopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#previewPopup img {
+    max-width: 90%;
+    max-height: 90%;
 }
 
 /* BUTTON */

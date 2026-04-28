@@ -16,26 +16,16 @@
 
 <!-- CAMERA -->
 <div id="cameraScreen" class="hidden">
-
     <div id="cameraContainer">
         <video id="video" autoplay playsinline></video>
 
-        <!-- CIRCLE -->
-        <div id="circle">
-            <div id="progress"></div>
-        </div>
-
-        <!-- DOT -->
+        <div id="circle"><div id="progress"></div></div>
         <div id="dot"></div>
-
-        <!-- ARROW (ONLY TOP) -->
         <div id="arrow">⬆</div>
     </div>
 
-    <p id="statusText">Press Start Capture</p>
-
+    <p id="statusText">Align camera</p>
     <button id="captureBtn">Start Capture</button>
-
 </div>
 
 <!-- RESULT -->
@@ -45,6 +35,11 @@
 
     <button id="downloadBtn">Download</button>
     <button id="retakeBtn">Retake</button>
+</div>
+
+<!-- PREVIEW -->
+<div id="previewPopup" class="hidden">
+    <img id="previewImg">
 </div>
 
 <canvas id="canvas"></canvas>
