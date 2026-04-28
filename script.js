@@ -1,3 +1,5 @@
+
+// ===== ELEMENTS =====
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 
@@ -15,13 +17,14 @@ const statusText = document.getElementById("statusText");
 const previewPopup = document.getElementById("previewPopup");
 const previewImg = document.getElementById("previewImg");
 
-/* DEBUG */
+// DEBUG UI
 const dbgYaw = document.getElementById("dbgYaw");
 const dbgPitch = document.getElementById("dbgPitch");
 const dbgTargetYaw = document.getElementById("dbgTargetYaw");
 const dbgTargetPitch = document.getElementById("dbgTargetPitch");
 const debugBox = document.getElementById("debugBox");
 
+// ===== STATE =====
 let capturedImages = [];
 let captureData = [];
 
@@ -33,7 +36,10 @@ let capturing = false;
 let ringIndex = 0;
 let targetIndex = 0;
 
-/* RINGS */
+let holding = false;
+let holdStart = 0;
+
+// ===== RING PATTERN =====
 const rings = [
   { pitch: 75, yaws: [45, 225] },
   { pitch: 45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
@@ -42,7 +48,7 @@ const rings = [
   { pitch: -75, yaws: [135,315] }
 ];
 
-/* START CAMERA */
+// ===== START CAMERA =====
 document.getElementById("startBtn").onclick = async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -57,56 +63,78 @@ document.getElementById("startBtn").onclick = async () => {
 
     } catch (e) {
         alert("Camera error: " + e.message);
+        console.error(e);
     }
 };
 
-/* START CAPTURE */
+// ===== START CAPTURE =====
 document.getElementById("captureBtn").onclick = () => {
     capturing = true;
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-let holding = false;
-let holdStart = 0;
+// ===== HELPERS =====
 
+// normalize angle to [-180, 180]
+function normalizeAngle(a) {
+    return ((a + 540) % 360) - 180;
+}
+
+// clamp
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+// ===== MAIN ORIENTATION =====
 function handleOrientation(e) {
 
     if (!capturing || e.alpha == null) return;
 
+    // ----- YAW -----
     currentYaw = (e.alpha + 360) % 360;
-    currentPitch = e.beta;
-    currentRoll = e.gamma;
+
+    // ----- PITCH (CRITICAL FIX) -----
+    // Convert device beta → camera pitch (-90 to +90)
+    currentPitch = -(e.beta - 90);
+    currentPitch = clamp(currentPitch, -90, 90);
+
+    // ----- ROLL -----
+    currentRoll = e.gamma || 0;
 
     const targetYaw = rings[ringIndex].yaws[targetIndex];
     const targetPitch = rings[ringIndex].pitch;
 
-    let yawDiff = ((currentYaw - targetYaw + 540) % 360) - 180;
+    // ----- DIFF -----
+    let yawDiff = normalizeAngle(currentYaw - targetYaw);
     let pitchDiff = currentPitch - targetPitch;
 
-    /* DEBUG UI */
+    // ===== DEBUG UI =====
     dbgYaw.innerText = currentYaw.toFixed(1);
     dbgPitch.innerText = currentPitch.toFixed(1);
     dbgTargetYaw.innerText = targetYaw;
     dbgTargetPitch.innerText = targetPitch;
 
+    // green when aligned
     debugBox.style.border =
         (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8)
         ? "2px solid lime"
         : "2px solid red";
 
-    /* DOT FIX */
+    // ===== DOT (FIXED MAPPING) =====
     const maxOffset = 80;
-    const x = Math.max(-maxOffset, Math.min(maxOffset, (yawDiff / 30) * maxOffset));
-    const y = Math.max(-maxOffset, Math.min(maxOffset, (pitchDiff / 30) * maxOffset));
+
+    const x = clamp((yawDiff / 30) * maxOffset, -maxOffset, maxOffset);
+    const y = clamp((pitchDiff / 30) * maxOffset, -maxOffset, maxOffset);
 
     dot.style.transform =
         `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-    /* ARROW FIX */
+    // ===== ARROW (FIXED DIRECTION) =====
     arrow.innerText =
         Math.abs(yawDiff) > 6 ? (yawDiff > 0 ? "➡" : "⬅") :
         Math.abs(pitchDiff) > 8 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
 
+    // ===== HOLD CAPTURE =====
     if (Math.abs(yawDiff) < 6 && Math.abs(pitchDiff) < 8) {
 
         if (!holding) {
@@ -133,7 +161,10 @@ function handleOrientation(e) {
                 ringIndex++;
                 targetIndex = 0;
 
-                if (ringIndex >= rings.length) finish();
+                if (ringIndex >= rings.length) {
+                    finish();
+                    return;
+                }
             }
         }
 
@@ -146,7 +177,7 @@ function handleOrientation(e) {
     statusText.innerText = `${capturedImages.length}/32`;
 }
 
-/* CAPTURE */
+// ===== CAPTURE =====
 function capture(targetYaw, targetPitch) {
 
     const ctx = canvas.getContext("2d");
@@ -162,12 +193,16 @@ function capture(targetYaw, targetPitch) {
     captureData.push({
         name: `img_${capturedImages.length}.png`,
         target: { yaw: targetYaw, pitch: targetPitch },
-        actual: { yaw: currentYaw, pitch: currentPitch, roll: currentRoll },
+        actual: {
+            yaw: currentYaw,
+            pitch: currentPitch,
+            roll: currentRoll
+        },
         time: Date.now()
     });
 }
 
-/* FINISH */
+// ===== FINISH =====
 function finish() {
 
     capturing = false;
@@ -189,10 +224,10 @@ function finish() {
     });
 }
 
-/* PREVIEW CLOSE */
+// ===== PREVIEW CLOSE =====
 previewPopup.onclick = () => previewPopup.classList.add("hidden");
 
-/* DOWNLOAD */
+// ===== DOWNLOAD (FIXED) =====
 document.getElementById("downloadBtn").onclick = async () => {
 
     const zip = new JSZip();
@@ -221,4 +256,5 @@ document.getElementById("downloadBtn").onclick = async () => {
     URL.revokeObjectURL(url);
 };
 
+// ===== RETAKE =====
 document.getElementById("retakeBtn").onclick = () => location.reload();
