@@ -6,7 +6,7 @@ body {
     font-family: Arial;
 }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 #cameraContainer {
     position: relative;
@@ -15,10 +15,12 @@ body {
     margin: auto;
 }
 
+/* 🔥 FIX: hide video initially */
 video {
     width: 100%;
-    background: black;
     border-radius: 10px;
+    display: none;
+    background: black;
 }
 
 /* GUIDE */
@@ -59,7 +61,7 @@ video {
     font-size: 28px;
 }
 
-/* RESULT */
+/* GALLERY */
 #gallery {
     display: flex;
     flex-wrap: wrap;

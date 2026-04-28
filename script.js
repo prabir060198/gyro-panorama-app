@@ -26,7 +26,7 @@ let capturing = false;
 let ringIndex = 0;
 let targetIndex = 0;
 
-/* FIXED RINGS */
+/* PATTERN */
 const rings = [
   { pitch: 75, yaws: [45, 225] },
   { pitch: 45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
@@ -44,8 +44,8 @@ document.getElementById("startBtn").onclick = async () => {
 
         video.srcObject = stream;
 
-        video.onloadedmetadata = async () => {
-            await video.play();
+        video.onplaying = () => {
+            video.style.display = "block"; // 🔥 FIX
             startScreen.classList.add("hidden");
             cameraScreen.classList.remove("hidden");
         };
@@ -61,7 +61,6 @@ document.getElementById("captureBtn").onclick = () => {
     window.addEventListener("deviceorientation", handleOrientation);
 };
 
-/* ORIENTATION */
 let holding = false;
 let holdStart = 0;
 
@@ -158,10 +157,12 @@ function finish() {
     capturedImages.forEach(img => {
         const el = document.createElement("img");
         el.src = img;
+
         el.onclick = () => {
             previewImg.src = img;
             previewPopup.classList.remove("hidden");
         };
+
         gallery.appendChild(el);
     });
 }
