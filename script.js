@@ -26,7 +26,7 @@ let capturing = false;
 let ringIndex = 0;
 let targetIndex = 0;
 
-/* PATTERN */
+/* RINGS */
 const rings = [
   { pitch: 75, yaws: [45, 225] },
   { pitch: 45, yaws: [22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5] },
@@ -35,7 +35,7 @@ const rings = [
   { pitch: -75, yaws: [135,315] }
 ];
 
-/* START CAMERA */
+/* START CAMERA — FIXED */
 document.getElementById("startBtn").onclick = async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -44,14 +44,15 @@ document.getElementById("startBtn").onclick = async () => {
 
         video.srcObject = stream;
 
-        video.onplaying = () => {
-            video.style.display = "block"; // 🔥 FIX
-            startScreen.classList.add("hidden");
-            cameraScreen.classList.remove("hidden");
-        };
+        /* 🔥 IMPORTANT FIX */
+        await video.play();
+
+        /* Show UI AFTER play */
+        startScreen.classList.add("hidden");
+        cameraScreen.classList.remove("hidden");
 
     } catch (e) {
-        alert("Camera error");
+        alert("Camera error: " + e.message);
     }
 };
 
@@ -167,29 +168,6 @@ function finish() {
     });
 }
 
-/* PREVIEW CLOSE */
 previewPopup.onclick = () => previewPopup.classList.add("hidden");
-
-/* DOWNLOAD */
-document.getElementById("downloadBtn").onclick = async () => {
-
-    const zip = new JSZip();
-
-    capturedImages.forEach((img, i) => {
-        zip.file(`img_${i+1}.png`, img.split(",")[1], { base64: true });
-    });
-
-    zip.file("metadata.json", JSON.stringify({
-        total: capturedImages.length,
-        images: captureData
-    }, null, 2));
-
-    const blob = await zip.generateAsync({ type: "blob" });
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "photosphere.zip";
-    a.click();
-};
 
 document.getElementById("retakeBtn").onclick = () => location.reload();
