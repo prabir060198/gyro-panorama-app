@@ -38,12 +38,17 @@ let targetIndex = 0;
 let holding = false;
 let holdStart = 0;
 
-// ===== ✅ FIXED RING PATTERN =====
+// ===== ✅ UPDATED RING PATTERN =====
 const rings = [
   { pitch: 75,  yaws: [0, 180] },
-  { pitch: 45,  yaws: [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5] },
-  { pitch: 0,   yaws: [0, 45, 90, 135, 180, 225, 270, 315] },
-  { pitch: -45, yaws: [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5] },
+
+  { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
+
+  // 🔥 MOST IMPORTANT FIX
+  { pitch: 0,   yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
+
+  { pitch: -45, yaws: [0,45,90,135,180,225,270,315] },
+
   { pitch: -75, yaws: [90, 270] }
 ];
 
@@ -89,7 +94,6 @@ function handleOrientation(e) {
 
   currentYaw = (e.alpha + 360) % 360;
 
-  // ✅ FIXED pitch mapping
   currentPitch = (e.beta - 90);
   currentPitch = clamp(currentPitch, -90, 90);
 
@@ -145,7 +149,7 @@ function handleOrientation(e) {
 
     if (progress >= 1) {
 
-      capture(targetYaw, targetPitch, correctedYaw, correctedPitch);
+      capture(correctedYaw, correctedPitch);
 
       holding = false;
       progressEl.style.background =
@@ -174,7 +178,7 @@ function handleOrientation(e) {
 }
 
 // ===== CAPTURE =====
-function capture(targetYaw, targetPitch, correctedYaw, correctedPitch) {
+function capture(yaw, pitch) {
 
   const ctx = canvas.getContext("2d");
   canvas.width = video.videoWidth;
@@ -186,19 +190,11 @@ function capture(targetYaw, targetPitch, correctedYaw, correctedPitch) {
 
   capturedImages.push(img);
 
+  // 🔥 CLEAN JSON FORMAT
   captureData.push({
     name: `img_${capturedImages.length}.png`,
-    target: { yaw: targetYaw, pitch: targetPitch },
-    actual: {
-      yaw: currentYaw,
-      pitch: currentPitch,
-      roll: currentRoll
-    },
-    corrected: {
-      yaw: correctedYaw,
-      pitch: correctedPitch
-    },
-    time: Date.now()
+    yaw: yaw,
+    pitch: pitch
   });
 }
 
@@ -237,7 +233,6 @@ document.getElementById("downloadBtn").onclick = async () => {
   });
 
   zip.file("metadata.json", JSON.stringify({
-    total: capturedImages.length,
     images: captureData
   }, null, 2));
 
