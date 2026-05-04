@@ -2,6 +2,8 @@ window.addEventListener("load", () => {
 
 const canvas = document.getElementById("renderCanvas");
 const video = document.getElementById("video");
+const dot = document.getElementById("dot");
+const arrow = document.getElementById("arrow");
 const progress = document.getElementById("progress");
 const capCanvas = document.getElementById("capCanvas");
 
@@ -16,13 +18,18 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
-// 🎯 TARGET (front)
-const targetYaw = 0;
-const targetPitch = 0;
+// ===== CAPTURE GRID =====
+const rings = [
+  { pitch: 0, yaws: [0, 90, 180, 270] },
+  { pitch: 45, yaws: [0, 90, 180, 270] },
+  { pitch: -45, yaws: [0, 90, 180, 270] }
+];
+
+let ringIndex = 0;
+let targetIndex = 0;
 
 // ===== INIT =====
 function init3D(){
-
   engine = new BABYLON.Engine(canvas,true);
   scene = new BABYLON.Scene(engine);
 
@@ -49,11 +56,20 @@ function captureFrame(){
 }
 
 // ===== PLACE IMAGE =====
-function placeImage(img){
+function placeImage(img, yaw, pitch){
+
+  const y = BABYLON.Tools.ToRadians(yaw);
+  const p = BABYLON.Tools.ToRadians(pitch);
+
+  const pos = new BABYLON.Vector3(
+    Math.sin(y)*Math.cos(p),
+    Math.sin(p),
+    Math.cos(y)*Math.cos(p)
+  ).scale(3);
 
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
 
-  plane.position = new BABYLON.Vector3(0,0,3);
+  plane.position = pos;
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
   const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
@@ -74,7 +90,6 @@ function placeImage(img){
 
 // ===== START =====
 startBtn.onclick = async ()=>{
-
   if(DeviceOrientationEvent.requestPermission){
     await DeviceOrientationEvent.requestPermission();
   }
@@ -113,15 +128,35 @@ window.addEventListener("deviceorientation", e => {
   camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
   camera3D.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-  // 🎯 DIRECT ALIGNMENT (NO PROJECTION)
-  let yawDiff = ((yaw - targetYaw + 540) % 360) - 180;
-  let pitchDiff = pitch - targetPitch;
+  // ===== TARGET =====
+  const targetYaw = rings[ringIndex].yaws[targetIndex];
+  const targetPitch = rings[ringIndex].pitch;
 
-  // 🔥 VERY EASY
+  let yawDiff = ((smoothYaw - targetYaw + 540) % 360) - 180;
+  let pitchDiff = smoothPitch - targetPitch;
+
+  // ===== DOT =====
+  const maxOffset = 70;
+
+  const x = Math.max(-maxOffset, Math.min(maxOffset, (yawDiff/30)*maxOffset));
+  const y = Math.max(-maxOffset, Math.min(maxOffset, (pitchDiff/30)*maxOffset));
+
+  dot.style.transform =
+    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+
+  // ===== ARROW =====
+  if(Math.abs(yawDiff) > Math.abs(pitchDiff)){
+    arrow.innerText = yawDiff > 0 ? "⬅" : "➡";
+  } else {
+    arrow.innerText = pitchDiff > 0 ? "⬆" : "⬇";
+  }
+
+  // ===== ALIGN =====
   const aligned =
-    Math.abs(yawDiff) < 20 &&
-    Math.abs(pitchDiff) < 20;
+    Math.abs(yawDiff) < 10 &&
+    Math.abs(pitchDiff) < 10;
 
+  // ===== CAPTURE =====
   if(aligned){
 
     if(!holding){
@@ -136,14 +171,23 @@ window.addEventListener("deviceorientation", e => {
 
     if(p >= 1){
 
-      console.log("CAPTURE SUCCESS");
-
       const img = captureFrame();
-      placeImage(img);
+      placeImage(img, targetYaw, targetPitch);
 
       holding = false;
       progress.style.background = "none";
-      capturing = false;
+
+      targetIndex++;
+
+      if(targetIndex >= rings[ringIndex].yaws.length){
+        ringIndex++;
+        targetIndex = 0;
+
+        if(ringIndex >= rings.length){
+          alert("DONE");
+          capturing = false;
+        }
+      }
     }
 
   } else {

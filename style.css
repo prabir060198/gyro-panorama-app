@@ -11,6 +11,7 @@ html, body {
   height: 100vh;
 }
 
+/* camera */
 #cameraBox {
   position: absolute;
   width: 220px;
@@ -31,6 +32,7 @@ video {
   object-fit: cover;
 }
 
+/* dot */
 #dot {
   position: absolute;
   left: 50%;
@@ -43,6 +45,7 @@ video {
   z-index: 10;
 }
 
+/* progress */
 #progress {
   position: absolute;
   left: 50%;
@@ -51,6 +54,17 @@ video {
   height: 90px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
+}
+
+/* arrow */
+#arrow {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+  font-size: 26px;
+  color: yellow;
+  z-index: 11;
 }
 
 button {

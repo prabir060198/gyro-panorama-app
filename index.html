@@ -2,18 +2,22 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Minimal Working</title>
+<title>360 Capture Multi</title>
+
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 </head>
+
 <body>
 
 <canvas id="renderCanvas"></canvas>
 
 <div id="cameraBox">
   <video id="video" autoplay playsinline muted></video>
+
   <div id="dot"></div>
   <div id="progress"></div>
+  <div id="arrow">⬆</div>
 </div>
 
 <button id="startBtn">Start</button>
@@ -22,5 +26,6 @@
 <canvas id="capCanvas" style="display:none;"></canvas>
 
 <script src="script.js"></script>
+
 </body>
 </html>
