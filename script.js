@@ -17,11 +17,11 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
-// ===== INIT 3D =====
+// ===== INIT =====
 function init3D(){
 
-  engine = new BABYLON.Engine(canvas, true);
-  engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+  engine = new BABYLON.Engine(canvas,true);
+  engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
   scene = new BABYLON.Scene(engine);
 
@@ -29,34 +29,21 @@ function init3D(){
 
   new BABYLON.HemisphericLight("l", new BABYLON.Vector3(0,1,0), scene);
 
-  // guide sphere
-  const s = BABYLON.MeshBuilder.CreateSphere("s", {diameter:6}, scene);
-  const sm = new BABYLON.StandardMaterial("sm", scene);
+  const s = BABYLON.MeshBuilder.CreateSphere("s",{diameter:6},scene);
+  const sm = new BABYLON.StandardMaterial("sm",scene);
   sm.wireframe = true;
   sm.alpha = 0.2;
   s.material = sm;
 
-  // target (straight ahead)
-  targetMesh = BABYLON.MeshBuilder.CreateSphere("t", {diameter:0.3}, scene);
+  targetMesh = BABYLON.MeshBuilder.CreateSphere("target",{diameter:0.3},scene);
   targetMesh.position = new BABYLON.Vector3(0,0,3);
 
-  const tm = new BABYLON.StandardMaterial("tm", scene);
+  const tm = new BABYLON.StandardMaterial("tm",scene);
   tm.emissiveColor = new BABYLON.Color3(1,0.5,0);
   targetMesh.material = tm;
 
-  engine.runRenderLoop(() => scene.render());
-  window.addEventListener("resize", () => engine.resize());
-}
-
-// ===== PROJECT 3D → SCREEN =====
-function project(pos){
-  const p = BABYLON.Vector3.Project(
-    pos,
-    BABYLON.Matrix.Identity(),
-    scene.getTransformMatrix(),
-    camera3D.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
-  );
-  return {x:p.x, y:p.y};
+  engine.runRenderLoop(()=>scene.render());
+  window.addEventListener("resize",()=>engine.resize());
 }
 
 // ===== CAPTURE =====
@@ -64,17 +51,19 @@ function captureFrame(){
   const ctx = capCanvas.getContext("2d");
   capCanvas.width = video.videoWidth;
   capCanvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0);
+  ctx.drawImage(video,0,0);
   return capCanvas.toDataURL("image/png");
 }
 
-// ===== SHOW IMAGE IN 3D =====
+// ===== PLACE IMAGE =====
 function placeImage(img){
-  const plane = BABYLON.MeshBuilder.CreatePlane("img", {size:1}, scene);
-  plane.position = targetMesh.position.clone();
-  plane.lookAt(camera3D.position);
 
-  const tex = new BABYLON.DynamicTexture("dt", {width:512,height:512}, scene);
+  const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
+  plane.position = targetMesh.position.clone();
+
+  plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+  const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
   const ctx = tex.getContext();
 
   const image = new Image();
@@ -84,7 +73,7 @@ function placeImage(img){
   };
   image.src = img;
 
-  const mat = new BABYLON.StandardMaterial("mat", scene);
+  const mat = new BABYLON.StandardMaterial("mat",scene);
   mat.diffuseTexture = tex;
   mat.emissiveColor = new BABYLON.Color3(1,1,1);
 
@@ -93,7 +82,8 @@ function placeImage(img){
 
 // ===== START =====
 startBtn.onclick = async ()=>{
-  if (DeviceOrientationEvent.requestPermission) {
+
+  if(DeviceOrientationEvent.requestPermission){
     await DeviceOrientationEvent.requestPermission();
   }
 
@@ -115,66 +105,66 @@ captureBtn.onclick = ()=>{
 // ===== SENSOR =====
 window.addEventListener("deviceorientation", e => {
 
-  if (!camera3D || !capturing || e.alpha == null) return;
+  if(!camera3D || !capturing || e.alpha == null) return;
 
   let rawYaw = e.alpha;
   let rawPitch = -(e.beta - 90);
 
-  if (yawOffset === null) yawOffset = rawYaw;
+  if(yawOffset === null) yawOffset = rawYaw;
 
   let yaw = rawYaw - yawOffset;
   let pitch = rawPitch;
 
-  // smoothing (reduce jitter)
-  smoothYaw = smoothYaw * 0.85 + yaw * 0.15;
-  smoothPitch = smoothPitch * 0.85 + pitch * 0.15;
+  smoothYaw = smoothYaw*0.85 + yaw*0.15;
+  smoothPitch = smoothPitch*0.85 + pitch*0.15;
 
   camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
   camera3D.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-  // ===== ALIGN =====
-  const screen = project(targetMesh.position);
-  const rect = document.getElementById("cameraBox").getBoundingClientRect();
+  // ===== TRUE 3D ALIGNMENT =====
+  const forward = new BABYLON.Vector3(
+    Math.sin(BABYLON.Tools.ToRadians(smoothYaw)) * Math.cos(BABYLON.Tools.ToRadians(smoothPitch)),
+    Math.sin(BABYLON.Tools.ToRadians(smoothPitch)),
+    Math.cos(BABYLON.Tools.ToRadians(smoothYaw)) * Math.cos(BABYLON.Tools.ToRadians(smoothPitch))
+  );
 
-  let gx = screen.x - rect.left;
-  let gy = screen.y - rect.top;
+  const targetDir = targetMesh.position.normalize();
 
-  // clamp inside box (prevents ghost going outside)
-  gx = Math.max(0, Math.min(rect.width, gx));
-  gy = Math.max(0, Math.min(rect.height, gy));
+  const dotVal = BABYLON.Vector3.Dot(forward, targetDir);
 
-  ghost.style.left = gx + "px";
-  ghost.style.top = gy + "px";
+  const error = 1 - dotVal;
 
-  const dx = gx - rect.width/2;
-  const dy = gy - rect.height/2;
+  // ghost scale feedback
+  ghost.style.transform =
+    `translate(-50%, -50%) scale(${1 - error*3})`;
 
-  // 🔥 VERY EASY ALIGNMENT
-  const aligned = Math.abs(dx) < 120 && Math.abs(dy) < 120;
+  const aligned = error < 0.15;
 
   // ===== CAPTURE =====
-  if (aligned) {
+  if(aligned){
 
-    if (!holding) {
+    if(!holding){
       holding = true;
       holdStart = Date.now();
     }
 
-    let p = (Date.now() - holdStart) / 600;
+    let p = (Date.now() - holdStart) / 700;
 
     progress.style.background =
       `conic-gradient(lime ${p*360}deg, transparent 0deg)`;
 
-    if (p >= 1) {
+    if(p >= 1){
 
       console.log("CAPTURE SUCCESS");
 
       const img = captureFrame();
-      placeImage(img);
+
+      setTimeout(()=>{
+        placeImage(img);
+      },50);
 
       holding = false;
       progress.style.background = "none";
-      capturing = false;
     }
 
   } else {
