@@ -10,15 +10,28 @@
 
 <body>
 
+<!-- 3D -->
 <canvas id="renderCanvas"></canvas>
 
+<!-- Camera -->
 <div id="cameraBox">
   <video id="video" autoplay playsinline muted></video>
+
+  <!-- FIXED CENTER DOT -->
   <div id="dot"></div>
+
+  <!-- MOVING TARGET -->
+  <div id="targetGhost"></div>
+
+  <!-- PROGRESS -->
+  <div id="progressCircle"></div>
 </div>
 
 <button id="startBtn">Start</button>
 <button id="captureBtn">Capture</button>
+
+<!-- DEBUG -->
+<div id="debugBox"></div>
 
 <script src="script.js"></script>
 

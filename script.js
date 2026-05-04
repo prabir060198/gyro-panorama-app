@@ -2,19 +2,9 @@ window.addEventListener("load", () => {
 
   const canvas = document.getElementById("renderCanvas");
   const video = document.getElementById("video");
-
-  // ===== DEBUG ELEMENTS =====
-  const dbg = document.createElement("div");
-  dbg.style.position = "fixed";
-  dbg.style.top = "10px";
-  dbg.style.left = "10px";
-  dbg.style.background = "rgba(0,0,0,0.7)";
-  dbg.style.color = "#00ffcc";
-  dbg.style.fontFamily = "monospace";
-  dbg.style.fontSize = "12px";
-  dbg.style.padding = "8px";
-  dbg.style.zIndex = 999;
-  document.body.appendChild(dbg);
+  const ghost = document.getElementById("targetGhost");
+  const progressCircle = document.getElementById("progressCircle");
+  const debugBox = document.getElementById("debugBox");
 
   let engine, scene, camera;
 
@@ -32,7 +22,6 @@ window.addEventListener("load", () => {
 
   let guidePoints = [];
 
-  // ===== GRID =====
   const rings = [
     { pitch: 75,  yaws: [0,180] },
     { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
@@ -41,9 +30,7 @@ window.addEventListener("load", () => {
     { pitch: -75, yaws: [90,270] }
   ];
 
-  // ===== INIT 3D =====
   function init3D() {
-
     engine = new BABYLON.Engine(canvas, true);
     engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
 
@@ -54,7 +41,6 @@ window.addEventListener("load", () => {
     new BABYLON.HemisphericLight("l", new BABYLON.Vector3(0,1,0), scene);
 
     const sphere = BABYLON.MeshBuilder.CreateSphere("s", {diameter:6}, scene);
-
     const mat = new BABYLON.StandardMaterial("m", scene);
     mat.wireframe = true;
     mat.alpha = 0.3;
@@ -66,7 +52,6 @@ window.addEventListener("load", () => {
     window.addEventListener("resize", () => engine.resize());
   }
 
-  // ===== CREATE POINTS =====
   function spherical(yaw, pitch) {
     const y = BABYLON.Tools.ToRadians(yaw);
     const p = BABYLON.Tools.ToRadians(pitch);
@@ -79,11 +64,8 @@ window.addEventListener("load", () => {
   }
 
   function createPoints() {
-    guidePoints = [];
-
     rings.forEach((r, ri) => {
       r.yaws.forEach((y, yi) => {
-
         const mesh = BABYLON.MeshBuilder.CreateSphere("p",{diameter:0.15},scene);
         mesh.position = spherical(y, r.pitch);
 
@@ -96,7 +78,16 @@ window.addEventListener("load", () => {
     });
   }
 
-  // ===== START =====
+  function project(pos) {
+    const p = BABYLON.Vector3.Project(
+      pos,
+      BABYLON.Matrix.Identity(),
+      scene.getTransformMatrix(),
+      camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+    );
+    return {x:p.x,y:p.y};
+  }
+
   startBtn.onclick = async () => {
 
     if (DeviceOrientationEvent.requestPermission) {
@@ -118,47 +109,43 @@ window.addEventListener("load", () => {
     yawOffset = null;
   };
 
-  // ===== FILTER =====
-  function smooth(prev, current) {
-    return prev * 0.9 + current * 0.1;
-  }
-
-  function norm(a) {
-    return ((a + 540) % 360) - 180;
-  }
-
-  // ===== ORIENTATION =====
   window.addEventListener("deviceorientation", e => {
 
     if (!camera || !capturing || e.alpha == null) return;
 
-    let rawYaw = (e.alpha + 360) % 360;
-    let rawPitch = -(e.beta - 90);
-    let roll = e.gamma || 0;
+    let yaw = (e.alpha + 360) % 360;
+    let pitch = -(e.beta - 90);
 
-    rawPitch = Math.max(-90, Math.min(90, rawPitch));
+    pitch = Math.max(-90, Math.min(90, pitch));
 
-    if (yawOffset === null) yawOffset = rawYaw;
-    rawYaw = (rawYaw - yawOffset + 360) % 360;
+    if (yawOffset === null) yawOffset = yaw;
+    yaw = (yaw - yawOffset + 360) % 360;
 
-    smoothYaw = smooth(smoothYaw, rawYaw);
-    smoothPitch = smooth(smoothPitch, rawPitch);
+    smoothYaw = smoothYaw * 0.9 + yaw * 0.1;
+    smoothPitch = smoothPitch * 0.9 + pitch * 0.1;
 
     camera.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
     camera.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-    // ===== TARGET =====
-    const tYaw = rings[ringIndex]?.yaws[targetIndex] ?? 0;
-    const tPitch = rings[ringIndex]?.pitch ?? 0;
+    const active = guidePoints.find(g =>
+      g.ri === ringIndex && g.yi === targetIndex
+    );
 
-    let yd = norm(smoothYaw - tYaw);
-    let pd = smoothPitch - tPitch;
+    if (!active) return;
 
-    if (Math.abs(tPitch) > 70) yd = 0;
+    const screen = project(active.mesh.position);
 
-    const aligned = Math.abs(yd) < 6 && Math.abs(pd) < 6;
+    ghost.style.left = screen.x + "px";
+    ghost.style.top = screen.y + "px";
 
-    // ===== HOLD CAPTURE =====
+    const cx = engine.getRenderWidth()/2;
+    const cy = engine.getRenderHeight()/2;
+
+    const dx = screen.x - cx;
+    const dy = screen.y - cy;
+
+    const aligned = Math.abs(dx)<25 && Math.abs(dy)<25;
+
     if (aligned) {
 
       if (!holding) {
@@ -166,58 +153,45 @@ window.addEventListener("load", () => {
         holdStart = Date.now();
       }
 
-      let p = (Date.now() - holdStart) / 700;
+      let progress = (Date.now()-holdStart)/700;
 
-      if (p >= 1) {
+      progressCircle.style.background =
+        `conic-gradient(lime ${progress*360}deg, transparent 0deg)`;
 
-        guidePoints.forEach(g => {
-          if (g.ri === ringIndex && g.yi === targetIndex) {
-            g.done = true;
-          }
-        });
+      if (progress>=1) {
+
+        active.done = true;
 
         targetIndex++;
-
-        if (targetIndex >= rings[ringIndex].yaws.length) {
+        if (targetIndex>=rings[ringIndex].yaws.length){
           ringIndex++;
-          targetIndex = 0;
+          targetIndex=0;
         }
 
-        holding = false;
+        holding=false;
+        progressCircle.style.background="none";
       }
 
     } else {
-      holding = false;
+      holding=false;
+      progressCircle.style.background="none";
     }
 
-    // ===== UPDATE POINT COLORS =====
-    guidePoints.forEach(g => {
-
-      if (g.done) {
+    guidePoints.forEach(g=>{
+      if(g.done){
         g.mesh.material.emissiveColor = new BABYLON.Color3(0,1,0);
-      } 
-      else if (g.ri === ringIndex && g.yi === targetIndex) {
+      } else if(g===active){
         g.mesh.material.emissiveColor = new BABYLON.Color3(1,0.5,0);
-      } 
-      else {
+      } else {
         g.mesh.material.emissiveColor = new BABYLON.Color3(1,1,1);
       }
-
     });
 
-    // ===== DEBUG =====
-    dbg.innerHTML = `
-Yaw: ${smoothYaw.toFixed(1)}<br>
-Pitch: ${smoothPitch.toFixed(1)}<br>
-Roll: ${roll.toFixed(1)}<br>
-Target Yaw: ${tYaw}<br>
-Target Pitch: ${tPitch}<br>
-FOV: ${(camera.fov*180/Math.PI).toFixed(1)}<br>
-Aligned: ${aligned}
-    `;
-
-    dbg.style.border = aligned ? "2px solid lime" : "2px solid red";
-
+    debugBox.innerHTML =
+      `Yaw:${smoothYaw.toFixed(1)}<br>
+       Pitch:${smoothPitch.toFixed(1)}<br>
+       dx:${dx.toFixed(1)} dy:${dy.toFixed(1)}<br>
+       aligned:${aligned}`;
   });
 
 });
