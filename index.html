@@ -2,9 +2,10 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Capture 3D</title>
+<title>360 3D Capture</title>
 
 <link rel="stylesheet" href="style.css">
+
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -17,23 +18,21 @@
 </div>
 
 <div id="cameraScreen" class="hidden">
-  <div id="cameraContainer">
 
+  <div id="cameraContainer">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="renderCanvas"></canvas>
 
     <div id="circle"><div id="progress"></div></div>
-    <div id="dot"></div>
-    <div id="arrow">⬆</div>
-
   </div>
 
   <p id="statusText">Align camera</p>
   <button id="captureBtn">Start Capture</button>
+
 </div>
 
 <div id="resultScreen" class="hidden">
-  <h3>Done</h3>
+  <h3>Captured</h3>
   <div id="gallery"></div>
 </div>
 
