@@ -3,36 +3,57 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>360 Capture</title>
-
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+<!-- START -->
 <div id="startScreen">
-  <button id="startBtn">Start</button>
+    <h2>📸 360 Capture</h2>
+    <button id="startBtn">Start</button>
 </div>
 
-<div id="captureScreen">
+<!-- CAMERA -->
+<div id="cameraScreen" class="hidden">
+    <div id="cameraContainer">
+        <video id="video" autoplay playsinline muted></video>
 
-  <!-- 🔥 3D CANVAS -->
-  <canvas id="renderCanvas"></canvas>
+        <div id="circle"><div id="progress"></div></div>
+        <div id="dot"></div>
+        <div id="arrow">⬆</div>
+    </div>
 
-  <!-- CAMERA -->
-  <div id="cameraBox">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="dot"></div>
-    <div id="progress"></div>
-    <div id="arrow">⬆</div>
-  </div>
+    <p id="statusText">Align camera</p>
 
-  <div id="debug"></div>
+    <!-- DEBUG UI -->
+    <div id="debugBox">
+        <div>Yaw: <span id="dbgYaw">0</span></div>
+        <div>Pitch: <span id="dbgPitch">0</span></div>
+        <div>Target Yaw: <span id="dbgTargetYaw">0</span></div>
+        <div>Target Pitch: <span id="dbgTargetPitch">0</span></div>
+    </div>
 
+    <button id="captureBtn">Start Capture</button>
 </div>
 
-<canvas id="capCanvas" style="display:none;"></canvas>
+<!-- RESULT -->
+<div id="resultScreen" class="hidden">
+    <h3>Capture Complete</h3>
+    <div id="gallery"></div>
 
+    <button id="downloadBtn">Download</button>
+    <button id="retakeBtn">Retake</button>
+</div>
+
+<!-- PREVIEW -->
+<div id="previewPopup" class="hidden">
+    <img id="previewImg">
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="script.js"></script>
 
 </body>

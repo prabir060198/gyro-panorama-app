@@ -1,159 +1,252 @@
-window.addEventListener("load", () => {
-
-const canvas = document.getElementById("renderCanvas");
+// ===== ELEMENTS =====
 const video = document.getElementById("video");
-const startBtn = document.getElementById("startBtn");
+const canvas = document.getElementById("canvas");
+
 const startScreen = document.getElementById("startScreen");
+const cameraScreen = document.getElementById("cameraScreen");
+const resultScreen = document.getElementById("resultScreen");
 
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
-const progress = document.getElementById("progress");
-const debug = document.getElementById("debug");
-const capCanvas = document.getElementById("capCanvas");
+const progressEl = document.getElementById("progress");
 
-let engine, scene, camera3D;
+const gallery = document.getElementById("gallery");
+const statusText = document.getElementById("statusText");
 
-let yawOffset = null;
+const previewPopup = document.getElementById("previewPopup");
+const previewImg = document.getElementById("previewImg");
+
+// DEBUG
+const dbgYaw = document.getElementById("dbgYaw");
+const dbgPitch = document.getElementById("dbgPitch");
+const dbgTargetYaw = document.getElementById("dbgTargetYaw");
+const dbgTargetPitch = document.getElementById("dbgTargetPitch");
+const debugBox = document.getElementById("debugBox");
+
+// ===== STATE =====
+let capturedImages = [];
+let captureData = [];
+
+let currentYaw = 0;
+let currentPitch = 0;
+let currentRoll = 0;
+
 let capturing = false;
-
-let smoothYaw = 0;
-let smoothPitch = 0;
+let ringIndex = 0;
+let targetIndex = 0;
 
 let holding = false;
 let holdStart = 0;
 
+// ===== ✅ UPDATED RING PATTERN =====
 const rings = [
-  { pitch: 0, yaws: [0,90,180,270] }
+  { pitch: 75,  yaws: [0, 180] },
+
+  { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
+
+  // 🔥 MOST IMPORTANT FIX
+  { pitch: 0,   yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
+
+  { pitch: -45, yaws: [0,45,90,135,180,225,270,315] },
+
+  { pitch: -75, yaws: [90, 270] }
 ];
 
-let guidePoints = [];
+const totalShots = rings.reduce((sum, r) => sum + r.yaws.length, 0);
 
-// ===== INIT =====
-function init3D(){
+// ===== START CAMERA =====
+document.getElementById("startBtn").onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
 
-  engine = new BABYLON.Engine(canvas,true);
-  scene = new BABYLON.Scene(engine);
+    video.srcObject = stream;
+    await video.play();
 
-  camera3D = new BABYLON.FreeCamera("cam",
-    new BABYLON.Vector3(0,0,0), scene);
+    startScreen.classList.add("hidden");
+    cameraScreen.classList.remove("hidden");
 
-  camera3D.fov = 1.2;
-
-  new BABYLON.HemisphericLight("l",
-    new BABYLON.Vector3(0,1,0), scene);
-
-  createPoints();
-
-  engine.runRenderLoop(()=>{
-    scene.render();
-  });
-}
-
-// ===== CREATE POINT =====
-function createPoints(){
-
-  const mesh = BABYLON.MeshBuilder.CreateSphere("pt",{diameter:0.2},scene);
-  mesh.position = new BABYLON.Vector3(0,0,3);
-
-  const mat = new BABYLON.StandardMaterial("m",scene);
-  mat.emissiveColor = new BABYLON.Color3(1,1,1);
-  mesh.material = mat;
-
-  guidePoints.push({mesh,yaw:0,pitch:0,done:false});
-}
-
-// ===== START =====
-startBtn.onclick = async ()=>{
-
-  startScreen.style.display = "none";
-
-  if(DeviceOrientationEvent.requestPermission){
-    await DeviceOrientationEvent.requestPermission();
+  } catch (e) {
+    alert("Camera error: " + e.message);
   }
-
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:"environment"}
-  });
-
-  video.srcObject = stream;
-  await video.play();
-
-  init3D();
-
-  capturing = true;
 };
 
+// ===== START CAPTURE =====
+document.getElementById("captureBtn").onclick = () => {
+  capturing = true;
+  window.addEventListener("deviceorientation", handleOrientation);
+};
+
+// ===== HELPERS =====
+function normalizeAngle(a) {
+  return ((a + 540) % 360) - 180;
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+// ===== ORIENTATION =====
+function handleOrientation(e) {
+
+  if (!capturing || e.alpha == null) return;
+
+  currentYaw = (e.alpha + 360) % 360;
+
+  currentPitch = (e.beta - 90);
+  currentPitch = clamp(currentPitch, -90, 90);
+
+  currentRoll = e.gamma || 0;
+
+  const targetYaw = rings[ringIndex].yaws[targetIndex];
+  const targetPitch = rings[ringIndex].pitch;
+
+  // 🔥 HYBRID CORRECTION
+  const correctedYaw = currentYaw * 0.7 + targetYaw * 0.3;
+  const correctedPitch = currentPitch * 0.7 + targetPitch * 0.3;
+
+  let yawDiff = normalizeAngle(correctedYaw - targetYaw);
+  let pitchDiff = correctedPitch - targetPitch;
+
+  // ===== DEBUG =====
+  dbgYaw.innerText = currentYaw.toFixed(1);
+  dbgPitch.innerText = currentPitch.toFixed(1);
+  dbgTargetYaw.innerText = targetYaw;
+  dbgTargetPitch.innerText = targetPitch;
+
+  debugBox.style.border =
+    (Math.abs(yawDiff) < 4 && Math.abs(pitchDiff) < 6)
+      ? "2px solid lime"
+      : "2px solid red";
+
+  // ===== DOT =====
+  const maxOffset = 80;
+
+  const x = clamp((yawDiff / 30) * maxOffset, -maxOffset, maxOffset);
+  const y = clamp((pitchDiff / 30) * maxOffset, -maxOffset, maxOffset);
+
+  dot.style.transform =
+    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+
+  // ===== ARROW =====
+  arrow.innerText =
+    Math.abs(yawDiff) > 4 ? (yawDiff > 0 ? "➡" : "⬅") :
+    Math.abs(pitchDiff) > 6 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
+
+  // ===== HOLD CAPTURE =====
+  if (Math.abs(yawDiff) < 4 && Math.abs(pitchDiff) < 6) {
+
+    if (!holding) {
+      holding = true;
+      holdStart = Date.now();
+    }
+
+    let progress = Math.min((Date.now() - holdStart) / 700, 1);
+
+    progressEl.style.background =
+      `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
+
+    if (progress >= 1) {
+
+      capture(correctedYaw, correctedPitch);
+
+      holding = false;
+      progressEl.style.background =
+        `conic-gradient(#888 0deg, transparent 0deg)`;
+
+      targetIndex++;
+
+      if (targetIndex >= rings[ringIndex].yaws.length) {
+        ringIndex++;
+        targetIndex = 0;
+
+        if (ringIndex >= rings.length) {
+          finish();
+          return;
+        }
+      }
+    }
+
+  } else {
+    holding = false;
+    progressEl.style.background =
+      `conic-gradient(#888 0deg, transparent 0deg)`;
+  }
+
+  statusText.innerText = `${capturedImages.length}/${totalShots}`;
+}
+
 // ===== CAPTURE =====
-function captureFrame(){
+function capture(yaw, pitch) {
 
-  const ctx = capCanvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-  capCanvas.width = video.videoWidth;
-  capCanvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
 
-  ctx.drawImage(video,0,0);
+  const img = canvas.toDataURL("image/png");
 
-  return capCanvas.toDataURL();
+  capturedImages.push(img);
+
+  // 🔥 CLEAN JSON FORMAT
+  captureData.push({
+    name: `img_${capturedImages.length}.png`,
+    yaw: yaw,
+    pitch: pitch
+  });
 }
 
-// ===== 🔥 FIXED PREVIEW =====
-function placeImage(imgData){
+// ===== FINISH =====
+function finish() {
 
-  const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:2},scene);
+  capturing = false;
+  window.removeEventListener("deviceorientation", handleOrientation);
 
-  // 🔥 IMPORTANT: ALWAYS IN FRONT
-  plane.position = new BABYLON.Vector3(0,0,3);
+  cameraScreen.classList.add("hidden");
+  resultScreen.classList.remove("hidden");
 
-  plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+  capturedImages.forEach(img => {
+    const el = document.createElement("img");
+    el.src = img;
 
-  const texture = new BABYLON.Texture(imgData, scene);
+    el.onclick = () => {
+      previewImg.src = img;
+      previewPopup.classList.remove("hidden");
+    };
 
-  const mat = new BABYLON.StandardMaterial("mat", scene);
-  mat.diffuseTexture = texture;
-  mat.emissiveColor = new BABYLON.Color3(1,1,1);
-
-  plane.material = mat;
+    gallery.appendChild(el);
+  });
 }
 
-// ===== SENSOR =====
-window.addEventListener("deviceorientation", e => {
+// ===== PREVIEW =====
+previewPopup.onclick = () => previewPopup.classList.add("hidden");
 
-if(!capturing || e.alpha==null) return;
+// ===== DOWNLOAD =====
+document.getElementById("downloadBtn").onclick = async () => {
 
-let yaw = e.alpha;
-let pitch = e.beta - 90;
+  const zip = new JSZip();
 
-camera3D.rotation = new BABYLON.Vector3(
-  BABYLON.Tools.ToRadians(-pitch),
-  BABYLON.Tools.ToRadians(yaw),
-  0
-);
+  capturedImages.forEach((img, i) => {
+    zip.file(`img_${i+1}.png`, img.split(",")[1], { base64: true });
+  });
 
-// ===== ALIGN =====
-if(Math.abs(pitch)<5){
+  zip.file("metadata.json", JSON.stringify({
+    images: captureData
+  }, null, 2));
 
-  if(!holding){
-    holding=true;
-    holdStart=Date.now();
-  }
+  const blob = await zip.generateAsync({ type: "blob" });
 
-  if(Date.now()-holdStart > 800){
+  const url = URL.createObjectURL(blob);
 
-    const img = captureFrame();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "photosphere.zip";
 
-    // 🔥 NOW WILL ALWAYS SHOW
-    placeImage(img);
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
-    holding=false;
-  }
-
-}else{
-  holding=false;
-}
-
-// DEBUG
-debug.innerHTML = `Yaw:${yaw.toFixed(1)} Pitch:${pitch.toFixed(1)}`;
-
-});
-
-});
+// ===== RETAKE =====
+document.getElementById("retakeBtn").onclick = () => location.reload();
