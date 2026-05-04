@@ -3,58 +3,42 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>360 Capture</title>
+
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
 
 <!-- START -->
 <div id="startScreen">
-    <h2>📸 360 Capture</h2>
-    <button id="startBtn">Start</button>
+  <button id="startBtn">Start</button>
 </div>
 
-<!-- CAMERA -->
-<div id="cameraScreen" class="hidden">
-    <div id="cameraContainer">
-        <video id="video" autoplay playsinline muted></video>
+<!-- CAPTURE -->
+<div id="captureScreen" style="display:none;">
+  <canvas id="renderCanvas"></canvas>
 
-        <div id="circle"><div id="progress"></div></div>
-        <div id="dot"></div>
-        <div id="arrow">⬆</div>
-    </div>
+  <div id="cameraBox">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="dot"></div>
+    <div id="progress"></div>
+    <div id="arrow">⬆</div>
+  </div>
 
-    <p id="statusText">Align camera</p>
-
-    <!-- DEBUG UI -->
-    <div id="debugBox">
-        <div>Yaw: <span id="dbgYaw">0</span></div>
-        <div>Pitch: <span id="dbgPitch">0</span></div>
-        <div>Target Yaw: <span id="dbgTargetYaw">0</span></div>
-        <div>Target Pitch: <span id="dbgTargetPitch">0</span></div>
-    </div>
-
-    <button id="captureBtn">Start Capture</button>
+  <div id="debug"></div>
 </div>
 
 <!-- RESULT -->
-<div id="resultScreen" class="hidden">
-    <h3>Capture Complete</h3>
-    <div id="gallery"></div>
-
-    <button id="downloadBtn">Download</button>
-    <button id="retakeBtn">Retake</button>
+<div id="resultScreen" style="display:none;">
+  <h2>Done</h2>
+  <div id="gallery"></div>
+  <button id="downloadBtn">Download</button>
 </div>
 
-<!-- PREVIEW -->
-<div id="previewPopup" class="hidden">
-    <img id="previewImg">
-</div>
+<canvas id="capCanvas" style="display:none;"></canvas>
 
-<canvas id="canvas"></canvas>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="script.js"></script>
-
 </body>
 </html>
