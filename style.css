@@ -4,15 +4,11 @@ html, body {
   background: black;
 }
 
-/* 3D */
 #renderCanvas {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
 }
 
-/* Camera */
 #cameraBox {
   position: absolute;
   width: 200px;
@@ -21,7 +17,6 @@ html, body {
   left: 50%;
   transform: translate(-50%, -50%);
   border: 2px solid white;
-  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -31,7 +26,6 @@ video {
   object-fit: cover;
 }
 
-/* Dot */
 #dot {
   position: absolute;
   left: 50%;
@@ -41,20 +35,20 @@ video {
   background: white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  z-index: 10;
 }
 
-/* Ghost */
-#targetGhost {
+#ghost {
   position: absolute;
   width: 14px;
   height: 14px;
   border: 2px solid orange;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  z-index: 9;
 }
 
-/* Progress */
-#progressCircle {
+#progress {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -64,18 +58,6 @@ video {
   border-radius: 50%;
 }
 
-/* Debug */
-#debugBox {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  color: #00ffcc;
-  font-family: monospace;
-  background: rgba(0,0,0,0.6);
-  padding: 8px;
-}
-
-/* Buttons */
 button {
   position: fixed;
   bottom: 20px;
