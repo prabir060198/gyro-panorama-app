@@ -1,6 +1,4 @@
-// =============================
-// STATE
-// =============================
+// ================= STATE =================
 let currentYaw = 0;
 let currentPitch = 0;
 let yawOffset = null;
@@ -9,16 +7,14 @@ let capturing = false;
 let ringIndex = 0;
 let targetIndex = 0;
 
-let capturedImages = [];
-let captureData = [];
-
 let stableFrames = 0;
 let holding = false;
 let holdStart = 0;
 
-// =============================
-// RINGS
-// =============================
+let capturedImages = [];
+let captureData = [];
+
+// ================= RINGS =================
 const rings = [
   { pitch: 80,  yaws: [0,120,240] },
   { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
@@ -27,9 +23,7 @@ const rings = [
   { pitch: -80, yaws: [60,180,300] }
 ];
 
-// =============================
-// 3D ENGINE
-// =============================
+// ================= 3D =================
 let engine, scene, camera3D, guidePoints = [];
 
 function init3D() {
@@ -38,7 +32,7 @@ function init3D() {
   engine = new BABYLON.Engine(canvas, true);
   scene = new BABYLON.Scene(engine);
 
-  camera3D = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,0,0), scene);
+  camera3D = new BABYLON.FreeCamera("cam", BABYLON.Vector3.Zero(), scene);
 
   new BABYLON.HemisphericLight("l", new BABYLON.Vector3(0,1,0), scene);
 
@@ -51,40 +45,38 @@ function init3D() {
   engine.runRenderLoop(() => scene.render());
 }
 
-// =============================
-// CREATE POINTS
-// =============================
+// ===== correct spherical =====
 function sphericalToCartesian(yaw, pitch) {
   const y = BABYLON.Tools.ToRadians(yaw);
   const p = BABYLON.Tools.ToRadians(pitch);
 
   return new BABYLON.Vector3(
-    2 * Math.cos(p) * Math.sin(y),
-    2 * Math.sin(p),
-    2 * Math.cos(p) * Math.cos(y)
-  );
+    Math.cos(p) * Math.sin(y),
+    -Math.sin(p),
+    Math.cos(p) * Math.cos(y)
+  ).scale(2);
 }
 
 function createPoints() {
   rings.forEach((r, ri) => {
     r.yaws.forEach((y, yi) => {
 
-      const m = BABYLON.MeshBuilder.CreateSphere("p", {diameter:0.08}, scene);
-      m.position = sphericalToCartesian(y, r.pitch);
+      const mesh = BABYLON.MeshBuilder.CreateSphere("p", {diameter:0.08}, scene);
+      mesh.position = sphericalToCartesian(y, r.pitch);
+
+      mesh.lookAt(BABYLON.Vector3.Zero());
 
       const mat = new BABYLON.StandardMaterial("pm", scene);
       mat.emissiveColor = new BABYLON.Color3(1,1,1);
-      m.material = mat;
+      mesh.material = mat;
 
-      guidePoints.push({mesh:m, rIndex:ri, yIndex:yi});
+      guidePoints.push({mesh, ri, yi});
     });
   });
 }
 
-// =============================
-// START CAMERA
-// =============================
-document.getElementById("startBtn").onclick = async () => {
+// ================= START =================
+startBtn.onclick = async () => {
 
   if (DeviceOrientationEvent.requestPermission) {
     await DeviceOrientationEvent.requestPermission();
@@ -104,34 +96,34 @@ document.getElementById("startBtn").onclick = async () => {
   cameraScreen.classList.remove("hidden");
 };
 
-// =============================
-// ORIENTATION
-// =============================
+// ================= ORIENTATION =================
 window.addEventListener("deviceorientation", e => {
 
   if (!capturing) return;
 
   let yaw = (e.alpha + 360) % 360;
-  let pitch = Math.max(-90, Math.min(90, e.beta - 90));
+
+  // 🔥 FIXED pitch (inverted)
+  let pitch = -(e.beta - 90);
+  pitch = Math.max(-90, Math.min(90, pitch));
 
   if (yawOffset === null) yawOffset = yaw;
   yaw = (yaw - yawOffset + 360) % 360;
 
-  currentYaw = currentYaw * 0.9 + yaw * 0.1;
-  currentPitch = currentPitch * 0.9 + pitch * 0.1;
+  // smooth
+  currentYaw = currentYaw * 0.85 + yaw * 0.15;
+  currentPitch = currentPitch * 0.85 + pitch * 0.15;
 
-  update3DCamera();
+  update3D();
   processCapture();
 });
 
-function update3DCamera() {
+function update3D() {
   camera3D.rotation.y = BABYLON.Tools.ToRadians(currentYaw);
-  camera3D.rotation.x = BABYLON.Tools.ToRadians(currentPitch);
+  camera3D.rotation.x = BABYLON.Tools.ToRadians(-currentPitch);
 }
 
-// =============================
-// CAPTURE LOGIC
-// =============================
+// ================= CAPTURE =================
 function normalize(a) {
   return ((a + 540) % 360) - 180;
 }
@@ -146,11 +138,12 @@ function processCapture() {
 
   if (Math.abs(tPitch) > 70) yDiff = 0;
 
-  const ok = Math.abs(yDiff) < 4 && Math.abs(pDiff) < 5;
+  const ok = Math.abs(yDiff) < 6 && Math.abs(pDiff) < 8;
 
-  if (ok) stableFrames++; else stableFrames = 0;
+  if (ok) stableFrames++;
+  else stableFrames = 0;
 
-  if (stableFrames < 5) return;
+  if (stableFrames < 4) return;
 
   if (!holding) {
     holding = true;
@@ -158,22 +151,25 @@ function processCapture() {
   }
 
   let progress = Math.min((Date.now() - holdStart)/700,1);
+
   progressEl.style.background =
     `conic-gradient(#00c853 ${progress*360}deg, transparent 0deg)`;
 
   if (progress >= 1) {
 
-    capture();
+    captureFrame();
 
     guidePoints.forEach(g=>{
-      if(g.rIndex===ringIndex && g.yIndex===targetIndex){
+      if(g.ri===ringIndex && g.yi===targetIndex){
         g.mesh.material.emissiveColor = new BABYLON.Color3(0,1,0);
       }
     });
 
     targetIndex++;
     if (targetIndex >= rings[ringIndex].yaws.length) {
-      ringIndex++; targetIndex = 0;
+      ringIndex++;
+      targetIndex = 0;
+
       if (ringIndex >= rings.length) finish();
     }
 
@@ -182,16 +178,14 @@ function processCapture() {
   }
 
   guidePoints.forEach(g=>{
-    if(g.rIndex===ringIndex && g.yIndex===targetIndex){
+    if(g.ri===ringIndex && g.yi===targetIndex){
       g.mesh.material.emissiveColor = new BABYLON.Color3(1,0.5,0);
     }
   });
 }
 
-// =============================
-// CAPTURE
-// =============================
-function capture() {
+// ================= CAPTURE FRAME =================
+function captureFrame() {
 
   const ctx = canvas.getContext("2d");
   canvas.width = video.videoWidth;
@@ -200,6 +194,7 @@ function capture() {
   ctx.drawImage(video,0,0);
 
   const img = canvas.toDataURL("image/png");
+
   capturedImages.push(img);
 
   captureData.push({
@@ -209,9 +204,7 @@ function capture() {
   });
 }
 
-// =============================
-// FINISH
-// =============================
+// ================= FINISH =================
 function finish() {
 
   capturing = false;
@@ -226,9 +219,10 @@ function finish() {
   });
 }
 
-// =============================
-// START CAPTURE
-// =============================
-document.getElementById("captureBtn").onclick = () => {
+// ================= START CAPTURE =================
+captureBtn.onclick = () => {
   capturing = true;
+  yawOffset = null;
+  stableFrames = 0;
+  holding = false;
 };
