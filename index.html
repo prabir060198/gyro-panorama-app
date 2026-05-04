@@ -2,32 +2,43 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 Capture PRO</title>
+<title>360 Capture</title>
 
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
 
-<canvas id="renderCanvas"></canvas>
-
-<div id="cameraBox">
-  <video id="video" autoplay playsinline muted></video>
-
-  <div id="dot"></div>
-  <div id="progress"></div>
-  <div id="arrow">⬆</div>
+<!-- START -->
+<div id="startScreen">
+  <button id="startBtn">Start</button>
 </div>
 
-<div id="debug"></div>
+<!-- CAPTURE -->
+<div id="captureScreen" style="display:none;">
+  <canvas id="renderCanvas"></canvas>
 
-<button id="startBtn">Start</button>
-<button id="captureBtn">Capture</button>
+  <div id="cameraBox">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="dot"></div>
+    <div id="progress"></div>
+    <div id="arrow">⬆</div>
+  </div>
+
+  <div id="debug"></div>
+</div>
+
+<!-- RESULT -->
+<div id="resultScreen" style="display:none;">
+  <h2>Done</h2>
+  <div id="gallery"></div>
+  <button id="downloadBtn">Download</button>
+</div>
 
 <canvas id="capCanvas" style="display:none;"></canvas>
 
 <script src="script.js"></script>
-
 </body>
 </html>

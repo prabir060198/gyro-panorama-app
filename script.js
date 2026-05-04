@@ -1,6 +1,10 @@
 window.addEventListener("load", () => {
 
-const canvas = document.getElementById("renderCanvas");
+const startBtn = document.getElementById("startBtn");
+const startScreen = document.getElementById("startScreen");
+const captureScreen = document.getElementById("captureScreen");
+const resultScreen = document.getElementById("resultScreen");
+
 const video = document.getElementById("video");
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
@@ -19,7 +23,9 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
-// ===== RINGS =====
+let capturedImages = [];
+let captureData = [];
+
 const rings = [
   { pitch: 75,  yaws: [0, 180] },
   { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
@@ -29,28 +35,26 @@ const rings = [
 ];
 
 let guidePoints = [];
+let totalPoints = rings.reduce((s,r)=>s+r.yaws.length,0);
 
-// ===== INIT =====
+// ===== INIT 3D =====
 function init3D(){
-
-  engine = new BABYLON.Engine(canvas,true);
+  engine = new BABYLON.Engine(renderCanvas,true);
   scene = new BABYLON.Scene(engine);
 
   camera3D = new BABYLON.FreeCamera("cam", BABYLON.Vector3.Zero(), scene);
 
   new BABYLON.HemisphericLight("l", new BABYLON.Vector3(0,1,0), scene);
 
-  createGuidePoints();
+  createPoints();
 
   engine.runRenderLoop(()=>scene.render());
-  window.addEventListener("resize",()=>engine.resize());
 }
 
-// ===== CREATE POINTS =====
-function createGuidePoints(){
-
-  rings.forEach(r => {
-    r.yaws.forEach(yaw => {
+// ===== POINTS =====
+function createPoints(){
+  rings.forEach(r=>{
+    r.yaws.forEach(yaw=>{
 
       const y = BABYLON.Tools.ToRadians(yaw);
       const p = BABYLON.Tools.ToRadians(r.pitch);
@@ -68,16 +72,34 @@ function createGuidePoints(){
       mat.emissiveColor = new BABYLON.Color3(1,1,1);
       mesh.material = mat;
 
-      guidePoints.push({
-        mesh,
-        yaw,
-        pitch: r.pitch,
-        done:false
-      });
+      guidePoints.push({mesh,yaw,pitch:r.pitch,done:false});
     });
   });
-
 }
+
+// ===== START =====
+startBtn.onclick = async ()=>{
+  startScreen.style.display = "none";
+  captureScreen.style.display = "block";
+
+  if(DeviceOrientationEvent.requestPermission){
+    await DeviceOrientationEvent.requestPermission();
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:"environment"}
+  });
+
+  video.srcObject = stream;
+  await video.play();
+
+  init3D();
+  capturing = true;
+};
+
+// ===== HELPERS =====
+function norm360(a){ return (a%360+360)%360; }
+function angleDiff(a,b){ return ((a-b+540)%360)-180; }
 
 // ===== CAPTURE =====
 function captureFrame(){
@@ -88,9 +110,7 @@ function captureFrame(){
   return capCanvas.toDataURL();
 }
 
-// ===== PLACE IMAGE =====
-function placeImage(img, pos){
-
+function placeImage(img,pos){
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
   plane.position = pos.clone();
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
@@ -107,130 +127,127 @@ function placeImage(img, pos){
 
   const mat = new BABYLON.StandardMaterial("mat",scene);
   mat.diffuseTexture = tex;
-
   plane.material = mat;
-}
-
-// ===== START =====
-startBtn.onclick = async ()=>{
-
-  if(DeviceOrientationEvent.requestPermission){
-    await DeviceOrientationEvent.requestPermission();
-  }
-
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:"environment"}
-  });
-
-  video.srcObject = stream;
-  await video.play();
-
-  init3D();
-};
-
-captureBtn.onclick = ()=>{
-  capturing = true;
-  yawOffset = null;
-};
-
-// ===== HELPERS =====
-function norm360(a){
-  return (a % 360 + 360) % 360;
-}
-
-function angleDiff(a, b){
-  return ((a - b + 540) % 360) - 180;
 }
 
 // ===== SENSOR =====
 window.addEventListener("deviceorientation", e => {
 
-  if(!camera3D || !capturing || e.alpha == null) return;
+if(!capturing || e.alpha==null) return;
 
-  let rawYaw = e.alpha;
-  let rawPitch = e.beta - 90;
+let rawYaw = e.alpha;
+let rawPitch = e.beta - 90;
 
-  if(yawOffset === null) yawOffset = rawYaw;
+if(yawOffset===null) yawOffset = rawYaw;
 
-  let yaw = norm360(rawYaw - yawOffset);
-  let pitch = rawPitch;
+let yaw = norm360(rawYaw - yawOffset);
 
-  // ===== SMOOTH =====
-  let dYaw = angleDiff(yaw, smoothYaw);
-  smoothYaw = norm360(smoothYaw + dYaw * 0.15);
+let dYaw = angleDiff(yaw, smoothYaw);
+smoothYaw = norm360(smoothYaw + dYaw*0.15);
+smoothPitch = smoothPitch*0.85 + rawPitch*0.15;
 
-  smoothPitch = smoothPitch * 0.85 + pitch * 0.15;
+// ===== CAMERA =====
+camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
+camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
 
-  // ===== CAMERA (FIXED) =====
-  camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
-  camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
+// ===== ACTIVE =====
+const active = guidePoints.find(p=>!p.done);
+if(!active) return;
 
-  // ===== ACTIVE =====
-  const active = guidePoints.find(p => !p.done);
-  if(!active) return;
+let yawDiff = -angleDiff(smoothYaw, active.yaw);
+let pitchDiff = smoothPitch - active.pitch;
 
-  let yawDiff = angleDiff(smoothYaw, active.yaw);
-  let pitchDiff = smoothPitch - active.pitch;
+// ===== DOT =====
+dot.style.transform =
+`translate(calc(-50% + ${-(yawDiff/30)*70}px),
+           calc(-50% + ${-(pitchDiff/30)*70}px))`;
 
-  // ===== DOT =====
-  const maxOffset = 70;
+// ===== ARROW =====
+if(Math.abs(yawDiff)>Math.abs(pitchDiff)){
+  arrow.innerText = yawDiff>0 ? "➡":"⬅";
+}else{
+  arrow.innerText = pitchDiff>0 ? "⬆":"⬇";
+}
 
-  const x = -(yawDiff / 30) * maxOffset;
-  const y = -(pitchDiff / 30) * maxOffset;
+// ===== ALIGN =====
+if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
-  dot.style.transform =
-    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  if(!holding){ holding=true; holdStart=Date.now(); }
 
-  // ===== ARROW (FIXED) =====
-  if (Math.abs(yawDiff) > Math.abs(pitchDiff)) {
-    arrow.innerText = yawDiff > 0 ? "⬅" : "➡";
-  } else {
-    arrow.innerText = pitchDiff > 0 ? "⬇" : "⬆";
+  let p=(Date.now()-holdStart)/700;
+
+  progress.style.background =
+  `conic-gradient(lime ${p*360}deg, transparent 0deg)`;
+
+  if(p>=1){
+
+    const img = captureFrame();
+
+    capturedImages.push(img);
+    captureData.push({
+      yaw:active.yaw,
+      pitch:active.pitch
+    });
+
+    placeImage(img, active.mesh.position);
+
+    active.done=true;
+    active.mesh.material.emissiveColor =
+      new BABYLON.Color3(0,1,0);
+
+    holding=false;
+    progress.style.background="none";
+
+    if(capturedImages.length===totalPoints){
+      finish();
+    }
   }
 
-  // ===== ALIGN =====
-  const aligned =
-    Math.abs(yawDiff) < 8 &&
-    Math.abs(pitchDiff) < 8;
+}else{
+  holding=false;
+  progress.style.background="none";
+}
 
-  if (aligned) {
-
-    if (!holding) {
-      holding = true;
-      holdStart = Date.now();
-    }
-
-    let p = (Date.now() - holdStart) / 700;
-
-    progress.style.background =
-      `conic-gradient(lime ${p*360}deg, transparent 0deg)`;
-
-    if (p >= 1) {
-
-      const img = captureFrame();
-      placeImage(img, active.mesh.position);
-
-      active.done = true;
-      active.mesh.material.emissiveColor = new BABYLON.Color3(0,1,0);
-
-      holding = false;
-      progress.style.background = "none";
-    }
-
-  } else {
-    holding = false;
-    progress.style.background = "none";
-  }
-
-  // ===== DEBUG =====
-  debug.innerHTML = `
-Yaw: ${smoothYaw.toFixed(1)}<br>
-Pitch: ${smoothPitch.toFixed(1)}<br>
-TargetYaw: ${active.yaw}<br>
-TargetPitch: ${active.pitch}<br>
-YawDiff: ${yawDiff.toFixed(1)}
+// ===== DEBUG =====
+debug.innerHTML = `
+Yaw:${smoothYaw.toFixed(1)}
+Pitch:${smoothPitch.toFixed(1)}
+Target:${active.yaw}
 `;
 
 });
+
+// ===== FINISH =====
+function finish(){
+  capturing=false;
+  captureScreen.style.display="none";
+  resultScreen.style.display="block";
+
+  const gallery=document.getElementById("gallery");
+  capturedImages.forEach(img=>{
+    const el=document.createElement("img");
+    el.src=img;
+    gallery.appendChild(el);
+  });
+}
+
+// ===== DOWNLOAD =====
+document.getElementById("downloadBtn").onclick=async()=>{
+
+  const zip=new JSZip();
+
+  capturedImages.forEach((img,i)=>{
+    zip.file(`img_${i+1}.png`, img.split(",")[1],{base64:true});
+  });
+
+  zip.file("data.json", JSON.stringify(captureData,null,2));
+
+  const blob=await zip.generateAsync({type:"blob"});
+
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="360.zip";
+  a.click();
+};
 
 });
