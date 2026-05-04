@@ -1,5 +1,11 @@
 window.addEventListener("load", () => {
 
+// ===== DOM =====
+const startBtn = document.getElementById("startBtn");
+const startScreen = document.getElementById("startScreen");
+const captureScreen = document.getElementById("captureScreen");
+const resultScreen = document.getElementById("resultScreen");
+
 const video = document.getElementById("video");
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
@@ -7,11 +13,12 @@ const progress = document.getElementById("progress");
 const debug = document.getElementById("debug");
 const capCanvas = document.getElementById("capCanvas");
 
+// ===== 3D =====
 let engine, scene, camera3D;
 
 // ===== STATE =====
 let capturing = false;
-let baseQuat = null;
+let yawOffset = null;
 
 let smoothYaw = 0;
 let smoothPitch = 0;
@@ -79,6 +86,9 @@ function createPoints(){
 // ===== START =====
 startBtn.onclick = async ()=>{
 
+  startScreen.style.display = "none";
+  captureScreen.style.display = "block";
+
   if(DeviceOrientationEvent.requestPermission){
     await DeviceOrientationEvent.requestPermission();
   }
@@ -91,35 +101,14 @@ startBtn.onclick = async ()=>{
   await video.play();
 
   init3D();
+
   capturing = true;
+  yawOffset = null; // reset
 };
 
 // ===== HELPERS =====
 function norm360(a){ return (a%360+360)%360; }
 function angleDiff(a,b){ return ((a-b+540)%360)-180; }
-
-// ===== DEVICE QUATERNION =====
-function getQuaternion(alpha, beta, gamma){
-
-  let _x = beta  * Math.PI/180;
-  let _y = gamma * Math.PI/180;
-  let _z = alpha * Math.PI/180;
-
-  const cX = Math.cos(_x/2);
-  const cY = Math.cos(_y/2);
-  const cZ = Math.cos(_z/2);
-
-  const sX = Math.sin(_x/2);
-  const sY = Math.sin(_y/2);
-  const sZ = Math.sin(_z/2);
-
-  return {
-    x: sX*cY*cZ - cX*sY*sZ,
-    y: cX*sY*cZ + sX*cY*sZ,
-    z: cX*cY*sZ - sX*sY*cZ,
-    w: cX*cY*cZ + sX*sY*sZ
-  };
-}
 
 // ===== CAPTURE =====
 function captureFrame(){
@@ -146,24 +135,22 @@ window.addEventListener("deviceorientation", e => {
 
 if(!capturing || e.alpha==null) return;
 
-// ===== GET QUATERNION =====
-const q = getQuaternion(e.alpha, e.beta, e.gamma);
+let rawYaw = e.alpha;
+let rawPitch = e.beta - 90;
 
-// ===== SET BASE =====
-if(!baseQuat){
-  baseQuat = q;
-  return;
+// ===== LOCK START ORIENTATION =====
+if(yawOffset === null){
+  yawOffset = rawYaw;
 }
 
-// ===== RELATIVE ROTATION =====
-const relYaw = e.alpha - (baseQuat.alpha || 0);
-const relPitch = (e.beta - 90);
+// ===== RELATIVE YAW =====
+let yaw = norm360(rawYaw - yawOffset);
 
 // ===== SMOOTH =====
-smoothYaw = smoothYaw*0.9 + relYaw*0.1;
-smoothPitch = smoothPitch*0.9 + relPitch*0.1;
+smoothYaw = norm360(smoothYaw + angleDiff(yaw, smoothYaw)*0.15);
+smoothPitch = smoothPitch*0.85 + rawPitch*0.15;
 
-// ===== LOCKED CAMERA =====
+// ===== CAMERA (LOCKED FEEL) =====
 camera3D.rotation = new BABYLON.Vector3(
   BABYLON.Tools.ToRadians(-smoothPitch),
   BABYLON.Tools.ToRadians(smoothYaw),
@@ -174,7 +161,7 @@ camera3D.rotation = new BABYLON.Vector3(
 const active = guidePoints.find(p=>!p.done);
 if(!active) return;
 
-let yawDiff = -angleDiff(norm360(smoothYaw), active.yaw);
+let yawDiff = -angleDiff(smoothYaw, active.yaw);
 let pitchDiff = smoothPitch - active.pitch;
 
 // ===== DOT =====
@@ -192,7 +179,10 @@ if(Math.abs(yawDiff)>Math.abs(pitchDiff)){
 // ===== ALIGN =====
 if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
-  if(!holding){ holding=true; holdStart=Date.now(); }
+  if(!holding){
+    holding=true;
+    holdStart=Date.now();
+  }
 
   let p=(Date.now()-holdStart)/700;
 
