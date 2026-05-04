@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360 3D Capture</title>
+<title>360 Capture Pro</title>
 
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -10,13 +10,23 @@
 
 <body>
 
-<!-- 3D FULL SCREEN -->
+<!-- 3D -->
 <canvas id="renderCanvas"></canvas>
 
-<!-- CAMERA PREVIEW -->
+<!-- Camera -->
 <div id="cameraBox">
   <video id="video" autoplay playsinline muted></video>
   <div id="dot"></div>
+</div>
+
+<!-- Debug -->
+<div id="debugBox">
+  <div>Yaw: <span id="dbgYaw">0</span></div>
+  <div>Pitch: <span id="dbgPitch">0</span></div>
+  <div>Roll: <span id="dbgRoll">0</span></div>
+  <div>Target Yaw: <span id="dbgTYaw">0</span></div>
+  <div>Target Pitch: <span id="dbgTPitch">0</span></div>
+  <div>FOV: <span id="dbgFov">0</span></div>
 </div>
 
 <button id="startBtn">Start</button>
