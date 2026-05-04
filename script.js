@@ -1,11 +1,5 @@
 window.addEventListener("load", () => {
 
-// ===== DOM =====
-const startBtn = document.getElementById("startBtn");
-const startScreen = document.getElementById("startScreen");
-const captureScreen = document.getElementById("captureScreen");
-const resultScreen = document.getElementById("resultScreen");
-
 const video = document.getElementById("video");
 const dot = document.getElementById("dot");
 const arrow = document.getElementById("arrow");
@@ -13,12 +7,11 @@ const progress = document.getElementById("progress");
 const debug = document.getElementById("debug");
 const capCanvas = document.getElementById("capCanvas");
 
-// ===== 3D =====
 let engine, scene, camera3D;
 
 // ===== STATE =====
-let yawOffset = null;
 let capturing = false;
+let baseQuat = null;
 
 let smoothYaw = 0;
 let smoothPitch = 0;
@@ -29,7 +22,7 @@ let holdStart = 0;
 let capturedImages = [];
 let captureData = [];
 
-// ===== FULL SPHERE RINGS =====
+// ===== RINGS =====
 const rings = [
   { pitch: 80, yaws: [0,180] },
   { pitch: 45, yaws: [0,60,120,180,240,300] },
@@ -41,8 +34,9 @@ const rings = [
 let guidePoints = [];
 let totalPoints = rings.reduce((s,r)=>s+r.yaws.length,0);
 
-// ===== INIT 3D =====
+// ===== INIT =====
 function init3D(){
+
   engine = new BABYLON.Engine(renderCanvas,true);
   scene = new BABYLON.Scene(engine);
 
@@ -57,6 +51,7 @@ function init3D(){
 
 // ===== CREATE POINTS =====
 function createPoints(){
+
   rings.forEach(r=>{
     r.yaws.forEach(yaw=>{
 
@@ -83,8 +78,6 @@ function createPoints(){
 
 // ===== START =====
 startBtn.onclick = async ()=>{
-  startScreen.style.display = "none";
-  captureScreen.style.display = "block";
 
   if(DeviceOrientationEvent.requestPermission){
     await DeviceOrientationEvent.requestPermission();
@@ -105,7 +98,30 @@ startBtn.onclick = async ()=>{
 function norm360(a){ return (a%360+360)%360; }
 function angleDiff(a,b){ return ((a-b+540)%360)-180; }
 
-// ===== CAPTURE FRAME =====
+// ===== DEVICE QUATERNION =====
+function getQuaternion(alpha, beta, gamma){
+
+  let _x = beta  * Math.PI/180;
+  let _y = gamma * Math.PI/180;
+  let _z = alpha * Math.PI/180;
+
+  const cX = Math.cos(_x/2);
+  const cY = Math.cos(_y/2);
+  const cZ = Math.cos(_z/2);
+
+  const sX = Math.sin(_x/2);
+  const sY = Math.sin(_y/2);
+  const sZ = Math.sin(_z/2);
+
+  return {
+    x: sX*cY*cZ - cX*sY*sZ,
+    y: cX*sY*cZ + sX*cY*sZ,
+    z: cX*cY*sZ - sX*sY*cZ,
+    w: cX*cY*cZ + sX*sY*sZ
+  };
+}
+
+// ===== CAPTURE =====
 function captureFrame(){
 
   const ctx = capCanvas.getContext("2d");
@@ -119,42 +135,9 @@ function captureFrame(){
   ctx.drawImage(video,0,0,w,h);
 
   return {
-    data: capCanvas.toDataURL("image/png"),
+    data: capCanvas.toDataURL(),
     width: w,
     height: h
-  };
-}
-
-// ===== PLACE IMAGE =====
-function placeImage(img,pos){
-
-  const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
-  plane.position = pos.clone();
-  plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-
-  const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
-  const ctx = tex.getContext();
-
-  const image = new Image();
-  image.onload = ()=>{
-    ctx.drawImage(image,0,0,512,512);
-    tex.update();
-  };
-  image.src = img;
-
-  const mat = new BABYLON.StandardMaterial("mat",scene);
-  mat.diffuseTexture = tex;
-
-  plane.material = mat;
-}
-
-// ===== FOV =====
-function getCameraFOV(){
-  const aspect = video.videoWidth / video.videoHeight;
-  const v = 45;
-  return {
-    vertical: v,
-    horizontal: v * aspect
   };
 }
 
@@ -163,29 +146,35 @@ window.addEventListener("deviceorientation", e => {
 
 if(!capturing || e.alpha==null) return;
 
-let rawYaw = e.alpha;
-let rawPitch = e.beta - 90;
+// ===== GET QUATERNION =====
+const q = getQuaternion(e.alpha, e.beta, e.gamma);
 
-if(yawOffset===null) yawOffset = rawYaw;
+// ===== SET BASE =====
+if(!baseQuat){
+  baseQuat = q;
+  return;
+}
 
-let yaw = norm360(rawYaw - yawOffset);
+// ===== RELATIVE ROTATION =====
+const relYaw = e.alpha - (baseQuat.alpha || 0);
+const relPitch = (e.beta - 90);
 
-// smooth yaw (wrap safe)
-let dYaw = angleDiff(yaw, smoothYaw);
-smoothYaw = norm360(smoothYaw + dYaw*0.15);
+// ===== SMOOTH =====
+smoothYaw = smoothYaw*0.9 + relYaw*0.1;
+smoothPitch = smoothPitch*0.9 + relPitch*0.1;
 
-// smooth pitch
-smoothPitch = smoothPitch*0.85 + rawPitch*0.15;
+// ===== LOCKED CAMERA =====
+camera3D.rotation = new BABYLON.Vector3(
+  BABYLON.Tools.ToRadians(-smoothPitch),
+  BABYLON.Tools.ToRadians(smoothYaw),
+  0
+);
 
-// ===== CAMERA =====
-camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
-camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
-
-// ===== ACTIVE POINT =====
+// ===== ACTIVE =====
 const active = guidePoints.find(p=>!p.done);
 if(!active) return;
 
-let yawDiff = -angleDiff(smoothYaw, active.yaw);
+let yawDiff = -angleDiff(norm360(smoothYaw), active.yaw);
 let pitchDiff = smoothPitch - active.pitch;
 
 // ===== DOT =====
@@ -193,7 +182,7 @@ dot.style.transform =
 `translate(calc(-50% + ${-(yawDiff/30)*70}px),
            calc(-50% + ${-(pitchDiff/30)*70}px))`;
 
-// ===== ARROW (FINAL FIXED) =====
+// ===== ARROW =====
 if(Math.abs(yawDiff)>Math.abs(pitchDiff)){
   arrow.innerText = yawDiff>0 ? "⬅":"➡";
 }else{
@@ -217,20 +206,15 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
     capturedImages.push(cap.data);
 
     captureData.push({
-      index: capturedImages.length,
-      file: `img_${capturedImages.length}.png`,
-      width: cap.width,
-      height: cap.height,
-      targetYaw: active.yaw,
-      targetPitch: active.pitch,
+      yaw: active.yaw,
+      pitch: active.pitch,
       actualYaw: smoothYaw,
       actualPitch: smoothPitch,
-      fov: getCameraFOV()
+      width: cap.width,
+      height: cap.height
     });
 
-    placeImage(cap.data, active.mesh.position);
-
-    active.done = true;
+    active.done=true;
     active.mesh.material.emissiveColor =
       new BABYLON.Color3(0,1,0);
 
@@ -238,7 +222,7 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
     progress.style.background="none";
 
     if(capturedImages.length===totalPoints){
-      finish();
+      alert("DONE");
     }
   }
 
@@ -249,44 +233,10 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
 // ===== DEBUG =====
 debug.innerHTML = `
-Yaw:${smoothYaw.toFixed(1)}<br>
-Pitch:${smoothPitch.toFixed(1)}<br>
-Target:${active.yaw}
+Yaw:${smoothYaw.toFixed(1)}
+Pitch:${smoothPitch.toFixed(1)}
 `;
 
 });
-
-// ===== FINISH =====
-function finish(){
-  capturing=false;
-  captureScreen.style.display="none";
-  resultScreen.style.display="block";
-
-  const gallery=document.getElementById("gallery");
-  capturedImages.forEach(img=>{
-    const el=document.createElement("img");
-    el.src=img;
-    gallery.appendChild(el);
-  });
-}
-
-// ===== DOWNLOAD =====
-document.getElementById("downloadBtn").onclick=async()=>{
-
-  const zip=new JSZip();
-
-  capturedImages.forEach((img,i)=>{
-    zip.file(`img_${i+1}.png`, img.split(",")[1],{base64:true});
-  });
-
-  zip.file("data.json", JSON.stringify(captureData,null,2));
-
-  const blob=await zip.generateAsync({type:"blob"});
-
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="360_capture.zip";
-  a.click();
-};
 
 });
