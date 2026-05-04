@@ -13,13 +13,13 @@ let engine, scene, camera3D;
 let yawOffset = null;
 let capturing = false;
 
-let smoothYaw = 0;   // 0..360
-let smoothPitch = 0; // degrees
+let smoothYaw = 0;
+let smoothPitch = 0;
 
 let holding = false;
 let holdStart = 0;
 
-// ===== RINGS (yours) =====
+// ===== RINGS =====
 const rings = [
   { pitch: 75,  yaws: [0, 180] },
   { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
@@ -32,6 +32,7 @@ let guidePoints = [];
 
 // ===== INIT =====
 function init3D(){
+
   engine = new BABYLON.Engine(canvas,true);
   scene = new BABYLON.Scene(engine);
 
@@ -45,8 +46,9 @@ function init3D(){
   window.addEventListener("resize",()=>engine.resize());
 }
 
-// ===== CREATE 3D POINTS =====
+// ===== CREATE POINTS =====
 function createGuidePoints(){
+
   rings.forEach(r => {
     r.yaws.forEach(yaw => {
 
@@ -68,12 +70,13 @@ function createGuidePoints(){
 
       guidePoints.push({
         mesh,
-        yaw,           // 0..360
+        yaw,
         pitch: r.pitch,
         done:false
       });
     });
   });
+
 }
 
 // ===== CAPTURE =====
@@ -87,6 +90,7 @@ function captureFrame(){
 
 // ===== PLACE IMAGE =====
 function placeImage(img, pos){
+
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
   plane.position = pos.clone();
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
@@ -109,6 +113,7 @@ function placeImage(img, pos){
 
 // ===== START =====
 startBtn.onclick = async ()=>{
+
   if(DeviceOrientationEvent.requestPermission){
     await DeviceOrientationEvent.requestPermission();
   }
@@ -129,13 +134,10 @@ captureBtn.onclick = ()=>{
 };
 
 // ===== HELPERS =====
-
-// normalize 0..360
 function norm360(a){
   return (a % 360 + 360) % 360;
 }
 
-// shortest diff in degrees (-180..180)
 function angleDiff(a, b){
   return ((a - b + 540) % 360) - 180;
 }
@@ -145,53 +147,48 @@ window.addEventListener("deviceorientation", e => {
 
   if(!camera3D || !capturing || e.alpha == null) return;
 
-  // --- RAW ---
-  let rawYaw = e.alpha;         // 0..360 from device
-  let rawPitch = e.beta - 90;   // up = +, down = -
+  let rawYaw = e.alpha;
+  let rawPitch = e.beta - 90;
 
-  // --- YAW OFFSET ---
-  if (yawOffset === null) yawOffset = rawYaw;
+  if(yawOffset === null) yawOffset = rawYaw;
 
-  // relative yaw then normalize to 0..360
   let yaw = norm360(rawYaw - yawOffset);
+  let pitch = rawPitch;
 
-  // --- SMOOTH (angle-aware for yaw) ---
+  // ===== SMOOTH =====
   let dYaw = angleDiff(yaw, smoothYaw);
   smoothYaw = norm360(smoothYaw + dYaw * 0.15);
 
-  // pitch is linear (no wrap)
-  smoothPitch = smoothPitch * 0.85 + rawPitch * 0.15;
+  smoothPitch = smoothPitch * 0.85 + pitch * 0.15;
 
-  // --- CAMERA ROTATION (CONSISTENT) ---
-  // Y: flip sign so turning phone right rotates scene right naturally
-  camera3D.rotation.y = BABYLON.Tools.ToRadians(-smoothYaw);
-  // X: direct (since we fixed pitch sign)
-  camera3D.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
+  // ===== CAMERA (FIXED) =====
+  camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
+  camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
 
-  // --- ACTIVE TARGET ---
+  // ===== ACTIVE =====
   const active = guidePoints.find(p => !p.done);
   if(!active) return;
 
-  // --- DIFFS (stable) ---
   let yawDiff = angleDiff(smoothYaw, active.yaw);
   let pitchDiff = smoothPitch - active.pitch;
 
-  // --- DOT ---
+  // ===== DOT =====
   const maxOffset = 70;
-  const x = (yawDiff / 30) * maxOffset;
-  const y = (pitchDiff / 30) * maxOffset;
+
+  const x = -(yawDiff / 30) * maxOffset;
+  const y = -(pitchDiff / 30) * maxOffset;
 
   dot.style.transform =
     `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-  // --- ARROW (NO FLIP) ---
+  // ===== ARROW (FIXED) =====
   if (Math.abs(yawDiff) > Math.abs(pitchDiff)) {
-    arrow.innerText = yawDiff > 0 ? "➡" : "⬅";
+    arrow.innerText = yawDiff > 0 ? "⬅" : "➡";
   } else {
-    arrow.innerText = pitchDiff > 0 ? "⬆" : "⬇";
+    arrow.innerText = pitchDiff > 0 ? "⬇" : "⬆";
   }
 
-  // --- ALIGN ---
+  // ===== ALIGN =====
   const aligned =
     Math.abs(yawDiff) < 8 &&
     Math.abs(pitchDiff) < 8;
@@ -225,7 +222,7 @@ window.addEventListener("deviceorientation", e => {
     progress.style.background = "none";
   }
 
-  // --- DEBUG ---
+  // ===== DEBUG =====
   debug.innerHTML = `
 Yaw: ${smoothYaw.toFixed(1)}<br>
 Pitch: ${smoothPitch.toFixed(1)}<br>
