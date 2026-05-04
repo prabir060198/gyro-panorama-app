@@ -4,7 +4,6 @@ window.addEventListener("load", () => {
 const startBtn = document.getElementById("startBtn");
 const startScreen = document.getElementById("startScreen");
 const captureScreen = document.getElementById("captureScreen");
-const resultScreen = document.getElementById("resultScreen");
 
 const video = document.getElementById("video");
 const dot = document.getElementById("dot");
@@ -26,9 +25,6 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
-let capturedImages = [];
-let captureData = [];
-
 // ===== RINGS =====
 const rings = [
   { pitch: 80, yaws: [0,180] },
@@ -39,7 +35,6 @@ const rings = [
 ];
 
 let guidePoints = [];
-let totalPoints = rings.reduce((s,r)=>s+r.yaws.length,0);
 
 // ===== INIT =====
 function init3D(){
@@ -123,33 +118,22 @@ function captureFrame(){
 
   ctx.drawImage(video,0,0,w,h);
 
-  return {
-    data: capCanvas.toDataURL(),
-    width: w,
-    height: h
-  };
+  return capCanvas.toDataURL("image/png");
 }
 
-// ===== PLACE IMAGE (FIXED) =====
-function placeImage(img,pos){
+// ===== 🔥 PREVIEW FIX (FINAL) =====
+function placeImage(imgData, pos){
 
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
+
   plane.position = pos.clone();
 
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
-  const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
-  const ctx = tex.getContext();
+  const texture = new BABYLON.Texture(imgData, scene, false, false);
 
-  const image = new Image();
-  image.onload = ()=>{
-    ctx.drawImage(image,0,0,512,512);
-    tex.update();
-  };
-  image.src = img;
-
-  const mat = new BABYLON.StandardMaterial("mat",scene);
-  mat.diffuseTexture = tex;
+  const mat = new BABYLON.StandardMaterial("mat", scene);
+  mat.diffuseTexture = texture;
   mat.emissiveColor = new BABYLON.Color3(1,1,1);
 
   plane.material = mat;
@@ -216,21 +200,10 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
   if(p>=1){
 
-    const cap = captureFrame();
+    const img = captureFrame();
 
-    capturedImages.push(cap.data);
-
-    captureData.push({
-      yaw: active.yaw,
-      pitch: active.pitch,
-      actualYaw: smoothYaw,
-      actualPitch: smoothPitch,
-      width: cap.width,
-      height: cap.height
-    });
-
-    // 🔥 FIXED: SHOW PREVIEW
-    placeImage(cap.data, active.mesh.position);
+    // 🔥 PREVIEW ALWAYS WORKS NOW
+    placeImage(img, active.mesh.position);
 
     active.done = true;
     active.mesh.material.emissiveColor =
@@ -238,10 +211,6 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
     holding=false;
     progress.style.background="none";
-
-    if(capturedImages.length===totalPoints){
-      alert("DONE");
-    }
   }
 
 }else{
