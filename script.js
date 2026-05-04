@@ -19,7 +19,7 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
-// ===== GRID =====
+// ===== YOUR RINGS (CORRECT) =====
 const rings = [
   { pitch: 75,  yaws: [0, 180] },
   { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
@@ -27,9 +27,6 @@ const rings = [
   { pitch: -45, yaws: [0,45,90,135,180,225,270,315] },
   { pitch: -75, yaws: [90, 270] }
 ];
-
-let ringIndex = 0;
-let targetIndex = 0;
 
 let guidePoints = [];
 
@@ -48,7 +45,7 @@ function init3D(){
   engine.runRenderLoop(()=>scene.render());
 }
 
-// ===== CREATE POINTS =====
+// ===== CREATE 3D POINTS =====
 function createGuidePoints(){
 
   rings.forEach(r => {
@@ -64,7 +61,6 @@ function createGuidePoints(){
       ).scale(3);
 
       const mesh = BABYLON.MeshBuilder.CreateSphere("pt",{diameter:0.12},scene);
-
       mesh.position = pos;
 
       const mat = new BABYLON.StandardMaterial("m",scene);
@@ -79,7 +75,6 @@ function createGuidePoints(){
       });
     });
   });
-
 }
 
 // ===== CAPTURE =====
@@ -139,43 +134,46 @@ captureBtn.onclick = ()=>{
 // ===== SENSOR =====
 window.addEventListener("deviceorientation", e => {
 
-  if(!camera3D || !capturing || e.alpha==null) return;
+  if(!camera3D || !capturing || e.alpha == null) return;
 
+  // ===== RAW SENSOR =====
   let rawYaw = e.alpha;
-  let rawPitch = e.beta - 90;
+  let rawPitch = e.beta - 90; // 🔥 FIXED (no inversion)
 
-  if(yawOffset===null) yawOffset = rawYaw;
+  if(yawOffset === null) yawOffset = rawYaw;
 
   let yaw = rawYaw - yawOffset;
-  let pitch = -rawPitch; // 🔥 FIXED
+  let pitch = rawPitch;
 
-  smoothYaw = smoothYaw*0.85 + yaw*0.15;
-  smoothPitch = smoothPitch*0.85 + pitch*0.15;
+  // ===== SMOOTH =====
+  smoothYaw = smoothYaw * 0.85 + yaw * 0.15;
+  smoothPitch = smoothPitch * 0.85 + pitch * 0.15;
 
+  // ===== CAMERA ROTATION =====
   camera3D.rotation.y = BABYLON.Tools.ToRadians(-smoothYaw);
-  camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
+  camera3D.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-  // ===== TARGET =====
+  // ===== ACTIVE TARGET =====
   const active = guidePoints.find(p => !p.done);
   if(!active) return;
 
-  let yawDiff = ((smoothYaw - active.yaw + 540)%360)-180;
+  let yawDiff = ((smoothYaw - active.yaw + 540) % 360) - 180;
   let pitchDiff = smoothPitch - active.pitch;
 
   // ===== DOT =====
   const maxOffset = 70;
 
-  const x = (yawDiff/30)*maxOffset;
-  const y = (pitchDiff/30)*maxOffset;
+  const x = (yawDiff / 30) * maxOffset;
+  const y = (pitchDiff / 30) * maxOffset;
 
   dot.style.transform =
     `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-  // ===== ARROW FIXED =====
+  // ===== ARROW (FIXED) =====
   if(Math.abs(yawDiff) > Math.abs(pitchDiff)){
-    arrow.innerText = yawDiff > 0 ? "➡" : "⬅"; // 🔥 FIXED
+    arrow.innerText = yawDiff > 0 ? "➡" : "⬅";
   } else {
-    arrow.innerText = pitchDiff > 0 ? "⬇" : "⬆"; // 🔥 FIXED
+    arrow.innerText = pitchDiff > 0 ? "⬆" : "⬇";
   }
 
   // ===== ALIGN =====
@@ -190,12 +188,12 @@ window.addEventListener("deviceorientation", e => {
       holdStart = Date.now();
     }
 
-    let p = (Date.now()-holdStart)/700;
+    let p = (Date.now() - holdStart) / 700;
 
     progress.style.background =
       `conic-gradient(lime ${p*360}deg, transparent 0deg)`;
 
-    if(p>=1){
+    if(p >= 1){
 
       const img = captureFrame();
       placeImage(img, active.mesh.position);
