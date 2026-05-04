@@ -7,9 +7,8 @@ let capturing = false;
 let ringIndex = 0;
 let targetIndex = 0;
 
-let stableFrames = 0;
-let holding = false;
 let holdStart = 0;
+let holding = false;
 
 let capturedImages = [];
 let captureData = [];
@@ -45,26 +44,26 @@ function init3D() {
   engine.runRenderLoop(() => scene.render());
 }
 
-// ===== correct spherical =====
+// ================= CORRECT MAPPING =================
 function sphericalToCartesian(yaw, pitch) {
   const y = BABYLON.Tools.ToRadians(yaw);
   const p = BABYLON.Tools.ToRadians(pitch);
 
   return new BABYLON.Vector3(
-    Math.cos(p) * Math.sin(y),
-    -Math.sin(p),
-    Math.cos(p) * Math.cos(y)
+    Math.sin(y) * Math.cos(p),
+    Math.sin(p),
+    Math.cos(y) * Math.cos(p)
   ).scale(2);
 }
 
 function createPoints() {
+  guidePoints = [];
+
   rings.forEach((r, ri) => {
     r.yaws.forEach((y, yi) => {
 
       const mesh = BABYLON.MeshBuilder.CreateSphere("p", {diameter:0.08}, scene);
       mesh.position = sphericalToCartesian(y, r.pitch);
-
-      mesh.lookAt(BABYLON.Vector3.Zero());
 
       const mat = new BABYLON.StandardMaterial("pm", scene);
       mat.emissiveColor = new BABYLON.Color3(1,1,1);
@@ -99,20 +98,20 @@ startBtn.onclick = async () => {
 // ================= ORIENTATION =================
 window.addEventListener("deviceorientation", e => {
 
-  if (!capturing) return;
+  if (!capturing || e.alpha == null) return;
 
   let yaw = (e.alpha + 360) % 360;
 
-  // 🔥 FIXED pitch (inverted)
-  let pitch = -(e.beta - 90);
+  // SIMPLE + CORRECT
+  let pitch = e.beta - 90;
   pitch = Math.max(-90, Math.min(90, pitch));
 
   if (yawOffset === null) yawOffset = yaw;
   yaw = (yaw - yawOffset + 360) % 360;
 
-  // smooth
-  currentYaw = currentYaw * 0.85 + yaw * 0.15;
-  currentPitch = currentPitch * 0.85 + pitch * 0.15;
+  // LIGHT smoothing only
+  currentYaw = currentYaw * 0.8 + yaw * 0.2;
+  currentPitch = currentPitch * 0.8 + pitch * 0.2;
 
   update3D();
   processCapture();
@@ -120,7 +119,7 @@ window.addEventListener("deviceorientation", e => {
 
 function update3D() {
   camera3D.rotation.y = BABYLON.Tools.ToRadians(currentYaw);
-  camera3D.rotation.x = BABYLON.Tools.ToRadians(-currentPitch);
+  camera3D.rotation.x = BABYLON.Tools.ToRadians(currentPitch);
 }
 
 // ================= CAPTURE =================
@@ -136,21 +135,22 @@ function processCapture() {
   let yDiff = normalize(currentYaw - tYaw);
   let pDiff = currentPitch - tPitch;
 
+  // ignore yaw at poles
   if (Math.abs(tPitch) > 70) yDiff = 0;
 
-  const ok = Math.abs(yDiff) < 6 && Math.abs(pDiff) < 8;
+  const aligned = Math.abs(yDiff) < 6 && Math.abs(pDiff) < 6;
 
-  if (ok) stableFrames++;
-  else stableFrames = 0;
-
-  if (stableFrames < 4) return;
+  if (!aligned) {
+    holding = false;
+    return;
+  }
 
   if (!holding) {
     holding = true;
     holdStart = Date.now();
   }
 
-  let progress = Math.min((Date.now() - holdStart)/700,1);
+  let progress = (Date.now() - holdStart) / 600;
 
   progressEl.style.background =
     `conic-gradient(#00c853 ${progress*360}deg, transparent 0deg)`;
@@ -159,6 +159,7 @@ function processCapture() {
 
     captureFrame();
 
+    // mark green
     guidePoints.forEach(g=>{
       if(g.ri===ringIndex && g.yi===targetIndex){
         g.mesh.material.emissiveColor = new BABYLON.Color3(0,1,0);
@@ -174,9 +175,9 @@ function processCapture() {
     }
 
     holding = false;
-    stableFrames = 0;
   }
 
+  // highlight active
   guidePoints.forEach(g=>{
     if(g.ri===ringIndex && g.yi===targetIndex){
       g.mesh.material.emissiveColor = new BABYLON.Color3(1,0.5,0);
@@ -184,7 +185,7 @@ function processCapture() {
   });
 }
 
-// ================= CAPTURE FRAME =================
+// ================= CAPTURE =================
 function captureFrame() {
 
   const ctx = canvas.getContext("2d");
@@ -223,6 +224,4 @@ function finish() {
 captureBtn.onclick = () => {
   capturing = true;
   yawOffset = null;
-  stableFrames = 0;
-  holding = false;
 };
