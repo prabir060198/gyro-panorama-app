@@ -4,6 +4,7 @@ html, body {
   background: black;
 }
 
+/* 3D */
 #renderCanvas {
   position: fixed;
   inset: 0;
@@ -62,9 +63,22 @@ video {
   left: 50%;
   top: 20%;
   transform: translateX(-50%);
-  font-size: 26px;
+  font-size: 28px;
   color: yellow;
   z-index: 11;
+}
+
+/* debug */
+#debug {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.7);
+  color: #00ffcc;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  z-index: 1000;
 }
 
 button {
