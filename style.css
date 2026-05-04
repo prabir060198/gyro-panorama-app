@@ -1,107 +1,107 @@
 body {
-    margin: 0;
-    background: #111;
-    color: white;
-    text-align: center;
-    font-family: Arial;
+  margin: 0;
+  background: black;
+  color: white;
+  text-align: center;
+  font-family: Arial;
 }
 
 .hidden { display: none !important; }
 
 #cameraContainer {
-    position: relative;
-    width: 90%;
-    max-width: 420px;
-    margin: auto;
+  position: relative;
+  width: 90%;
+  max-width: 420px;
+  margin: auto;
 }
 
 video {
-    width: 100%;
-    border-radius: 10px;
-    background: black;
+  width: 100%;
+  border-radius: 10px;
+  background: black;
 }
 
-/* GUIDE */
+/* 3D Canvas */
+#renderCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* UI */
 #circle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 90px;
-    height: 90px;
-    border: 2px solid white;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90px;
+  height: 90px;
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 #progress {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: conic-gradient(#00c853 0deg, transparent 0deg);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(#00c853 0deg, transparent 0deg);
 }
 
 #dot {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 14px;
-    height: 14px;
-    background: white;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 #arrow {
-    position: absolute;
-    top: calc(50% - 80px);
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 28px;
+  position: absolute;
+  top: calc(50% - 80px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
 }
 
-/* DEBUG */
-#debugBox {
-    margin-top: 10px;
-    padding: 10px;
-    background: rgba(0,0,0,0.6);
-    border-radius: 8px;
-    font-size: 14px;
-    border: 2px solid red;
-}
-
-/* RESULT */
+/* Gallery */
 #gallery {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 #gallery img {
-    width: 70px;
-    margin: 4px;
-    border-radius: 6px;
+  width: 70px;
+  margin: 4px;
+  border-radius: 6px;
 }
 
-/* POPUP */
+/* Preview */
 #previewPopup {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 #previewPopup img {
-    max-width: 90%;
-    max-height: 90%;
+  max-width: 90%;
+  max-height: 90%;
 }
 
 button {
-    padding: 10px 18px;
-    margin: 10px;
-    border: none;
-    border-radius: 6px;
-    background: #00c853;
-    color: white;
+  padding: 10px 18px;
+  margin: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #00c853;
+  color: white;
 }
