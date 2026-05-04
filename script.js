@@ -1,5 +1,6 @@
 window.addEventListener("load", () => {
 
+// ===== DOM =====
 const startBtn = document.getElementById("startBtn");
 const startScreen = document.getElementById("startScreen");
 const captureScreen = document.getElementById("captureScreen");
@@ -12,8 +13,10 @@ const progress = document.getElementById("progress");
 const debug = document.getElementById("debug");
 const capCanvas = document.getElementById("capCanvas");
 
+// ===== 3D =====
 let engine, scene, camera3D;
 
+// ===== STATE =====
 let yawOffset = null;
 let capturing = false;
 
@@ -26,12 +29,13 @@ let holdStart = 0;
 let capturedImages = [];
 let captureData = [];
 
+// ===== FULL SPHERE RINGS =====
 const rings = [
-  { pitch: 75,  yaws: [0, 180] },
-  { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
-  { pitch: 0,   yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
-  { pitch: -45, yaws: [0,45,90,135,180,225,270,315] },
-  { pitch: -75, yaws: [90, 270] }
+  { pitch: 80, yaws: [0,180] },
+  { pitch: 45, yaws: [0,60,120,180,240,300] },
+  { pitch: 0,  yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
+  { pitch: -45, yaws: [0,60,120,180,240,300] },
+  { pitch: -80, yaws: [90,270] }
 ];
 
 let guidePoints = [];
@@ -51,7 +55,7 @@ function init3D(){
   engine.runRenderLoop(()=>scene.render());
 }
 
-// ===== POINTS =====
+// ===== CREATE POINTS =====
 function createPoints(){
   rings.forEach(r=>{
     r.yaws.forEach(yaw=>{
@@ -101,16 +105,29 @@ startBtn.onclick = async ()=>{
 function norm360(a){ return (a%360+360)%360; }
 function angleDiff(a,b){ return ((a-b+540)%360)-180; }
 
-// ===== CAPTURE =====
+// ===== CAPTURE FRAME =====
 function captureFrame(){
+
   const ctx = capCanvas.getContext("2d");
-  capCanvas.width = video.videoWidth;
-  capCanvas.height = video.videoHeight;
-  ctx.drawImage(video,0,0);
-  return capCanvas.toDataURL();
+
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+
+  capCanvas.width = w;
+  capCanvas.height = h;
+
+  ctx.drawImage(video,0,0,w,h);
+
+  return {
+    data: capCanvas.toDataURL("image/png"),
+    width: w,
+    height: h
+  };
 }
 
+// ===== PLACE IMAGE =====
 function placeImage(img,pos){
+
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
   plane.position = pos.clone();
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
@@ -127,7 +144,18 @@ function placeImage(img,pos){
 
   const mat = new BABYLON.StandardMaterial("mat",scene);
   mat.diffuseTexture = tex;
+
   plane.material = mat;
+}
+
+// ===== FOV =====
+function getCameraFOV(){
+  const aspect = video.videoWidth / video.videoHeight;
+  const v = 45;
+  return {
+    vertical: v,
+    horizontal: v * aspect
+  };
 }
 
 // ===== SENSOR =====
@@ -142,15 +170,18 @@ if(yawOffset===null) yawOffset = rawYaw;
 
 let yaw = norm360(rawYaw - yawOffset);
 
+// smooth yaw (wrap safe)
 let dYaw = angleDiff(yaw, smoothYaw);
 smoothYaw = norm360(smoothYaw + dYaw*0.15);
+
+// smooth pitch
 smoothPitch = smoothPitch*0.85 + rawPitch*0.15;
 
 // ===== CAMERA =====
 camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
 camera3D.rotation.x = BABYLON.Tools.ToRadians(-smoothPitch);
 
-// ===== ACTIVE =====
+// ===== ACTIVE POINT =====
 const active = guidePoints.find(p=>!p.done);
 if(!active) return;
 
@@ -162,11 +193,11 @@ dot.style.transform =
 `translate(calc(-50% + ${-(yawDiff/30)*70}px),
            calc(-50% + ${-(pitchDiff/30)*70}px))`;
 
-// ===== ARROW =====
+// ===== ARROW (FINAL FIXED) =====
 if(Math.abs(yawDiff)>Math.abs(pitchDiff)){
-  arrow.innerText = yawDiff>0 ? "➡":"⬅";
+  arrow.innerText = yawDiff>0 ? "⬅":"➡";
 }else{
-  arrow.innerText = pitchDiff>0 ? "⬆":"⬇";
+  arrow.innerText = pitchDiff>0 ? "⬇":"⬆";
 }
 
 // ===== ALIGN =====
@@ -181,17 +212,25 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
   if(p>=1){
 
-    const img = captureFrame();
+    const cap = captureFrame();
 
-    capturedImages.push(img);
+    capturedImages.push(cap.data);
+
     captureData.push({
-      yaw:active.yaw,
-      pitch:active.pitch
+      index: capturedImages.length,
+      file: `img_${capturedImages.length}.png`,
+      width: cap.width,
+      height: cap.height,
+      targetYaw: active.yaw,
+      targetPitch: active.pitch,
+      actualYaw: smoothYaw,
+      actualPitch: smoothPitch,
+      fov: getCameraFOV()
     });
 
-    placeImage(img, active.mesh.position);
+    placeImage(cap.data, active.mesh.position);
 
-    active.done=true;
+    active.done = true;
     active.mesh.material.emissiveColor =
       new BABYLON.Color3(0,1,0);
 
@@ -210,8 +249,8 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
 
 // ===== DEBUG =====
 debug.innerHTML = `
-Yaw:${smoothYaw.toFixed(1)}
-Pitch:${smoothPitch.toFixed(1)}
+Yaw:${smoothYaw.toFixed(1)}<br>
+Pitch:${smoothPitch.toFixed(1)}<br>
 Target:${active.yaw}
 `;
 
@@ -246,7 +285,7 @@ document.getElementById("downloadBtn").onclick=async()=>{
 
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="360.zip";
+  a.download="360_capture.zip";
   a.click();
 };
 
