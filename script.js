@@ -1,4 +1,25 @@
-// ===== ELEMENTS =====
+// =============================
+// CAMERA CONFIG (AUTO CALIB)
+// =============================
+const CAMERA_CONFIG = {
+  IMG_W: 0,
+  IMG_H: 0,
+  FOV_H_DEG: 60 // default fallback
+};
+
+// Estimate FOV based on aspect ratio (simple heuristic)
+function estimateFOV(width, height) {
+  const aspect = width / height;
+
+  // Typical phone rear camera ranges
+  if (aspect > 1.7) return 65;   // wide
+  if (aspect > 1.4) return 60;   // normal
+  return 55;                     // narrow
+}
+
+// =============================
+// ELEMENTS
+// =============================
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 
@@ -16,20 +37,16 @@ const statusText = document.getElementById("statusText");
 const previewPopup = document.getElementById("previewPopup");
 const previewImg = document.getElementById("previewImg");
 
-// DEBUG
-const dbgYaw = document.getElementById("dbgYaw");
-const dbgPitch = document.getElementById("dbgPitch");
-const dbgTargetYaw = document.getElementById("dbgTargetYaw");
-const dbgTargetPitch = document.getElementById("dbgTargetPitch");
-const debugBox = document.getElementById("debugBox");
-
-// ===== STATE =====
+// =============================
+// STATE
+// =============================
 let capturedImages = [];
 let captureData = [];
 
 let currentYaw = 0;
 let currentPitch = 0;
-let currentRoll = 0;
+
+let yawOffset = null;
 
 let capturing = false;
 let ringIndex = 0;
@@ -38,47 +55,67 @@ let targetIndex = 0;
 let holding = false;
 let holdStart = 0;
 
-// ===== ✅ UPDATED RING PATTERN =====
+// =============================
+// 🔥 IMPROVED RINGS
+// =============================
 const rings = [
-  { pitch: 75,  yaws: [0, 180] },
+  { pitch: 80,  yaws: [0, 120, 240] },
 
   { pitch: 45,  yaws: [0,45,90,135,180,225,270,315] },
 
-  // 🔥 MOST IMPORTANT FIX
   { pitch: 0,   yaws: [0,30,60,90,120,150,180,210,240,270,300,330] },
 
   { pitch: -45, yaws: [0,45,90,135,180,225,270,315] },
 
-  { pitch: -75, yaws: [90, 270] }
+  { pitch: -80, yaws: [60, 180, 300] }
 ];
 
-const totalShots = rings.reduce((sum, r) => sum + r.yaws.length, 0);
+const totalShots = rings.reduce((s, r) => s + r.yaws.length, 0);
 
-// ===== START CAMERA =====
-document.getElementById("startBtn").onclick = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
-    });
-
-    video.srcObject = stream;
-    await video.play();
-
-    startScreen.classList.add("hidden");
-    cameraScreen.classList.remove("hidden");
-
-  } catch (e) {
-    alert("Camera error: " + e.message);
+// =============================
+// iPHONE PERMISSION
+// =============================
+async function requestPermission() {
+  if (typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function") {
+    const res = await DeviceOrientationEvent.requestPermission();
+    if (res !== "granted") {
+      alert("Permission required");
+      return false;
+    }
   }
+  return true;
+}
+
+// =============================
+// START CAMERA
+// =============================
+document.getElementById("startBtn").onclick = async () => {
+
+  const ok = await requestPermission();
+  if (!ok) return;
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" }
+  });
+
+  video.srcObject = stream;
+  await video.play();
+
+  // 🔥 AUTO CALIBRATION
+  CAMERA_CONFIG.IMG_W = video.videoWidth;
+  CAMERA_CONFIG.IMG_H = video.videoHeight;
+  CAMERA_CONFIG.FOV_H_DEG = estimateFOV(video.videoWidth, video.videoHeight);
+
+  console.log("Camera:", CAMERA_CONFIG);
+
+  startScreen.classList.add("hidden");
+  cameraScreen.classList.remove("hidden");
 };
 
-// ===== START CAPTURE =====
-document.getElementById("captureBtn").onclick = () => {
-  capturing = true;
-  window.addEventListener("deviceorientation", handleOrientation);
-};
-
-// ===== HELPERS =====
+// =============================
+// HELPERS
+// =============================
 function normalizeAngle(a) {
   return ((a + 540) % 360) - 180;
 }
@@ -87,69 +124,78 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
-// ===== ORIENTATION =====
-function handleOrientation(e) {
+function smooth(prev, current, f = 0.15) {
+  return prev * (1 - f) + current * f;
+}
+
+// =============================
+// ORIENTATION
+// =============================
+window.addEventListener("deviceorientation", (e) => {
 
   if (!capturing || e.alpha == null) return;
 
-  currentYaw = (e.alpha + 360) % 360;
+  let yaw = e.alpha;
+  let pitch = e.beta;
 
-  currentPitch = (e.beta - 90);
-  currentPitch = clamp(currentPitch, -90, 90);
+  yaw = (yaw + 360) % 360;
+  pitch = clamp(pitch - 90, -90, 90);
 
-  currentRoll = e.gamma || 0;
+  // 🔥 YAW OFFSET FIX (important for iPhone)
+  if (yawOffset === null) yawOffset = yaw;
+  yaw = (yaw - yawOffset + 360) % 360;
+
+  // 🔥 SMOOTHING
+  currentYaw = smooth(currentYaw, yaw);
+  currentPitch = smooth(currentPitch, pitch);
+
+  processCapture();
+});
+
+// =============================
+// CAPTURE LOGIC
+// =============================
+function processCapture() {
 
   const targetYaw = rings[ringIndex].yaws[targetIndex];
   const targetPitch = rings[ringIndex].pitch;
 
-  // 🔥 HYBRID CORRECTION
-  const correctedYaw = currentYaw * 0.7 + targetYaw * 0.3;
-  const correctedPitch = currentPitch * 0.7 + targetPitch * 0.3;
+  let yawDiff = normalizeAngle(currentYaw - targetYaw);
+  let pitchDiff = currentPitch - targetPitch;
 
-  let yawDiff = normalizeAngle(correctedYaw - targetYaw);
-  let pitchDiff = correctedPitch - targetPitch;
+  // 🔥 RELAX FOR POLES
+  let yawTol = Math.abs(targetPitch) > 60 ? 6 : 4;
+  let pitchTol = Math.abs(targetPitch) > 60 ? 8 : 5;
 
-  // ===== DEBUG =====
-  dbgYaw.innerText = currentYaw.toFixed(1);
-  dbgPitch.innerText = currentPitch.toFixed(1);
-  dbgTargetYaw.innerText = targetYaw;
-  dbgTargetPitch.innerText = targetPitch;
-
-  debugBox.style.border =
-    (Math.abs(yawDiff) < 4 && Math.abs(pitchDiff) < 6)
-      ? "2px solid lime"
-      : "2px solid red";
-
-  // ===== DOT =====
+  // UI dot
   const maxOffset = 80;
-
   const x = clamp((yawDiff / 30) * maxOffset, -maxOffset, maxOffset);
   const y = clamp((pitchDiff / 30) * maxOffset, -maxOffset, maxOffset);
 
   dot.style.transform =
     `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-  // ===== ARROW =====
   arrow.innerText =
-    Math.abs(yawDiff) > 4 ? (yawDiff > 0 ? "➡" : "⬅") :
-    Math.abs(pitchDiff) > 6 ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
+    Math.abs(yawDiff) > yawTol ? (yawDiff > 0 ? "➡" : "⬅") :
+    Math.abs(pitchDiff) > pitchTol ? (pitchDiff > 0 ? "⬇" : "⬆") : "●";
 
-  // ===== HOLD CAPTURE =====
-  if (Math.abs(yawDiff) < 4 && Math.abs(pitchDiff) < 6) {
+  // HOLD
+  if (Math.abs(yawDiff) < yawTol && Math.abs(pitchDiff) < pitchTol) {
 
     if (!holding) {
       holding = true;
       holdStart = Date.now();
     }
 
-    let progress = Math.min((Date.now() - holdStart) / 700, 1);
+    let holdTime = Math.abs(targetPitch) > 60 ? 900 : 700;
+    let progress = Math.min((Date.now() - holdStart) / holdTime, 1);
 
     progressEl.style.background =
       `conic-gradient(#00c853 ${progress * 360}deg, transparent 0deg)`;
 
     if (progress >= 1) {
 
-      capture(correctedYaw, correctedPitch);
+      capture(currentYaw, currentPitch);
 
       holding = false;
       progressEl.style.background =
@@ -174,10 +220,15 @@ function handleOrientation(e) {
       `conic-gradient(#888 0deg, transparent 0deg)`;
   }
 
-  statusText.innerText = `${capturedImages.length}/${totalShots}`;
+  statusText.innerText =
+    Math.abs(targetPitch) > 70
+      ? "Tilt fully up/down"
+      : `${capturedImages.length}/${totalShots}`;
 }
 
-// ===== CAPTURE =====
+// =============================
+// CAPTURE FRAME
+// =============================
 function capture(yaw, pitch) {
 
   const ctx = canvas.getContext("2d");
@@ -190,19 +241,24 @@ function capture(yaw, pitch) {
 
   capturedImages.push(img);
 
-  // 🔥 CLEAN JSON FORMAT
   captureData.push({
     name: `img_${capturedImages.length}.png`,
     yaw: yaw,
-    pitch: pitch
+    pitch: pitch,
+
+    // 🔥 INCLUDE CAMERA DATA
+    width: CAMERA_CONFIG.IMG_W,
+    height: CAMERA_CONFIG.IMG_H,
+    fov: CAMERA_CONFIG.FOV_H_DEG
   });
 }
 
-// ===== FINISH =====
+// =============================
+// FINISH
+// =============================
 function finish() {
 
   capturing = false;
-  window.removeEventListener("deviceorientation", handleOrientation);
 
   cameraScreen.classList.add("hidden");
   resultScreen.classList.remove("hidden");
@@ -210,20 +266,24 @@ function finish() {
   capturedImages.forEach(img => {
     const el = document.createElement("img");
     el.src = img;
-
     el.onclick = () => {
       previewImg.src = img;
       previewPopup.classList.remove("hidden");
     };
-
     gallery.appendChild(el);
   });
 }
 
-// ===== PREVIEW =====
-previewPopup.onclick = () => previewPopup.classList.add("hidden");
+// =============================
+// START CAPTURE
+// =============================
+document.getElementById("captureBtn").onclick = () => {
+  capturing = true;
+};
 
-// ===== DOWNLOAD =====
+// =============================
+// DOWNLOAD
+// =============================
 document.getElementById("downloadBtn").onclick = async () => {
 
   const zip = new JSZip();
@@ -233,20 +293,19 @@ document.getElementById("downloadBtn").onclick = async () => {
   });
 
   zip.file("metadata.json", JSON.stringify({
+    camera: CAMERA_CONFIG,
     images: captureData
   }, null, 2));
 
   const blob = await zip.generateAsync({ type: "blob" });
 
-  const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = "photosphere.zip";
-
   a.click();
-  URL.revokeObjectURL(url);
 };
 
-// ===== RETAKE =====
-document.getElementById("retakeBtn").onclick = () => location.reload();
+// =============================
+// PREVIEW
+// =============================
+previewPopup.onclick = () => previewPopup.classList.add("hidden");
