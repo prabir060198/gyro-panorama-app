@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Test Capture</title>
+<title>360 Capture Fix</title>
 
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -14,6 +14,7 @@
 
 <div id="cameraBox">
   <video id="video" autoplay playsinline muted></video>
+
   <div id="dot"></div>
   <div id="ghost"></div>
   <div id="progress"></div>
@@ -22,7 +23,7 @@
 <button id="startBtn">Start</button>
 <button id="captureBtn">Capture</button>
 
-<canvas id="captureCanvas" style="display:none;"></canvas>
+<canvas id="captureCanvas"></canvas>
 
 <script src="script.js"></script>
 

@@ -7,6 +7,7 @@ const progress = document.getElementById("progress");
 const captureCanvas = document.getElementById("captureCanvas");
 
 let engine, scene, camera;
+let targetMesh;
 
 let yawOffset = null;
 let capturing = false;
@@ -21,25 +22,35 @@ let holdStart = 0;
 function init3D(){
 
 engine = new BABYLON.Engine(canvas,true);
-engine.setHardwareScalingLevel(1/window.devicePixelRatio);
+engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
 
 scene = new BABYLON.Scene(engine);
 
-camera = new BABYLON.FreeCamera("cam",BABYLON.Vector3.Zero(),scene);
+camera = new BABYLON.FreeCamera("cam", BABYLON.Vector3.Zero(), scene);
 
 new BABYLON.HemisphericLight("l", new BABYLON.Vector3(0,1,0), scene);
 
-const s = BABYLON.MeshBuilder.CreateSphere("s",{diameter:6},scene);
+// sphere
+const sphere = BABYLON.MeshBuilder.CreateSphere("s",{diameter:6},scene);
 const mat = new BABYLON.StandardMaterial("m",scene);
 mat.wireframe=true;
-mat.alpha=0.3;
-s.material=mat;
+mat.alpha=0.2;
+sphere.material=mat;
 
-// single capture point
-targetPos = spherical(0,0);
+// 🔥 TARGET POINT (VISIBLE IN 3D)
+targetMesh = BABYLON.MeshBuilder.CreateSphere("target",{diameter:0.25},scene);
+targetMesh.position = spherical(0,0);
+
+const tmat = new BABYLON.StandardMaterial("tm",scene);
+tmat.emissiveColor = new BABYLON.Color3(1,0.5,0);
+targetMesh.material = tmat;
 
 engine.runRenderLoop(()=>scene.render());
-window.addEventListener("resize",()=>engine.resize());
+
+window.addEventListener("resize",()=>{
+engine.resize();
+});
+
 }
 
 // ===== SPHERE =====
@@ -48,20 +59,22 @@ const y = BABYLON.Tools.ToRadians(yaw);
 const p = BABYLON.Tools.ToRadians(pitch);
 
 return new BABYLON.Vector3(
-  Math.sin(y)*Math.cos(p),
-  Math.sin(p),
-  Math.cos(y)*Math.cos(p)
+Math.sin(y)*Math.cos(p),
+Math.sin(p),
+Math.cos(y)*Math.cos(p)
 ).scale(3);
 }
 
-// ===== PROJECT =====
+// ===== PROJECT FIX =====
 function project(pos){
+
 const p = BABYLON.Vector3.Project(
 pos,
 BABYLON.Matrix.Identity(),
 scene.getTransformMatrix(),
 camera.viewport.toGlobal(engine.getRenderWidth(),engine.getRenderHeight())
 );
+
 return {x:p.x,y:p.y};
 }
 
@@ -78,17 +91,26 @@ ctx.drawImage(video,0,0);
 return captureCanvas.toDataURL("image/png");
 }
 
-// ===== SHOW IMAGE =====
+// ===== PLACE IMAGE FIX =====
 function placeImage(img,pos){
 
-const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:0.8},scene);
-plane.position = pos.clone();
-plane.lookAt(BABYLON.Vector3.Zero());
+const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
 
-const tex = new BABYLON.Texture(img,scene);
+plane.position = pos.clone();
+plane.lookAt(camera.position); // 🔥 FIX
+
+const texture = new BABYLON.DynamicTexture("dt", {width:512,height:512}, scene);
+const ctx = texture.getContext();
+
+const image = new Image();
+image.onload = ()=>{
+ctx.drawImage(image,0,0,512,512);
+texture.update();
+};
+image.src = img;
 
 const mat = new BABYLON.StandardMaterial("mat",scene);
-mat.diffuseTexture = tex;
+mat.diffuseTexture = texture;
 mat.emissiveColor = new BABYLON.Color3(1,1,1);
 
 plane.material = mat;
@@ -121,13 +143,15 @@ window.addEventListener("deviceorientation",e=>{
 
 if(!camera || !capturing || e.alpha==null) return;
 
+// 🔥 FIXED YAW (NO DRIFT)
 let rawYaw = e.alpha;
-let rawPitch = e.beta - 90;
 
 if(yawOffset===null) yawOffset=rawYaw;
 
 let yaw = rawYaw - yawOffset;
-let pitch = -rawPitch;
+
+// 🔥 FIXED PITCH
+let pitch = -(e.beta - 90);
 
 smoothYaw = smoothYaw*0.9 + yaw*0.1;
 smoothPitch = smoothPitch*0.9 + pitch*0.1;
@@ -135,21 +159,25 @@ smoothPitch = smoothPitch*0.9 + pitch*0.1;
 camera.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
 camera.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-// ===== ALIGN =====
-const screen = project(targetPos);
+// ===== ALIGNMENT FIX =====
+const screen = project(targetMesh.position);
 
 const rect = document.getElementById("cameraBox").getBoundingClientRect();
 
 const cx = rect.width/2;
 const cy = rect.height/2;
 
-const dx = (screen.x - rect.left) - cx;
-const dy = (screen.y - rect.top) - cy;
+const gx = screen.x - rect.left;
+const gy = screen.y - rect.top;
 
-ghost.style.left = (screen.x - rect.left)+"px";
-ghost.style.top = (screen.y - rect.top)+"px";
+ghost.style.left = gx+"px";
+ghost.style.top = gy+"px";
 
-const aligned = Math.abs(dx)<60 && Math.abs(dy)<60;
+const dx = gx - cx;
+const dy = gy - cy;
+
+// 🔥 MORE RELAXED
+const aligned = Math.abs(dx)<80 && Math.abs(dy)<80;
 
 // ===== CAPTURE =====
 if(aligned){
@@ -166,14 +194,14 @@ progress.style.background =
 
 if(p>=1){
 
-console.log("CAPTURE WORKED");
-
 const img = captureFrame();
-placeImage(img,targetPos);
+placeImage(img, targetMesh.position);
 
 holding=false;
 progress.style.background="none";
 capturing=false;
+
+console.log("CAPTURE SUCCESS");
 }
 
 }else{

@@ -1,14 +1,23 @@
 html, body {
   margin: 0;
+  padding: 0;
   overflow: hidden;
   background: black;
+  width: 100%;
+  height: 100%;
 }
 
+/* 🔥 TRUE FULLSCREEN FIX */
 #renderCanvas {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
 }
 
+/* camera */
 #cameraBox {
   position: absolute;
   width: 200px;
@@ -18,6 +27,7 @@ html, body {
   transform: translate(-50%, -50%);
   border: 2px solid white;
   overflow: hidden;
+  z-index: 5;
 }
 
 video {
@@ -26,6 +36,7 @@ video {
   object-fit: cover;
 }
 
+/* dot */
 #dot {
   position: absolute;
   left: 50%;
@@ -38,6 +49,7 @@ video {
   z-index: 10;
 }
 
+/* ghost */
 #ghost {
   position: absolute;
   width: 14px;
@@ -48,6 +60,7 @@ video {
   z-index: 9;
 }
 
+/* progress */
 #progress {
   position: absolute;
   left: 50%;
@@ -58,6 +71,7 @@ video {
   border-radius: 50%;
 }
 
+/* buttons */
 button {
   position: fixed;
   bottom: 20px;
