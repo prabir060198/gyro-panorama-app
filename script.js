@@ -2,11 +2,10 @@ window.addEventListener("load", () => {
 
 const canvas = document.getElementById("renderCanvas");
 const video = document.getElementById("video");
-const ghost = document.getElementById("ghost");
 const progress = document.getElementById("progress");
 const capCanvas = document.getElementById("capCanvas");
 
-let engine, scene, camera3D, targetMesh;
+let engine, scene, camera3D;
 
 let yawOffset = null;
 let capturing = false;
@@ -17,12 +16,14 @@ let smoothPitch = 0;
 let holding = false;
 let holdStart = 0;
 
+// 🎯 TARGET (front)
+const targetYaw = 0;
+const targetPitch = 0;
+
 // ===== INIT =====
 function init3D(){
 
   engine = new BABYLON.Engine(canvas,true);
-  engine.setHardwareScalingLevel(1/window.devicePixelRatio);
-
   scene = new BABYLON.Scene(engine);
 
   camera3D = new BABYLON.FreeCamera("cam", BABYLON.Vector3.Zero(), scene);
@@ -35,15 +36,7 @@ function init3D(){
   sm.alpha = 0.2;
   s.material = sm;
 
-  targetMesh = BABYLON.MeshBuilder.CreateSphere("target",{diameter:0.3},scene);
-  targetMesh.position = new BABYLON.Vector3(0,0,3);
-
-  const tm = new BABYLON.StandardMaterial("tm",scene);
-  tm.emissiveColor = new BABYLON.Color3(1,0.5,0);
-  targetMesh.material = tm;
-
   engine.runRenderLoop(()=>scene.render());
-  window.addEventListener("resize",()=>engine.resize());
 }
 
 // ===== CAPTURE =====
@@ -59,8 +52,8 @@ function captureFrame(){
 function placeImage(img){
 
   const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
-  plane.position = targetMesh.position.clone();
 
+  plane.position = new BABYLON.Vector3(0,0,3);
   plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
   const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
@@ -75,7 +68,6 @@ function placeImage(img){
 
   const mat = new BABYLON.StandardMaterial("mat",scene);
   mat.diffuseTexture = tex;
-  mat.emissiveColor = new BABYLON.Color3(1,1,1);
 
   plane.material = mat;
 }
@@ -108,7 +100,7 @@ window.addEventListener("deviceorientation", e => {
   if(!camera3D || !capturing || e.alpha == null) return;
 
   let rawYaw = e.alpha;
-  let rawPitch = -(e.beta - 90);
+  let rawPitch = e.beta - 90;
 
   if(yawOffset === null) yawOffset = rawYaw;
 
@@ -121,26 +113,15 @@ window.addEventListener("deviceorientation", e => {
   camera3D.rotation.y = BABYLON.Tools.ToRadians(smoothYaw);
   camera3D.rotation.x = BABYLON.Tools.ToRadians(smoothPitch);
 
-  // ===== TRUE 3D ALIGNMENT =====
-  const forward = new BABYLON.Vector3(
-    Math.sin(BABYLON.Tools.ToRadians(smoothYaw)) * Math.cos(BABYLON.Tools.ToRadians(smoothPitch)),
-    Math.sin(BABYLON.Tools.ToRadians(smoothPitch)),
-    Math.cos(BABYLON.Tools.ToRadians(smoothYaw)) * Math.cos(BABYLON.Tools.ToRadians(smoothPitch))
-  );
+  // 🎯 DIRECT ALIGNMENT (NO PROJECTION)
+  let yawDiff = ((yaw - targetYaw + 540) % 360) - 180;
+  let pitchDiff = pitch - targetPitch;
 
-  const targetDir = targetMesh.position.normalize();
+  // 🔥 VERY EASY
+  const aligned =
+    Math.abs(yawDiff) < 20 &&
+    Math.abs(pitchDiff) < 20;
 
-  const dotVal = BABYLON.Vector3.Dot(forward, targetDir);
-
-  const error = 1 - dotVal;
-
-  // ghost scale feedback
-  ghost.style.transform =
-    `translate(-50%, -50%) scale(${1 - error*3})`;
-
-  const aligned = error < 0.15;
-
-  // ===== CAPTURE =====
   if(aligned){
 
     if(!holding){
@@ -158,13 +139,11 @@ window.addEventListener("deviceorientation", e => {
       console.log("CAPTURE SUCCESS");
 
       const img = captureFrame();
-
-      setTimeout(()=>{
-        placeImage(img);
-      },50);
+      placeImage(img);
 
       holding = false;
       progress.style.background = "none";
+      capturing = false;
     }
 
   } else {
