@@ -103,7 +103,7 @@ startBtn.onclick = async ()=>{
   init3D();
 
   capturing = true;
-  yawOffset = null; // reset
+  yawOffset = null;
 };
 
 // ===== HELPERS =====
@@ -130,6 +130,31 @@ function captureFrame(){
   };
 }
 
+// ===== PLACE IMAGE (FIXED) =====
+function placeImage(img,pos){
+
+  const plane = BABYLON.MeshBuilder.CreatePlane("img",{size:1},scene);
+  plane.position = pos.clone();
+
+  plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+  const tex = new BABYLON.DynamicTexture("dt",{width:512,height:512},scene);
+  const ctx = tex.getContext();
+
+  const image = new Image();
+  image.onload = ()=>{
+    ctx.drawImage(image,0,0,512,512);
+    tex.update();
+  };
+  image.src = img;
+
+  const mat = new BABYLON.StandardMaterial("mat",scene);
+  mat.diffuseTexture = tex;
+  mat.emissiveColor = new BABYLON.Color3(1,1,1);
+
+  plane.material = mat;
+}
+
 // ===== SENSOR =====
 window.addEventListener("deviceorientation", e => {
 
@@ -138,7 +163,7 @@ if(!capturing || e.alpha==null) return;
 let rawYaw = e.alpha;
 let rawPitch = e.beta - 90;
 
-// ===== LOCK START ORIENTATION =====
+// ===== LOCK START =====
 if(yawOffset === null){
   yawOffset = rawYaw;
 }
@@ -150,7 +175,7 @@ let yaw = norm360(rawYaw - yawOffset);
 smoothYaw = norm360(smoothYaw + angleDiff(yaw, smoothYaw)*0.15);
 smoothPitch = smoothPitch*0.85 + rawPitch*0.15;
 
-// ===== CAMERA (LOCKED FEEL) =====
+// ===== CAMERA =====
 camera3D.rotation = new BABYLON.Vector3(
   BABYLON.Tools.ToRadians(-smoothPitch),
   BABYLON.Tools.ToRadians(smoothYaw),
@@ -204,7 +229,10 @@ if(Math.abs(yawDiff)<8 && Math.abs(pitchDiff)<8){
       height: cap.height
     });
 
-    active.done=true;
+    // 🔥 FIXED: SHOW PREVIEW
+    placeImage(cap.data, active.mesh.position);
+
+    active.done = true;
     active.mesh.material.emissiveColor =
       new BABYLON.Color3(0,1,0);
 
