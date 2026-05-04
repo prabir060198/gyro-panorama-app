@@ -5,37 +5,24 @@
 <title>360 Capture</title>
 
 <link rel="stylesheet" href="style.css">
-
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
 
-<div id="startScreen">
-  <h2>📸 360 Capture</h2>
-  <button id="startBtn">Start</button>
+<!-- 3D FULL SCREEN -->
+<canvas id="renderCanvas"></canvas>
+
+<!-- CAMERA PREVIEW CENTER -->
+<div id="cameraBox">
+  <video id="video" autoplay playsinline muted></video>
+
+  <div id="dot"></div>
+  <div id="circle"></div>
 </div>
 
-<div id="cameraScreen" class="hidden">
-
-  <div id="cameraContainer">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="renderCanvas"></canvas>
-
-    <div id="circle"><div id="progress"></div></div>
-    <div id="dot"></div>
-  </div>
-
-  <p id="statusText">Align camera</p>
-  <button id="captureBtn">Start Capture</button>
-
-</div>
-
-<div id="resultScreen" class="hidden">
-  <h3>Captured</h3>
-  <div id="gallery"></div>
-</div>
+<button id="startBtn">Start</button>
+<button id="captureBtn">Capture</button>
 
 <canvas id="canvas"></canvas>
 

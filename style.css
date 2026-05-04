@@ -1,69 +1,65 @@
 body {
   margin: 0;
-  background: black;
-  color: white;
-  text-align: center;
-  font-family: Arial;
-}
-
-.hidden { display: none !important; }
-
-/* FULL SCREEN CAMERA */
-#cameraContainer {
-  position: relative;
-  width: 100%;
-  height: 100vh;
   overflow: hidden;
+  background: black;
 }
 
-video {
+/* 🔥 FULL 3D */
+#renderCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 📷 SMALL CAMERA BOX */
+#cameraBox {
   position: absolute;
+  width: 180px;
+  height: 240px;
   top: 50%;
   left: 50%;
-  min-width: 100%;
-  min-height: 100%;
   transform: translate(-50%, -50%);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid white;
+}
+
+#cameraBox video {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-/* 3D overlay */
-#renderCanvas {
-  position: absolute;
-  inset: 0;
-}
-
-/* center guide */
+/* 🎯 GUIDE */
 #dot {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   background: white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* progress */
 #circle {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 90px;
-  height: 90px;
+  width: 80px;
+  height: 80px;
   border: 2px solid white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 
-#progress {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: conic-gradient(#00c853 0deg, transparent 0deg);
+/* buttons */
+button {
+  position: fixed;
+  bottom: 20px;
+  padding: 10px 15px;
 }
 
-#gallery img {
-  width: 70px;
-  margin: 4px;
-}
+#startBtn { left: 20px; }
+#captureBtn { right: 20px; }
