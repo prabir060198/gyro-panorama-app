@@ -2,8 +2,6 @@ html, body {
   margin: 0;
   overflow: hidden;
   background: black;
-  width: 100%;
-  height: 100%;
 }
 
 /* 3D */
@@ -14,7 +12,7 @@ html, body {
   height: 100vh;
 }
 
-/* Camera preview */
+/* Camera */
 #cameraBox {
   position: absolute;
   width: 200px;
@@ -25,16 +23,15 @@ html, body {
   border: 2px solid white;
   border-radius: 10px;
   overflow: hidden;
-  z-index: 2;
 }
 
-#cameraBox video {
+video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* FIXED DOT */
+/* Dot */
 #dot {
   position: absolute;
   left: 50%;
@@ -46,7 +43,7 @@ html, body {
   transform: translate(-50%, -50%);
 }
 
-/* MOVING TARGET */
+/* Ghost */
 #targetGhost {
   position: absolute;
   width: 14px;
@@ -56,28 +53,16 @@ html, body {
   transform: translate(-50%, -50%);
 }
 
-/* PROGRESS */
+/* Progress */
 #progressCircle {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 80px;
   height: 80px;
-  border-radius: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none;
+  border-radius: 50%;
 }
-
-/* Buttons */
-button {
-  position: fixed;
-  bottom: 20px;
-  padding: 10px;
-  z-index: 3;
-}
-
-#startBtn { left: 20px; }
-#captureBtn { right: 20px; }
 
 /* Debug */
 #debugBox {
@@ -86,7 +71,16 @@ button {
   left: 10px;
   color: #00ffcc;
   font-family: monospace;
-  font-size: 12px;
   background: rgba(0,0,0,0.6);
   padding: 8px;
 }
+
+/* Buttons */
+button {
+  position: fixed;
+  bottom: 20px;
+  padding: 10px;
+}
+
+#startBtn { left: 20px; }
+#captureBtn { right: 20px; }
