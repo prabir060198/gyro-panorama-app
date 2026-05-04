@@ -1,15 +1,14 @@
-// ========= STATE =========
+// ===== STATE =====
 let currentYaw = 0;
 let currentPitch = 0;
 let yawOffset = null;
 
 let capturing = false;
-let holdStart = 0;
 let holding = false;
+let holdStart = 0;
 
 let capturedImages = [];
 
-// ========= RINGS =========
 const rings = [
   { pitch: 60, yaws: [0,90,180,270] },
   { pitch: 0,  yaws: [0,60,120,180,240,300] },
@@ -19,11 +18,10 @@ const rings = [
 let ringIndex = 0;
 let targetIndex = 0;
 
-// ========= 3D =========
+// ===== 3D =====
 let engine, scene, camera;
 
 function init3D() {
-
   const canvas = document.getElementById("renderCanvas");
 
   engine = new BABYLON.Engine(canvas, true);
@@ -43,7 +41,7 @@ function init3D() {
   engine.runRenderLoop(() => scene.render());
 }
 
-// ========= START =========
+// ===== START =====
 startBtn.onclick = async () => {
 
   if (DeviceOrientationEvent.requestPermission) {
@@ -63,21 +61,23 @@ startBtn.onclick = async () => {
   cameraScreen.classList.remove("hidden");
 };
 
-// ========= ORIENTATION =========
+// ===== ORIENTATION =====
 window.addEventListener("deviceorientation", e => {
 
   if (!capturing || e.alpha == null) return;
 
   let yaw = (e.alpha + 360) % 360;
 
-  // 🔥 FIXED PITCH (correct direction)
-  let pitch = -(e.beta - 90);
+  // 🔥 FIXED UNIVERSAL PITCH
+  let pitch = e.beta - 90;
+  pitch = -pitch;
+
   pitch = Math.max(-90, Math.min(90, pitch));
 
   if (yawOffset === null) yawOffset = yaw;
   yaw = (yaw - yawOffset + 360) % 360;
 
-  // smooth
+  // smoothing
   currentYaw = currentYaw * 0.85 + yaw * 0.15;
   currentPitch = currentPitch * 0.85 + pitch * 0.15;
 
@@ -88,7 +88,7 @@ window.addEventListener("deviceorientation", e => {
   processCapture();
 });
 
-// ========= CAPTURE =========
+// ===== CAPTURE =====
 function normalize(a) {
   return ((a + 540) % 360) - 180;
 }
@@ -133,7 +133,7 @@ function processCapture() {
   }
 }
 
-// ========= CAPTURE FRAME =========
+// ===== CAPTURE FRAME =====
 function captureFrame() {
 
   const ctx = canvas.getContext("2d");
@@ -147,7 +147,7 @@ function captureFrame() {
   capturedImages.push(img);
 }
 
-// ========= FINISH =========
+// ===== FINISH =====
 function finish() {
 
   capturing = false;
@@ -162,7 +162,7 @@ function finish() {
   });
 }
 
-// ========= START CAPTURE =========
+// ===== START CAPTURE =====
 captureBtn.onclick = () => {
   capturing = true;
   yawOffset = null;
