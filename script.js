@@ -1,6 +1,8 @@
 window.addEventListener("load",()=>{
 
-// ===== DOM =====
+// ======================================================
+// DOM
+// ======================================================
 
 const startBtn =
 document.getElementById("startBtn");
@@ -32,7 +34,9 @@ document.getElementById("debug");
 const statusText =
 document.getElementById("status");
 
-// ===== ERROR =====
+// ======================================================
+// ERROR
+// ======================================================
 
 window.onerror = function(err){
 
@@ -40,19 +44,25 @@ window.onerror = function(err){
   "ERROR: " + err;
 };
 
-// ===== SENSOR =====
+// ======================================================
+// SENSOR
+// ======================================================
 
 let smoothYaw = 0;
 let smoothPitch = 0;
 let smoothRoll = 0;
 
-// ===== LOCK =====
+// ======================================================
+// LOCK
+// ======================================================
 
 let environmentLocked = false;
 
 let worldLockYaw = 0;
 
-// ===== STATE =====
+// ======================================================
+// STATE
+// ======================================================
 
 let capturing = false;
 
@@ -60,32 +70,47 @@ let holding = false;
 
 let holdStart = 0;
 
-// ===== DATA =====
+// ======================================================
+// DATA
+// ======================================================
 
 let capturedImages = [];
 let captureData = [];
 
-// ===== CAMERA =====
+// ======================================================
+// CAMERA
+// ======================================================
 
 let stream;
 
-// ===== CAPTURE INDEX =====
+// ======================================================
+// CAPTURE INDEX
+// ======================================================
 
 let currentIndex = 0;
 
-// ===== 30 PHOTO LARGE ROOM =====
+// ======================================================
+// 38 CAPTURE PROFESSIONAL OVERLAP
+// 3 / 10 / 12 / 10 / 3
+// ======================================================
 
 const rings = [
 
-  // ===== TOP =====
+  // ================= TOP =================
 
   {
-    pitch: 90,
+    pitch: 75,
 
-    yaws: [0]
+    yaws: [
+
+      0,
+      120,
+      240
+
+    ]
   },
 
-  // ===== UPPER =====
+  // ================= UPPER =================
 
   {
     pitch: 45,
@@ -93,18 +118,20 @@ const rings = [
     yaws: [
 
       0,
-      45,
-      90,
-      135,
+      36,
+      72,
+      108,
+      144,
       180,
-      225,
-      270,
-      315
+      216,
+      252,
+      288,
+      324
 
     ]
   },
 
-  // ===== MIDDLE =====
+  // ================= MIDDLE =================
 
   {
     pitch: 0,
@@ -127,7 +154,7 @@ const rings = [
     ]
   },
 
-  // ===== LOWER =====
+  // ================= LOWER =================
 
   {
     pitch: -45,
@@ -135,28 +162,38 @@ const rings = [
     yaws: [
 
       0,
-      45,
-      90,
-      135,
+      36,
+      72,
+      108,
+      144,
       180,
-      225,
-      270,
-      315
+      216,
+      252,
+      288,
+      324
 
     ]
   },
 
-  // ===== BOTTOM =====
+  // ================= BOTTOM =================
 
   {
-    pitch: -90,
+    pitch: -75,
 
-    yaws: [0]
+    yaws: [
+
+      60,
+      180,
+      300
+
+    ]
   }
 
 ];
 
-// ===== FLATTEN =====
+// ======================================================
+// FLATTEN
+// ======================================================
 
 const capturePoints = [];
 
@@ -178,7 +215,9 @@ rings.forEach(r=>{
 const totalPoints =
 capturePoints.length;
 
-// ===== HELPERS =====
+// ======================================================
+// HELPERS
+// ======================================================
 
 function norm360(a){
 
@@ -190,16 +229,16 @@ function angleDiff(a,b){
   return ((a-b+540)%360)-180;
 }
 
-// ===== FIXED PITCH =====
+// ======================================================
+// PITCH FIX
 // beta 0   -> -90
 // beta 90  -> 0
 // beta 180 -> +90
+// ======================================================
 
 function getStablePitch(beta){
 
   let pitch = beta - 90;
-
-  // ===== CLAMP =====
 
   if(pitch > 90)
     pitch = 90;
@@ -210,26 +249,9 @@ function getStablePitch(beta){
   return pitch;
 }
 
-// ===== FOV =====
-
-function getCameraFOV(){
-
-  const aspect =
-  video.videoWidth /
-  video.videoHeight;
-
-  const vertical = 50;
-
-  return {
-
-    vertical,
-
-    horizontal:
-    vertical * aspect
-  };
-}
-
-// ===== START =====
+// ======================================================
+// START
+// ======================================================
 
 startBtn.onclick = async ()=>{
 
@@ -244,7 +266,7 @@ startBtn.onclick = async ()=>{
     statusText.innerHTML =
     "Opening camera...";
 
-    // ===== iOS =====
+    // ================= iOS =================
 
     if(
 
@@ -266,7 +288,7 @@ startBtn.onclick = async ()=>{
       "Permission: " + permission;
     }
 
-    // ===== CAMERA =====
+    // ================= CAMERA =================
 
     stream =
 
@@ -279,12 +301,14 @@ startBtn.onclick = async ()=>{
           ideal:"environment"
         },
 
+        // ================= FASTER =================
+
         width:{
-          ideal:4096
+          ideal:1920
         },
 
         height:{
-          ideal:2160
+          ideal:1080
         }
 
       }
@@ -308,7 +332,9 @@ startBtn.onclick = async ()=>{
 
 };
 
-// ===== SENSOR =====
+// ======================================================
+// SENSOR
+// ======================================================
 
 window.addEventListener(
 
@@ -328,7 +354,9 @@ async e=>{
       return;
     }
 
-    // ===== RAW =====
+    // ======================================================
+    // RAW
+    // ======================================================
 
     let rawYaw =
     360 - e.alpha;
@@ -341,7 +369,9 @@ async e=>{
     let rawRoll =
     e.gamma || 0;
 
-    // ===== FIRST LOCK =====
+    // ======================================================
+    // FIRST LOCK
+    // ======================================================
 
     if(!environmentLocked){
 
@@ -354,7 +384,9 @@ async e=>{
       "Environment Locked";
     }
 
-    // ===== RELATIVE =====
+    // ======================================================
+    // RELATIVE
+    // ======================================================
 
     let yaw =
 
@@ -365,7 +397,9 @@ async e=>{
     let pitch =
     rawPitch;
 
-    // ===== SMOOTH =====
+    // ======================================================
+    // SMOOTH
+    // ======================================================
 
     smoothYaw =
 
@@ -388,7 +422,9 @@ async e=>{
 
     (rawRoll-smoothRoll)*0.12;
 
-    // ===== ACTIVE =====
+    // ======================================================
+    // ACTIVE
+    // ======================================================
 
     const active =
     capturePoints[currentIndex];
@@ -399,7 +435,9 @@ async e=>{
       return;
     }
 
-    // ===== DIFF =====
+    // ======================================================
+    // DIFF
+    // ======================================================
 
     let yawDiff =
 
@@ -413,8 +451,9 @@ async e=>{
     active.pitch -
     smoothPitch;
 
-    // ===== DOT =====
-    // FINAL FIXED
+    // ======================================================
+    // DOT
+    // ======================================================
 
     dot.style.transform =
 
@@ -423,8 +462,9 @@ async e=>{
       calc(-50% + ${(pitchDiff/30)*80}px)
     )`;
 
-    // ===== ARROW =====
-    // FINAL FIXED
+    // ======================================================
+    // ARROW
+    // ======================================================
 
     if(
       Math.abs(yawDiff) >
@@ -444,7 +484,9 @@ async e=>{
       "⬆" : "⬇";
     }
 
-    // ===== STATUS =====
+    // ======================================================
+    // STATUS
+    // ======================================================
 
     statusText.innerHTML =
 
@@ -459,7 +501,9 @@ async e=>{
     P ${active.pitch}
     `;
 
-    // ===== ALIGN =====
+    // ======================================================
+    // ALIGN
+    // ======================================================
 
     const aligned =
 
@@ -478,7 +522,7 @@ async e=>{
 
       let progressValue =
 
-      (Date.now()-holdStart)/500;
+      (Date.now()-holdStart)/450;
 
       progress.style.background =
 
@@ -507,7 +551,9 @@ async e=>{
       "none";
     }
 
-    // ===== DEBUG =====
+    // ======================================================
+    // DEBUG
+    // ======================================================
 
     debug.innerHTML =
 
@@ -549,7 +595,9 @@ async e=>{
 
 });
 
-// ===== CAPTURE =====
+// ======================================================
+// CAPTURE PNG
+// ======================================================
 
 async function capture(active){
 
@@ -571,14 +619,21 @@ async function capture(active){
     0
   );
 
+  // ======================================================
+  // PNG
+  // ======================================================
+
   const imgData =
 
   canvas.toDataURL(
-    "image/jpeg",
-    1.0
+    "image/png"
   );
 
   capturedImages.push(imgData);
+
+  // ======================================================
+  // META
+  // ======================================================
 
   captureData.push({
 
@@ -586,7 +641,7 @@ async function capture(active){
     capturedImages.length,
 
     file:
-    `img_${capturedImages.length}.jpg`,
+    `img_${capturedImages.length}.png`,
 
     targetYaw:
     active.yaw,
@@ -603,8 +658,12 @@ async function capture(active){
     roll:
     smoothRoll,
 
-    fov:
-    getCameraFOV(),
+    fov:{
+
+      vertical:50,
+
+      horizontal:58
+    },
 
     deviceOrientation:{
 
@@ -621,7 +680,9 @@ async function capture(active){
 
 }
 
-// ===== FINISH =====
+// ======================================================
+// FINISH
+// ======================================================
 
 function finish(){
 
@@ -652,7 +713,9 @@ function finish(){
 
 }
 
-// ===== DOWNLOAD =====
+// ======================================================
+// DOWNLOAD
+// ======================================================
 
 document.getElementById(
 "downloadBtn"
@@ -661,28 +724,95 @@ document.getElementById(
   const zip =
   new JSZip();
 
+  // ======================================================
+  // SAVE PNG
+  // ======================================================
+
   capturedImages.forEach((img,i)=>{
 
     zip.file(
-      `img_${i+1}.jpg`,
+
+      `img_${i+1}.png`,
+
       img.split(",")[1],
+
       {base64:true}
+
     );
 
   });
 
+  // ======================================================
+  // STITCH FORMAT
+  // ======================================================
+
+  const stitchData = {
+
+    images: []
+
+  };
+
+  captureData.forEach(d=>{
+
+    stitchData.images.push({
+
+      name:
+      d.file,
+
+      yaw:
+      d.actualYaw,
+
+      pitch:
+      d.actualPitch,
+
+      roll:
+      d.roll,
+
+      targetYaw:
+      d.targetYaw,
+
+      targetPitch:
+      d.targetPitch,
+
+      timestamp:
+      d.timestamp
+
+    });
+
+  });
+
+  // ======================================================
+  // SAVE JSON
+  // ======================================================
+
   zip.file(
+
     "data.json",
+
     JSON.stringify(
-      captureData,
+      stitchData,
       null,
       2
     )
+
   );
 
+  // ======================================================
+  // ZIP
+  // ======================================================
+
   const blob =
+
   await zip.generateAsync({
-    type:"blob"
+
+    type:"blob",
+
+    compression:"DEFLATE",
+
+    compressionOptions:{
+      level:6
+    }
+
   });
 
   const a =
