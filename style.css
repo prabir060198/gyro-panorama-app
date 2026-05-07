@@ -1,240 +1,251 @@
 *{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+margin:0;
+padding:0;
+box-sizing:border-box;
 }
 
 body{
-  overflow:hidden;
-  background:black;
-  color:white;
-  font-family:sans-serif;
+overflow:hidden;
+background:black;
+color:white;
+font-family:sans-serif;
 }
 
-/* START */
-
 #startScreen{
-  position:fixed;
-  inset:0;
+position:fixed;
+inset:0;
 
-  display:flex;
-  align-items:center;
-  justify-content:center;
+display:flex;
+align-items:center;
+justify-content:center;
 
-  background:black;
+background:black;
+padding:20px;
 }
 
 #startPanel{
-  text-align:center;
+width:100%;
+max-width:420px;
+text-align:center;
 }
 
 #startPanel h1{
-  font-size:42px;
-  margin-bottom:10px;
+font-size:42px;
+margin-bottom:10px;
 }
 
 #startPanel p{
-  opacity:0.7;
-  margin-bottom:30px;
+opacity:0.7;
+margin-bottom:25px;
 }
 
-#startBtn{
-  padding:15px 40px;
-
-  border:none;
-  border-radius:12px;
-
-  font-size:18px;
-
-  cursor:pointer;
+#modeButtons{
+display:flex;
+flex-direction:column;
+gap:14px;
 }
 
-/* CAPTURE */
+.modeBtn{
+background:#181818;
+border:2px solid #333;
+color:white;
+
+padding:18px;
+border-radius:18px;
+
+font-size:18px;
+font-weight:600;
+
+cursor:pointer;
+
+transition:0.2s;
+}
+
+.modeBtn span{
+display:block;
+margin-top:6px;
+
+font-size:14px;
+opacity:0.7;
+font-weight:400;
+}
+
+.modeBtn:active{
+transform:scale(0.98);
+}
+
+.modeBtn:hover{
+border-color:#00ffaa;
+background:#202020;
+}
 
 #captureScreen{
-  position:fixed;
-  inset:0;
-
-  display:none;
+position:fixed;
+inset:0;
+display:none;
 }
 
-/* CAMERA */
-
 #cameraBox{
-  position:absolute;
+position:absolute;
 
-  width:260px;
-  height:340px;
+width:260px;
+height:340px;
 
-  left:50%;
-  top:50%;
+left:50%;
+top:50%;
 
-  transform:translate(-50%,-50%);
+transform:translate(-50%,-50%);
 
-  border:3px solid white;
-  border-radius:20px;
+border:3px solid white;
+border-radius:20px;
 
-  overflow:hidden;
+overflow:hidden;
 }
 
 video{
-  position:absolute;
-  inset:0;
+position:absolute;
+inset:0;
 
-  width:100%;
-  height:100%;
+width:100%;
+height:100%;
 
-  object-fit:cover;
+object-fit:cover;
 }
-
-/* CENTER TARGET */
 
 #centerTarget{
-  position:absolute;
+position:absolute;
 
-  left:50%;
-  top:50%;
+left:50%;
+top:50%;
 
-  width:100px;
-  height:100px;
+width:100px;
+height:100px;
 
-  border:3px solid rgba(255,255,255,0.9);
+border:3px solid rgba(255,255,255,0.9);
 
-  border-radius:50%;
+border-radius:50%;
 
-  transform:translate(-50%,-50%);
+transform:translate(-50%,-50%);
 
-  box-shadow:
-    0 0 20px rgba(255,255,255,0.5);
+box-shadow:
+0 0 20px rgba(255,255,255,0.5);
 }
-
-/* DOT */
 
 #dot{
-  position:absolute;
+position:absolute;
 
-  left:50%;
-  top:50%;
+left:50%;
+top:50%;
 
-  width:20px;
-  height:20px;
+width:20px;
+height:20px;
 
-  border-radius:50%;
+border-radius:50%;
 
-  background:#00ffcc;
+background:#00ffcc;
 
-  transform:translate(-50%,-50%);
+transform:translate(-50%,-50%);
 
-  box-shadow:
-    0 0 15px #00ffcc;
+box-shadow:
+0 0 15px #00ffcc;
 }
-
-/* PROGRESS */
 
 #progress{
-  position:absolute;
+position:absolute;
 
-  left:50%;
-  top:50%;
+left:50%;
+top:50%;
 
-  width:140px;
-  height:140px;
+width:140px;
+height:140px;
 
-  border-radius:50%;
+border-radius:50%;
 
-  transform:translate(-50%,-50%);
+transform:translate(-50%,-50%);
 }
-
-/* ARROW */
 
 #arrow{
-  position:absolute;
+position:absolute;
 
-  top:15px;
-  left:50%;
+top:15px;
+left:50%;
 
-  transform:translateX(-50%);
+transform:translateX(-50%);
 
-  font-size:34px;
+font-size:34px;
 
-  color:yellow;
+color:yellow;
 }
-
-/* STATUS */
 
 #status{
-  position:fixed;
+position:fixed;
 
-  bottom:20px;
-  left:50%;
+bottom:20px;
+left:50%;
 
-  transform:translateX(-50%);
+transform:translateX(-50%);
 
-  background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.6);
 
-  padding:12px 24px;
+padding:12px 24px;
 
-  border-radius:12px;
+border-radius:12px;
 
-  font-size:18px;
+font-size:18px;
 
-  text-align:center;
+text-align:center;
 }
-
-/* DEBUG */
 
 #debug{
-  position:fixed;
+position:fixed;
 
-  top:10px;
-  left:10px;
+top:10px;
+left:10px;
 
-  color:#00ffff;
+color:#00ffff;
 
-  font-size:12px;
+font-size:12px;
 
-  background:rgba(0,0,0,0.5);
+background:rgba(0,0,0,0.5);
 
-  padding:10px;
+padding:10px;
 
-  border-radius:10px;
+border-radius:10px;
 }
 
-/* RESULT */
-
 #resultScreen{
-  position:fixed;
-  inset:0;
+position:fixed;
+inset:0;
 
-  background:black;
+background:black;
 
-  display:none;
+display:none;
 
-  overflow:auto;
+overflow:auto;
 
-  padding:20px;
+padding:20px;
 }
 
 #gallery{
-  display:flex;
-  flex-wrap:wrap;
+display:flex;
+flex-wrap:wrap;
 }
 
 #gallery img{
-  width:120px;
+width:120px;
 
-  margin:5px;
+margin:5px;
 
-  border-radius:10px;
+border-radius:10px;
 }
 
 #downloadBtn{
-  margin-top:20px;
+margin-top:20px;
 
-  padding:15px 30px;
+padding:15px 30px;
 
-  border:none;
-  border-radius:10px;
+border:none;
+border-radius:10px;
 
-  cursor:pointer;
+cursor:pointer;
 }

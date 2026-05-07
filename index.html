@@ -3,12 +3,15 @@
 
 <head>
 
-<meta name="viewport"
+<meta
+name="viewport"
 content="width=device-width, initial-scale=1.0">
 
 <title>360 Capture</title>
 
-<link rel="stylesheet" href="style.css">
+<link
+rel="stylesheet"
+href="style.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
@@ -16,82 +19,118 @@ content="width=device-width, initial-scale=1.0">
 
 <body>
 
-<!-- START -->
-
 <div id="startScreen">
 
-  <div id="startPanel">
+<div id="startPanel">
 
-    <h1>360 Capture</h1>
+<h1>360 Capture</h1>
 
-    <p>
-      Professional Panorama Capture
-    </p>
+<p>
+Choose Capture Mode
+</p>
 
-    <button id="startBtn">
-      START
-    </button>
+<div id="modeButtons">
 
-  </div>
+<button
+class="modeBtn"
+data-mode="quick"
+>
+
+Quick Room
+
+<span>
+18 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="standard"
+>
+
+Standard 360
+
+<span>
+30 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="pro"
+>
+
+Pro Sphere
+
+<span>
+38 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="full"
+>
+
+Full Interior
+
+<span>
+50 Photos
+</span>
+
+</button>
 
 </div>
 
-<!-- CAPTURE -->
+</div>
+
+</div>
 
 <div id="captureScreen">
 
-  <!-- CAMERA -->
+<div id="cameraBox">
 
-  <div id="cameraBox">
+<video
+id="video"
+autoplay
+playsinline
+muted>
+</video>
 
-    <video
-      id="video"
-      autoplay
-      playsinline
-      muted>
-    </video>
+<div id="centerTarget"></div>
 
-    <!-- CENTER -->
+<div id="dot"></div>
 
-    <div id="centerTarget"></div>
+<div id="progress"></div>
 
-    <!-- DOT -->
-
-    <div id="dot"></div>
-
-    <!-- PROGRESS -->
-
-    <div id="progress"></div>
-
-    <!-- ARROW -->
-
-    <div id="arrow">⬆</div>
-
-  </div>
-
-  <!-- STATUS -->
-
-  <div id="status">
-    Initializing...
-  </div>
-
-  <!-- DEBUG -->
-
-  <div id="debug"></div>
+<div id="arrow">
+⬆
+</div>
 
 </div>
 
-<!-- RESULT -->
+<div id="status">
+Initializing...
+</div>
+
+<div id="debug"></div>
+
+</div>
 
 <div id="resultScreen">
 
-  <h2>Capture Complete</h2>
+<h2>
+Capture Complete
+</h2>
 
-  <div id="gallery"></div>
+<div id="gallery"></div>
 
-  <button id="downloadBtn">
-    Download ZIP
-  </button>
+<button id="downloadBtn">
+Download ZIP
+</button>
 
 </div>
 
