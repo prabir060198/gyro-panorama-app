@@ -26,7 +26,7 @@ content="width=device-width, initial-scale=1.0">
     <h1>360 Capture</h1>
 
     <p>
-      Professional Locked Panorama
+      Professional 360 Capture
     </p>
 
     <button id="startBtn">
@@ -43,6 +43,8 @@ content="width=device-width, initial-scale=1.0">
 
   <canvas id="renderCanvas"></canvas>
 
+  <!-- CAMERA GUIDE -->
+
   <div id="cameraBox">
 
     <video
@@ -52,11 +54,11 @@ content="width=device-width, initial-scale=1.0">
       muted>
     </video>
 
-    <!-- CENTER -->
+    <!-- CENTER TARGET -->
 
     <div id="centerTarget"></div>
 
-    <!-- DOT -->
+    <!-- MOVING DOT -->
 
     <div id="dot"></div>
 
@@ -64,15 +66,19 @@ content="width=device-width, initial-scale=1.0">
 
     <div id="progress"></div>
 
-    <!-- ARROW -->
+    <!-- DIRECTION -->
 
     <div id="arrow">⬆</div>
 
   </div>
 
+  <!-- STATUS -->
+
   <div id="status">
     Align first capture
   </div>
+
+  <!-- DEBUG -->
 
   <div id="debug"></div>
 
