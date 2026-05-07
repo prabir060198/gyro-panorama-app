@@ -190,7 +190,7 @@ function angleDiff(a,b){
   return ((a-b+540)%360)-180;
 }
 
-// ===== FINAL FIXED PITCH =====
+// ===== FIXED PITCH =====
 // beta 0   -> -90
 // beta 90  -> 0
 // beta 180 -> +90
@@ -400,16 +400,16 @@ async e=>{
     }
 
     // ===== DIFF =====
+    // FIXED LEFT RIGHT
 
     let yawDiff =
 
-    -angleDiff(
+    angleDiff(
       smoothYaw,
       active.yaw
     );
 
-    // ===== FIXED =====
-    // INVERTED CORRECTLY
+    // ===== FIXED UP DOWN
 
     let pitchDiff =
 
@@ -417,11 +417,12 @@ async e=>{
     smoothPitch;
 
     // ===== DOT =====
+    // FULLY FIXED
 
     dot.style.transform =
 
     `translate(
-      calc(-50% + ${-(yawDiff/30)*80}px),
+      calc(-50% + ${(yawDiff/30)*80}px),
       calc(-50% + ${(pitchDiff/30)*80}px)
     )`;
 
@@ -432,14 +433,14 @@ async e=>{
       Math.abs(pitchDiff)
     ){
 
+      // ===== FIXED =====
+
       arrow.innerText =
 
       yawDiff > 0 ?
-      "⬅" : "➡";
+      "➡" : "⬅";
 
     }else{
-
-      // ===== FIXED =====
 
       arrow.innerText =
 
