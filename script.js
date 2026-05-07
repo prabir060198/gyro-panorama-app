@@ -192,38 +192,13 @@ function angleDiff(a,b){
 }
 
 // ===== FIXED PITCH =====
+// middle = 0
+// up = +
+// down = -
 
-function getStablePitch(beta,gamma){
+function getStablePitch(beta){
 
-  let pitch;
-
-  // ===== PORTRAIT =====
-
-  if(
-    window.innerHeight >
-    window.innerWidth
-  ){
-
-    // FIXED DIRECTION
-
-    pitch = -beta;
-
-  }else{
-
-    // LANDSCAPE
-
-    pitch = -gamma;
-  }
-
-  // ===== FIX RANGE =====
-
-  if(pitch > 90)
-    pitch = 180 - pitch;
-
-  if(pitch < -90)
-    pitch = -180 - pitch;
-
-  return pitch;
+  return -beta;
 }
 
 // ===== FOV =====
@@ -349,10 +324,11 @@ async e=>{
     let rawYaw =
     360 - e.alpha;
 
+    // ===== FIXED PITCH =====
+
     let rawPitch =
     getStablePitch(
-      e.beta || 0,
-      e.gamma || 0
+      e.beta || 0
     );
 
     let rawRoll =
@@ -434,13 +410,13 @@ async e=>{
     active.pitch;
 
     // ===== DOT =====
-    // FIXED PITCH DIRECTION
+    // FIXED DIRECTION
 
     dot.style.transform =
 
     `translate(
       calc(-50% + ${-(yawDiff/30)*80}px),
-      calc(-50% + ${(pitchDiff/30)*80}px)
+      calc(-50% + ${-(pitchDiff/30)*80}px)
     )`;
 
     // ===== ARROW =====
@@ -543,11 +519,6 @@ async e=>{
 
     RawBeta:
     ${(e.beta||0).toFixed(1)}
-
-    <br>
-
-    RawGamma:
-    ${(e.gamma||0).toFixed(1)}
 
     <br>
 
