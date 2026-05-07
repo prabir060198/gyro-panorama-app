@@ -91,7 +91,6 @@ let currentIndex = 0;
 
 // ======================================================
 // 38 CAPTURE PROFESSIONAL OVERLAP
-// 3 / 10 / 12 / 10 / 3
 // ======================================================
 
 const rings = [
@@ -301,8 +300,6 @@ startBtn.onclick = async ()=>{
           ideal:"environment"
         },
 
-        // ================= FASTER =================
-
         width:{
           ideal:1920
         },
@@ -410,17 +407,17 @@ async e=>{
       angleDiff(
         yaw,
         smoothYaw
-      ) * 0.12
+      ) * 0.06
 
     );
 
     smoothPitch +=
 
-    (pitch-smoothPitch)*0.25;
+    (pitch-smoothPitch)*0.12;
 
     smoothRoll +=
 
-    (rawRoll-smoothRoll)*0.12;
+    (rawRoll-smoothRoll)*0.08;
 
     // ======================================================
     // ACTIVE
@@ -452,14 +449,24 @@ async e=>{
     smoothPitch;
 
     // ======================================================
+    // DEADZONE
+    // ======================================================
+
+    if(Math.abs(yawDiff) < 1.5)
+      yawDiff = 0;
+
+    if(Math.abs(pitchDiff) < 1.5)
+      pitchDiff = 0;
+
+    // ======================================================
     // DOT
     // ======================================================
 
     dot.style.transform =
 
     `translate(
-      calc(-50% + ${-(yawDiff/30)*80}px),
-      calc(-50% + ${(pitchDiff/30)*80}px)
+      calc(-50% + ${-(yawDiff/30)*55}px),
+      calc(-50% + ${(pitchDiff/30)*55}px)
     )`;
 
     // ======================================================
@@ -507,8 +514,12 @@ async e=>{
 
     const aligned =
 
-      Math.abs(yawDiff) < 8 &&
-      Math.abs(pitchDiff) < 8;
+      Math.abs(yawDiff) < 6 &&
+      Math.abs(pitchDiff) < 6;
+
+    // ======================================================
+    // CAPTURE FLOW
+    // ======================================================
 
     if(aligned){
 
@@ -522,25 +533,56 @@ async e=>{
 
       let progressValue =
 
-      (Date.now()-holdStart)/450;
+      (Date.now()-holdStart)/700;
+
+      // ===== CLAMP =====
+
+      const clamped =
+
+      Math.min(progressValue,1);
+
+      // ===== PROGRESS =====
 
       progress.style.background =
 
       `conic-gradient(
-        lime ${progressValue*360}deg,
-        transparent 0deg
+        lime ${clamped*360}deg,
+        rgba(255,255,255,0.15) 0deg
       )`;
 
+      // ===== COMPLETE =====
+
       if(progressValue >= 1){
+
+        // ===== SUCCESS =====
+
+        progress.style.background =
+        "rgba(0,255,120,0.35)";
+
+        dot.style.background =
+        "#00ff66";
+
+        // ===== WAIT =====
+
+        await new Promise(r=>
+          setTimeout(r,180)
+        );
+
+        // ===== CAPTURE =====
 
         await capture(active);
 
         currentIndex++;
 
+        // ===== RESET =====
+
         holding = false;
 
         progress.style.background =
         "none";
+
+        dot.style.background =
+        "#00ffcc";
       }
 
     }else{
@@ -549,6 +591,9 @@ async e=>{
 
       progress.style.background =
       "none";
+
+      dot.style.background =
+      "#00ffcc";
     }
 
     // ======================================================
