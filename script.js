@@ -42,14 +42,13 @@ let worldRoot;
 // ===== CAMERA =====
 
 let stream;
-let imageCapture;
 
 // ===== LOCK =====
 
-let worldLockYaw = null;
-let worldLockPitch = null;
-
 let environmentLocked = false;
+
+let worldLockYaw = 0;
+let worldLockPitch = 0;
 
 // ===== SENSOR =====
 
@@ -61,14 +60,17 @@ let smoothPitch = 0;
 let capturing = false;
 
 let holding = false;
-let holdStart = 0;
 
-let latestOrientation = null;
+let holdStart = 0;
 
 // ===== DATA =====
 
 let capturedImages = [];
 let captureData = [];
+
+// ===== GUIDE =====
+
+let guidePoints = [];
 
 // ===== RINGS =====
 
@@ -98,9 +100,8 @@ const rings = [
     pitch:-80,
     yaws:[90,270]
   }
-];
 
-let guidePoints = [];
+];
 
 let totalPoints =
 rings.reduce((s,r)=>s+r.yaws.length,0);
@@ -128,27 +129,31 @@ function init3D(){
   scene =
   new BABYLON.Scene(engine);
 
+  scene.clearColor =
+  new BABYLON.Color4(0,0,0,0);
+
   camera3D =
   new BABYLON.FreeCamera(
     "cam",
-    BABYLON.Vector3.Zero(),
+    new BABYLON.Vector3(0,0,-8),
     scene
   );
 
-  camera3D.rotation =
-  BABYLON.Vector3.Zero();
-
-  camera3D.fov = 1.2;
-
-  worldRoot =
-  new BABYLON.TransformNode(
-    "worldRoot",
-    scene
+  camera3D.setTarget(
+    BABYLON.Vector3.Zero()
   );
+
+  camera3D.fov = 1.0;
 
   new BABYLON.HemisphericLight(
     "light",
     new BABYLON.Vector3(0,1,0),
+    scene
+  );
+
+  worldRoot =
+  new BABYLON.TransformNode(
+    "worldRoot",
     scene
   );
 
@@ -157,11 +162,18 @@ function init3D(){
   engine.runRenderLoop(()=>{
     scene.render();
   });
+
+  window.addEventListener(
+    "resize",
+    ()=>engine.resize()
+  );
 }
 
-// ===== POINTS =====
+// ===== CREATE POINTS =====
 
 function createPoints(){
+
+  guidePoints = [];
 
   rings.forEach(r=>{
 
@@ -178,12 +190,12 @@ function createPoints(){
         Math.sin(y)*Math.cos(p),
         Math.sin(p),
         Math.cos(y)*Math.cos(p)
-      ).scale(3);
+      ).scale(4);
 
       const mesh =
       BABYLON.MeshBuilder.CreateSphere(
         "pt",
-        {diameter:0.12},
+        {diameter:0.25},
         scene
       );
 
@@ -198,18 +210,70 @@ function createPoints(){
       );
 
       mat.emissiveColor =
-      new BABYLON.Color3(1,1,1);
+      new BABYLON.Color3(
+        0.3,
+        0.3,
+        0.3
+      );
 
       mesh.material = mat;
 
       guidePoints.push({
+
         mesh,
         yaw,
         pitch:r.pitch,
         done:false
+
       });
 
     });
+
+  });
+
+  updateGuideVisuals();
+}
+
+// ===== GUIDE VISUALS =====
+
+function updateGuideVisuals(){
+
+  const active =
+  guidePoints.find(p=>!p.done);
+
+  guidePoints.forEach(p=>{
+
+    if(p.done){
+
+      // GREEN DONE
+
+      p.mesh.material.emissiveColor =
+      new BABYLON.Color3(0,1,0);
+
+      p.mesh.scaling.setAll(1);
+
+    }else if(p===active){
+
+      // ACTIVE
+
+      p.mesh.material.emissiveColor =
+      new BABYLON.Color3(1,1,0);
+
+      p.mesh.scaling.setAll(2);
+
+    }else{
+
+      // FUTURE
+
+      p.mesh.material.emissiveColor =
+      new BABYLON.Color3(
+        0.25,
+        0.25,
+        0.25
+      );
+
+      p.mesh.scaling.setAll(1);
+    }
 
   });
 
@@ -257,16 +321,7 @@ startBtn.onclick = async ()=>{
 
   await video.play();
 
-  const track =
-  stream.getVideoTracks()[0];
-
-  imageCapture =
-  new ImageCapture(track);
-
   init3D();
-
-  statusText.innerHTML =
-  "Align first capture to center";
 
   capturing = true;
 };
@@ -282,12 +337,8 @@ async e=>{
   if(e.alpha==null) return;
 
   let rawYaw = e.alpha;
-  let rawPitch = e.beta - 90;
 
-  latestOrientation = {
-    yaw:rawYaw,
-    pitch:rawPitch
-  };
+  let rawPitch = e.beta - 90;
 
   // ===== FIRST LOCK =====
 
@@ -307,25 +358,14 @@ async e=>{
     let yawDelta =
     angleDiff(yaw,smoothYaw);
 
-    if(Math.abs(yawDelta)<0.1)
-      yawDelta=0;
-
     smoothYaw =
     norm360(
       smoothYaw + yawDelta*0.08
     );
 
-    let pitchDelta =
-    pitch-smoothPitch;
-
-    if(Math.abs(pitchDelta)<0.1)
-      pitchDelta=0;
-
     smoothPitch +=
-    pitchDelta*0.08;
+    (pitch-smoothPitch)*0.08;
   }
-
-  // ===== ACTIVE =====
 
   const active =
   guidePoints.find(p=>!p.done);
@@ -334,8 +374,6 @@ async e=>{
 
   let yawDiff;
   let pitchDiff;
-
-  // ===== FIRST SHOT =====
 
   if(!environmentLocked){
 
@@ -376,6 +414,12 @@ async e=>{
     pitchDiff>0 ? "⬇":"⬆";
   }
 
+  // ===== STATUS =====
+
+  statusText.innerHTML =
+  `Capture ${capturedImages.length+1}
+   / ${totalPoints}`;
+
   // ===== ALIGN =====
 
   if(
@@ -401,14 +445,17 @@ async e=>{
 
     if(p>=1){
 
-      // ===== FIRST ENV LOCK =====
+      // FIRST LOCK
 
       if(!environmentLocked){
 
         environmentLocked = true;
 
-        worldLockYaw = rawYaw;
-        worldLockPitch = rawPitch;
+        worldLockYaw =
+        rawYaw;
+
+        worldLockPitch =
+        rawPitch;
 
         worldRoot.rotation.y =
         -BABYLON.Tools.ToRadians(
@@ -419,18 +466,13 @@ async e=>{
         BABYLON.Tools.ToRadians(
           worldLockPitch
         );
-
-        statusText.innerHTML =
-        "Environment Locked ✓";
       }
 
       await captureHQ(active);
 
       active.done = true;
 
-      active.mesh.material
-      .emissiveColor =
-      new BABYLON.Color3(0,1,0);
+      updateGuideVisuals();
 
       holding = false;
 
@@ -465,59 +507,60 @@ async e=>{
 
 async function captureHQ(active){
 
-  try{
+  const canvas =
+  document.createElement("canvas");
 
-    const blob =
-    await imageCapture.takePhoto();
+  canvas.width =
+  video.videoWidth;
 
-    const reader =
-    new FileReader();
+  canvas.height =
+  video.videoHeight;
 
-    reader.onload = ()=>{
+  const ctx =
+  canvas.getContext("2d");
 
-      const imgData =
-      reader.result;
+  ctx.drawImage(
+    video,
+    0,
+    0
+  );
 
-      capturedImages.push(imgData);
+  const imgData =
+  canvas.toDataURL(
+    "image/jpeg",
+    1.0
+  );
 
-      captureData.push({
+  capturedImages.push(imgData);
 
-        index:
-        capturedImages.length,
+  captureData.push({
 
-        file:
-        `img_${capturedImages.length}.jpg`,
+    index:
+    capturedImages.length,
 
-        targetYaw:
-        active.yaw,
+    file:
+    `img_${capturedImages.length}.jpg`,
 
-        targetPitch:
-        active.pitch,
+    targetYaw:
+    active.yaw,
 
-        actualYaw:
-        smoothYaw,
+    targetPitch:
+    active.pitch,
 
-        actualPitch:
-        smoothPitch,
+    actualYaw:
+    smoothYaw,
 
-        timestamp:
-        Date.now()
-      });
+    actualPitch:
+    smoothPitch
 
-      placeImage(
-        imgData,
-        active.mesh.position
-      );
+  });
 
-    };
+  // PREVIEW IMAGE IN 3D
 
-    reader.readAsDataURL(blob);
-
-  }catch(err){
-
-    console.log(err);
-  }
-
+  placeImage(
+    imgData,
+    active.mesh.position
+  );
 }
 
 // ===== PLACE IMAGE =====
@@ -527,7 +570,10 @@ function placeImage(img,pos){
   const plane =
   BABYLON.MeshBuilder.CreatePlane(
     "img",
-    {size:1},
+    {
+      width:1.2,
+      height:1.6
+    },
     scene
   );
 
@@ -535,8 +581,9 @@ function placeImage(img,pos){
 
   plane.position = pos.clone();
 
-  plane.billboardMode =
-  BABYLON.Mesh.BILLBOARDMODE_ALL;
+  plane.lookAt(
+    BABYLON.Vector3.Zero()
+  );
 
   const tex =
   new BABYLON.DynamicTexture(
@@ -573,6 +620,9 @@ function placeImage(img,pos){
   );
 
   mat.diffuseTexture = tex;
+
+  mat.emissiveColor =
+  new BABYLON.Color3(1,1,1);
 
   plane.material = mat;
 }

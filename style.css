@@ -22,8 +22,6 @@ body{
   justify-content:center;
 
   background:black;
-
-  z-index:10;
 }
 
 #startPanel{
@@ -68,6 +66,8 @@ body{
   height:100vh;
 }
 
+/* CAMERA BOX */
+
 #cameraBox{
   position:absolute;
 
@@ -105,8 +105,8 @@ video{
   left:50%;
   top:50%;
 
-  width:80px;
-  height:80px;
+  width:90px;
+  height:90px;
 
   border:3px solid rgba(255,255,255,0.9);
 
@@ -115,9 +115,7 @@ video{
   transform:translate(-50%,-50%);
 
   box-shadow:
-    0 0 15px rgba(255,255,255,0.5);
-
-  pointer-events:none;
+    0 0 20px rgba(255,255,255,0.5);
 }
 
 /* MOVING DOT */
@@ -128,8 +126,8 @@ video{
   left:50%;
   top:50%;
 
-  width:16px;
-  height:16px;
+  width:18px;
+  height:18px;
 
   border-radius:50%;
 
@@ -138,7 +136,7 @@ video{
   transform:translate(-50%,-50%);
 
   box-shadow:
-    0 0 10px #00ffcc;
+    0 0 12px #00ffcc;
 }
 
 /* PROGRESS */
@@ -149,8 +147,8 @@ video{
   left:50%;
   top:50%;
 
-  width:120px;
-  height:120px;
+  width:130px;
+  height:130px;
 
   border-radius:50%;
 
@@ -162,7 +160,7 @@ video{
 #arrow{
   position:absolute;
 
-  top:20px;
+  top:15px;
   left:50%;
 
   transform:translateX(-50%);
@@ -182,13 +180,13 @@ video{
 
   transform:translateX(-50%);
 
-  font-size:18px;
-
   background:rgba(0,0,0,0.6);
 
   padding:12px 24px;
 
   border-radius:12px;
+
+  font-size:18px;
 }
 
 /* DEBUG */
@@ -199,9 +197,9 @@ video{
   top:10px;
   left:10px;
 
-  font-size:12px;
-
   color:#00ffff;
+
+  font-size:12px;
 }
 
 /* RESULT */
@@ -241,8 +239,4 @@ video{
   border-radius:10px;
 
   cursor:pointer;
-}
-
-#capCanvas{
-  display:none;
 }
