@@ -400,7 +400,6 @@ async e=>{
     }
 
     // ===== DIFF =====
-    // FIXED LEFT RIGHT
 
     let yawDiff =
 
@@ -409,36 +408,33 @@ async e=>{
       active.yaw
     );
 
-    // ===== FIXED UP DOWN
-
     let pitchDiff =
 
     active.pitch -
     smoothPitch;
 
     // ===== DOT =====
-    // FULLY FIXED
+    // FINAL FIXED
 
     dot.style.transform =
 
     `translate(
-      calc(-50% + ${(yawDiff/30)*80}px),
+      calc(-50% + ${-(yawDiff/30)*80}px),
       calc(-50% + ${(pitchDiff/30)*80}px)
     )`;
 
     // ===== ARROW =====
+    // FINAL FIXED
 
     if(
       Math.abs(yawDiff) >
       Math.abs(pitchDiff)
     ){
 
-      // ===== FIXED =====
-
       arrow.innerText =
 
       yawDiff > 0 ?
-      "➡" : "⬅";
+      "⬅" : "➡";
 
     }else{
 
