@@ -1,56 +1,202 @@
-body { margin:0; background:black; color:white; font-family:sans-serif; }
-
-#startScreen {
-  position:fixed; inset:0; display:flex;
-  align-items:center; justify-content:center;
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
 }
 
-#captureScreen { position:fixed; inset:0; }
-
-#renderCanvas {
-  position:fixed; inset:0; width:100vw; height:100vh;
-}
-
-#cameraBox {
-  position:absolute;
-  width:220px; height:280px;
-  top:50%; left:50%;
-  transform:translate(-50%,-50%);
-  border:2px solid white;
+body{
   overflow:hidden;
+  background:black;
+  color:white;
+  font-family:sans-serif;
 }
 
-video {
-  position:absolute; inset:0;
-  width:100%; height:100%;
+/* START */
+
+#startScreen{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:black;
+  z-index:10;
+}
+
+#startPanel{
+  text-align:center;
+}
+
+#startPanel h1{
+  font-size:42px;
+  margin-bottom:10px;
+}
+
+#startPanel p{
+  opacity:0.7;
+  margin-bottom:30px;
+}
+
+#startBtn{
+  padding:15px 40px;
+  border:none;
+  border-radius:10px;
+  font-size:18px;
+  cursor:pointer;
+}
+
+/* CAPTURE */
+
+#captureScreen{
+  position:fixed;
+  inset:0;
+  display:none;
+}
+
+#renderCanvas{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+}
+
+#cameraBox{
+  position:absolute;
+
+  width:240px;
+  height:320px;
+
+  left:50%;
+  top:50%;
+
+  transform:translate(-50%,-50%);
+
+  border:3px solid white;
+  border-radius:20px;
+
+  overflow:hidden;
+
+  backdrop-filter:blur(5px);
+}
+
+video{
+  position:absolute;
+  inset:0;
+
+  width:100%;
+  height:100%;
+
   object-fit:cover;
 }
 
-#dot {
-  position:absolute; left:50%; top:50%;
-  width:12px; height:12px;
-  background:white; border-radius:50%;
-  transform:translate(-50%,-50%);
-}
+#dot{
+  position:absolute;
 
-#progress {
-  position:absolute; left:50%; top:50%;
-  width:90px; height:90px;
-  transform:translate(-50%,-50%);
+  left:50%;
+  top:50%;
+
+  width:16px;
+  height:16px;
+
   border-radius:50%;
+
+  background:white;
+
+  transform:translate(-50%,-50%);
 }
 
-#arrow {
-  position:absolute; top:20%; left:50%;
+#progress{
+  position:absolute;
+
+  left:50%;
+  top:50%;
+
+  width:120px;
+  height:120px;
+
+  border-radius:50%;
+
+  transform:translate(-50%,-50%);
+}
+
+#arrow{
+  position:absolute;
+
+  top:20px;
+  left:50%;
+
   transform:translateX(-50%);
-  font-size:28px; color:yellow;
+
+  font-size:34px;
+
+  color:yellow;
 }
 
-#debug {
-  position:fixed; top:10px; left:10px;
-  font-size:12px; color:#0ff;
+#status{
+  position:fixed;
+
+  bottom:20px;
+  left:50%;
+
+  transform:translateX(-50%);
+
+  font-size:18px;
+
+  background:rgba(0,0,0,0.5);
+
+  padding:10px 20px;
+
+  border-radius:10px;
 }
 
-#gallery img {
-  width:100px; margin:5px;
+#debug{
+  position:fixed;
+
+  top:10px;
+  left:10px;
+
+  font-size:12px;
+
+  color:#00ffff;
+}
+
+/* RESULT */
+
+#resultScreen{
+  position:fixed;
+  inset:0;
+
+  background:black;
+
+  display:none;
+
+  overflow:auto;
+
+  padding:20px;
+}
+
+#gallery{
+  display:flex;
+  flex-wrap:wrap;
+}
+
+#gallery img{
+  width:120px;
+  margin:5px;
+  border-radius:10px;
+}
+
+#downloadBtn{
+  margin-top:20px;
+
+  padding:15px 30px;
+
+  border:none;
+  border-radius:10px;
+
+  cursor:pointer;
+}
+
+#capCanvas{
+  display:none;
 }
