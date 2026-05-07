@@ -177,6 +177,8 @@ video{
   border-radius:12px;
 
   font-size:18px;
+
+  text-align:center;
 }
 
 /* DEBUG */
@@ -190,6 +192,12 @@ video{
   color:#00ffff;
 
   font-size:12px;
+
+  background:rgba(0,0,0,0.5);
+
+  padding:10px;
+
+  border-radius:10px;
 }
 
 /* RESULT */
