@@ -1,240 +1,107 @@
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+body {
+    margin: 0;
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: Arial;
 }
 
-body{
-  overflow:hidden;
-  background:black;
-  color:white;
-  font-family:sans-serif;
+.hidden { display: none !important; }
+
+#cameraContainer {
+    position: relative;
+    width: 90%;
+    max-width: 420px;
+    margin: auto;
 }
 
-/* START */
-
-#startScreen{
-  position:fixed;
-  inset:0;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  background:black;
+video {
+    width: 100%;
+    border-radius: 10px;
+    background: black;
 }
 
-#startPanel{
-  text-align:center;
+/* GUIDE */
+#circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    border: 2px solid white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
 }
 
-#startPanel h1{
-  font-size:42px;
-  margin-bottom:10px;
+#progress {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(#00c853 0deg, transparent 0deg);
 }
 
-#startPanel p{
-  opacity:0.7;
-  margin-bottom:30px;
+#dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
 }
 
-#startBtn{
-  padding:15px 40px;
-
-  border:none;
-  border-radius:12px;
-
-  font-size:18px;
-
-  cursor:pointer;
-}
-
-/* CAPTURE */
-
-#captureScreen{
-  position:fixed;
-  inset:0;
-
-  display:none;
-}
-
-/* CAMERA */
-
-#cameraBox{
-  position:absolute;
-
-  width:260px;
-  height:340px;
-
-  left:50%;
-  top:50%;
-
-  transform:translate(-50%,-50%);
-
-  border:3px solid white;
-  border-radius:20px;
-
-  overflow:hidden;
-}
-
-video{
-  position:absolute;
-  inset:0;
-
-  width:100%;
-  height:100%;
-
-  object-fit:cover;
-}
-
-/* CENTER TARGET */
-
-#centerTarget{
-  position:absolute;
-
-  left:50%;
-  top:50%;
-
-  width:100px;
-  height:100px;
-
-  border:3px solid rgba(255,255,255,0.9);
-
-  border-radius:50%;
-
-  transform:translate(-50%,-50%);
-
-  box-shadow:
-    0 0 20px rgba(255,255,255,0.5);
-}
-
-/* DOT */
-
-#dot{
-  position:absolute;
-
-  left:50%;
-  top:50%;
-
-  width:20px;
-  height:20px;
-
-  border-radius:50%;
-
-  background:#00ffcc;
-
-  transform:translate(-50%,-50%);
-
-  box-shadow:
-    0 0 15px #00ffcc;
-}
-
-/* PROGRESS */
-
-#progress{
-  position:absolute;
-
-  left:50%;
-  top:50%;
-
-  width:140px;
-  height:140px;
-
-  border-radius:50%;
-
-  transform:translate(-50%,-50%);
-}
-
-/* ARROW */
-
-#arrow{
-  position:absolute;
-
-  top:15px;
-  left:50%;
-
-  transform:translateX(-50%);
-
-  font-size:34px;
-
-  color:yellow;
-}
-
-/* STATUS */
-
-#status{
-  position:fixed;
-
-  bottom:20px;
-  left:50%;
-
-  transform:translateX(-50%);
-
-  background:rgba(0,0,0,0.6);
-
-  padding:12px 24px;
-
-  border-radius:12px;
-
-  font-size:18px;
-
-  text-align:center;
+#arrow {
+    position: absolute;
+    top: calc(50% - 80px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 28px;
 }
 
 /* DEBUG */
-
-#debug{
-  position:fixed;
-
-  top:10px;
-  left:10px;
-
-  color:#00ffff;
-
-  font-size:12px;
-
-  background:rgba(0,0,0,0.5);
-
-  padding:10px;
-
-  border-radius:10px;
+#debugBox {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 8px;
+    font-size: 14px;
+    border: 2px solid red;
 }
 
 /* RESULT */
-
-#resultScreen{
-  position:fixed;
-  inset:0;
-
-  background:black;
-
-  display:none;
-
-  overflow:auto;
-
-  padding:20px;
+#gallery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
-#gallery{
-  display:flex;
-  flex-wrap:wrap;
+#gallery img {
+    width: 70px;
+    margin: 4px;
+    border-radius: 6px;
 }
 
-#gallery img{
-  width:120px;
-
-  margin:5px;
-
-  border-radius:10px;
+/* POPUP */
+#previewPopup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-#downloadBtn{
-  margin-top:20px;
+#previewPopup img {
+    max-width: 90%;
+    max-height: 90%;
+}
 
-  padding:15px 30px;
-
-  border:none;
-  border-radius:10px;
-
-  cursor:pointer;
+button {
+    padding: 10px 18px;
+    margin: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #00c853;
+    color: white;
 }

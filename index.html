@@ -1,100 +1,59 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>360 Capture</title>
-
 <link rel="stylesheet" href="style.css">
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 </head>
 
 <body>
 
 <!-- START -->
-
 <div id="startScreen">
-
-  <div id="startPanel">
-
-    <h1>360 Capture</h1>
-
-    <p>
-      Professional Panorama Capture
-    </p>
-
-    <button id="startBtn">
-      START
-    </button>
-
-  </div>
-
+    <h2>📸 360 Capture</h2>
+    <button id="startBtn">Start</button>
 </div>
 
-<!-- CAPTURE -->
+<!-- CAMERA -->
+<div id="cameraScreen" class="hidden">
+    <div id="cameraContainer">
+        <video id="video" autoplay playsinline muted></video>
 
-<div id="captureScreen">
+        <div id="circle"><div id="progress"></div></div>
+        <div id="dot"></div>
+        <div id="arrow">⬆</div>
+    </div>
 
-  <!-- CAMERA -->
+    <p id="statusText">Align camera</p>
 
-  <div id="cameraBox">
+    <!-- DEBUG UI -->
+    <div id="debugBox">
+        <div>Yaw: <span id="dbgYaw">0</span></div>
+        <div>Pitch: <span id="dbgPitch">0</span></div>
+        <div>Target Yaw: <span id="dbgTargetYaw">0</span></div>
+        <div>Target Pitch: <span id="dbgTargetPitch">0</span></div>
+    </div>
 
-    <video
-      id="video"
-      autoplay
-      playsinline
-      muted>
-    </video>
-
-    <!-- CENTER -->
-
-    <div id="centerTarget"></div>
-
-    <!-- DOT -->
-
-    <div id="dot"></div>
-
-    <!-- PROGRESS -->
-
-    <div id="progress"></div>
-
-    <!-- ARROW -->
-
-    <div id="arrow">⬆</div>
-
-  </div>
-
-  <!-- STATUS -->
-
-  <div id="status">
-    Initializing...
-  </div>
-
-  <!-- DEBUG -->
-
-  <div id="debug"></div>
-
+    <button id="captureBtn">Start Capture</button>
 </div>
 
 <!-- RESULT -->
+<div id="resultScreen" class="hidden">
+    <h3>Capture Complete</h3>
+    <div id="gallery"></div>
 
-<div id="resultScreen">
-
-  <h2>Capture Complete</h2>
-
-  <div id="gallery"></div>
-
-  <button id="downloadBtn">
-    Download ZIP
-  </button>
-
+    <button id="downloadBtn">Download</button>
+    <button id="retakeBtn">Retake</button>
 </div>
 
+<!-- PREVIEW -->
+<div id="previewPopup" class="hidden">
+    <img id="previewImg">
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="script.js"></script>
 
 </body>

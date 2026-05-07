@@ -32,15 +32,13 @@ document.getElementById("debug");
 const statusText =
 document.getElementById("status");
 
-// ===== BABYLON =====
+// ===== ERROR =====
 
-let engine;
-let scene;
+window.onerror = function(err){
 
-let camera3D;
-
-let previewRoot;
-let worldRoot;
+  debug.innerHTML =
+  "ERROR: " + err;
+};
 
 // ===== SENSOR =====
 
@@ -68,11 +66,13 @@ let holdStart = 0;
 let capturedImages = [];
 let captureData = [];
 
-let guidePoints = [];
-
 // ===== CAMERA =====
 
 let stream;
+
+// ===== CAPTURE INDEX =====
+
+let currentIndex = 0;
 
 // ===== RINGS =====
 
@@ -80,41 +80,100 @@ const rings = [
 
   // TOP
   {
-    pitch:90,
-    yaws:[0]
+    pitch: 75,
+    yaws: [
+      0,
+      120,
+      240
+    ]
   },
 
   // UPPER
   {
-    pitch:45,
-    yaws:[0,60,120,180,240,300]
+    pitch: 45,
+    yaws: [
+      0,
+      36,
+      72,
+      108,
+      144,
+      180,
+      216,
+      252,
+      288,
+      324
+    ]
   },
 
   // HORIZON
   {
-    pitch:0,
-    yaws:[
-      0,30,60,90,120,150,
-      180,210,240,270,300,330
+    pitch: 0,
+    yaws: [
+      0,
+      30,
+      60,
+      90,
+      120,
+      150,
+      180,
+      210,
+      240,
+      270,
+      300,
+      330
     ]
   },
 
   // LOWER
   {
-    pitch:-45,
-    yaws:[0,60,120,180,240,300]
+    pitch: -45,
+    yaws: [
+      0,
+      36,
+      72,
+      108,
+      144,
+      180,
+      216,
+      252,
+      288,
+      324
+    ]
   },
 
   // BOTTOM
   {
-    pitch:-90,
-    yaws:[0]
+    pitch: -75,
+    yaws: [
+      60,
+      180,
+      300
+    ]
   }
 
 ];
 
-let totalPoints =
-rings.reduce((s,r)=>s+r.yaws.length,0);
+// ===== FLATTEN =====
+
+const capturePoints = [];
+
+rings.forEach(r=>{
+
+  r.yaws.forEach(yaw=>{
+
+    capturePoints.push({
+
+      yaw,
+      pitch:r.pitch
+
+    });
+
+  });
+
+});
+
+const totalPoints =
+capturePoints.length;
 
 // ===== HELPERS =====
 
@@ -145,233 +204,79 @@ function getCameraFOV(){
   };
 }
 
-// ===== INIT =====
-
-function init3D(){
-
-  engine =
-  new BABYLON.Engine(
-    renderCanvas,
-    true
-  );
-
-  scene =
-  new BABYLON.Scene(engine);
-
-  scene.clearColor =
-  new BABYLON.Color4(0,0,0,0);
-
-  // CAMERA
-
-  camera3D =
-  new BABYLON.FreeCamera(
-    "cam",
-    new BABYLON.Vector3(0,0,-8),
-    scene
-  );
-
-  camera3D.setTarget(
-    BABYLON.Vector3.Zero()
-  );
-
-  camera3D.fov = 1.0;
-
-  // LIGHT
-
-  new BABYLON.HemisphericLight(
-    "light",
-    new BABYLON.Vector3(0,1,0),
-    scene
-  );
-
-  // PREVIEW ROOT
-
-  previewRoot =
-  new BABYLON.TransformNode(
-    "previewRoot",
-    scene
-  );
-
-  // WORLD ROOT
-
-  worldRoot =
-  new BABYLON.TransformNode(
-    "worldRoot",
-    scene
-  );
-
-  worldRoot.parent =
-  previewRoot;
-
-  createPoints();
-
-  engine.runRenderLoop(()=>{
-    scene.render();
-  });
-
-  window.addEventListener(
-    "resize",
-    ()=>engine.resize()
-  );
-}
-
-// ===== CREATE POINTS =====
-
-function createPoints(){
-
-  guidePoints = [];
-
-  rings.forEach(r=>{
-
-    r.yaws.forEach(yaw=>{
-
-      const y =
-      BABYLON.Tools.ToRadians(yaw);
-
-      const p =
-      BABYLON.Tools.ToRadians(r.pitch);
-
-      const pos =
-      new BABYLON.Vector3(
-        Math.sin(y)*Math.cos(p),
-        Math.sin(p),
-        Math.cos(y)*Math.cos(p)
-      ).scale(4);
-
-      const mesh =
-      BABYLON.MeshBuilder.CreateSphere(
-        "pt",
-        {
-          diameter:0.25
-        },
-        scene
-      );
-
-      mesh.parent = worldRoot;
-
-      mesh.position = pos;
-
-      const mat =
-      new BABYLON.StandardMaterial(
-        "m",
-        scene
-      );
-
-      mat.emissiveColor =
-      new BABYLON.Color3(
-        0.3,
-        0.3,
-        0.3
-      );
-
-      mesh.material = mat;
-
-      guidePoints.push({
-
-        mesh,
-        yaw,
-        pitch:r.pitch,
-        done:false
-
-      });
-
-    });
-
-  });
-
-  updateGuideVisuals();
-}
-
-// ===== GUIDE VISUALS =====
-
-function updateGuideVisuals(){
-
-  const active =
-  guidePoints.find(p=>!p.done);
-
-  guidePoints.forEach(p=>{
-
-    if(p.done){
-
-      // DONE
-
-      p.mesh.material.emissiveColor =
-      new BABYLON.Color3(0,1,0);
-
-      p.mesh.scaling.setAll(1);
-
-    }else if(p===active){
-
-      // ACTIVE
-
-      p.mesh.material.emissiveColor =
-      new BABYLON.Color3(1,1,0);
-
-      p.mesh.scaling.setAll(2);
-
-    }else{
-
-      // FUTURE
-
-      p.mesh.material.emissiveColor =
-      new BABYLON.Color3(
-        0.25,
-        0.25,
-        0.25
-      );
-
-      p.mesh.scaling.setAll(1);
-    }
-
-  });
-
-}
-
 // ===== START =====
 
 startBtn.onclick = async ()=>{
 
-  startScreen.style.display =
-  "none";
+  try{
 
-  captureScreen.style.display =
-  "block";
+    startScreen.style.display =
+    "none";
 
-  if(DeviceOrientationEvent.requestPermission){
+    captureScreen.style.display =
+    "block";
 
-    await DeviceOrientationEvent
-    .requestPermission();
-  }
+    statusText.innerHTML =
+    "Opening camera...";
 
-  stream =
-  await navigator.mediaDevices
-  .getUserMedia({
+    // iOS
 
-    video:{
+    if(
+      typeof DeviceOrientationEvent !==
+      "undefined" &&
 
-      facingMode:{
-        ideal:"environment"
-      },
+      typeof DeviceOrientationEvent
+      .requestPermission ===
+      "function"
+    ){
 
-      width:{
-        ideal:4096
-      },
+      const permission =
+      await DeviceOrientationEvent
+      .requestPermission();
 
-      height:{
-        ideal:2160
-      }
-
+      debug.innerHTML =
+      "Permission: " + permission;
     }
 
-  });
+    // CAMERA
 
-  video.srcObject = stream;
+    stream =
+    await navigator.mediaDevices
+    .getUserMedia({
 
-  await video.play();
+      video:{
 
-  init3D();
+        facingMode:{
+          ideal:"environment"
+        },
 
-  capturing = true;
+        width:{
+          ideal:4096
+        },
+
+        height:{
+          ideal:2160
+        }
+
+      }
+
+    });
+
+    video.srcObject = stream;
+
+    await video.play();
+
+    capturing = true;
+
+    statusText.innerHTML =
+    "Move phone to start";
+
+  }catch(err){
+
+    debug.innerHTML =
+    "START ERROR:<br>" + err;
+  }
+
 };
 
 // ===== SENSOR =====
@@ -380,197 +285,226 @@ window.addEventListener(
 "deviceorientation",
 async e=>{
 
-  if(!capturing) return;
+  try{
 
-  if(e.alpha==null) return;
+    if(!capturing) return;
 
-  // ===== RAW =====
+    if(e.alpha == null){
 
-  let rawYaw = e.alpha;
+      debug.innerHTML =
+      "No sensor data";
 
-  // FIXED PITCH
-  let rawPitch = e.beta;
+      return;
+    }
 
-  // ROLL
-  let rawRoll = e.gamma;
+    // ===== RAW =====
 
-  // ===== FIRST LOCK =====
+    let rawYaw =
+    360 - e.alpha;
 
-  if(!environmentLocked){
+    let rawPitch =
+    Math.max(
+      -89,
+      Math.min(
+        89,
+        e.beta || 0
+      )
+    );
 
-    smoothYaw = 0;
-    smoothPitch = 0;
-    smoothRoll = 0;
+    let rawRoll =
+    e.gamma || 0;
 
-  }else{
+    // ===== FIRST LOCK =====
+
+    if(!environmentLocked){
+
+      worldLockYaw =
+      rawYaw;
+
+      worldLockPitch =
+      rawPitch;
+
+      environmentLocked = true;
+
+      debug.innerHTML =
+      "Environment Locked";
+    }
+
+    // ===== RELATIVE =====
 
     let yaw =
-    norm360(rawYaw-worldLockYaw);
+    norm360(
+      rawYaw - worldLockYaw
+    );
 
     let pitch =
-    rawPitch-worldLockPitch;
+    rawPitch - worldLockPitch;
 
-    // SMOOTH
+    // ===== SMOOTH =====
 
     smoothYaw =
     norm360(
       smoothYaw +
-      angleDiff(yaw,smoothYaw)*0.08
+      angleDiff(
+        yaw,
+        smoothYaw
+      ) * 0.12
     );
 
     smoothPitch +=
-    (pitch-smoothPitch)*0.08;
+    (pitch-smoothPitch)*0.12;
 
     smoothRoll +=
-    (rawRoll-smoothRoll)*0.08;
-  }
+    (rawRoll-smoothRoll)*0.12;
 
-  // ===== PREVIEW ROTATION =====
+    // ===== ACTIVE =====
 
-  previewRoot.rotation.y =
-  BABYLON.Tools.ToRadians(
-    smoothYaw * 0.25
-  );
+    const active =
+    capturePoints[currentIndex];
 
-  previewRoot.rotation.x =
-  BABYLON.Tools.ToRadians(
-    -smoothPitch * 0.25
-  );
+    if(!active){
 
-  // ===== ACTIVE =====
+      finish();
+      return;
+    }
 
-  const active =
-  guidePoints.find(p=>!p.done);
+    // ===== DIFF =====
 
-  if(!active) return;
-
-  let yawDiff;
-  let pitchDiff;
-
-  if(!environmentLocked){
-
-    yawDiff = 0;
-    pitchDiff = 0;
-
-  }else{
-
-    yawDiff =
+    let yawDiff =
     -angleDiff(
       smoothYaw,
       active.yaw
     );
 
-    pitchDiff =
-    smoothPitch-active.pitch;
-  }
+    let pitchDiff =
+    smoothPitch -
+    active.pitch;
 
-  // ===== DOT =====
+    // ===== DOT =====
 
-  dot.style.transform =
-  `translate(
-    calc(-50% + ${-(yawDiff/30)*70}px),
-    calc(-50% + ${-(pitchDiff/30)*70}px)
-  )`;
-
-  // ===== ARROW =====
-
-  if(Math.abs(yawDiff)>
-     Math.abs(pitchDiff)){
-
-    arrow.innerText =
-    yawDiff>0 ? "⬅":"➡";
-
-  }else{
-
-    arrow.innerText =
-    pitchDiff>0 ? "⬇":"⬆";
-  }
-
-  // ===== STATUS =====
-
-  statusText.innerHTML =
-  `Capture ${capturedImages.length+1}
-   / ${totalPoints}`;
-
-  // ===== ALIGN =====
-
-  if(
-    Math.abs(yawDiff)<5 &&
-    Math.abs(pitchDiff)<5
-  ){
-
-    if(!holding){
-
-      holding = true;
-
-      holdStart = Date.now();
-    }
-
-    let p =
-    (Date.now()-holdStart)/900;
-
-    progress.style.background =
-    `conic-gradient(
-      lime ${p*360}deg,
-      transparent 0deg
+    dot.style.transform =
+    `translate(
+      calc(-50% + ${-(yawDiff/30)*80}px),
+      calc(-50% + ${-(pitchDiff/30)*80}px)
     )`;
 
-    if(p>=1){
+    // ===== ARROW =====
 
-      // FIRST LOCK
+    if(
+      Math.abs(yawDiff) >
+      Math.abs(pitchDiff)
+    ){
 
-      if(!environmentLocked){
+      arrow.innerText =
+      yawDiff > 0 ?
+      "⬅" : "➡";
 
-        environmentLocked = true;
+    }else{
 
-        worldLockYaw =
-        rawYaw;
+      arrow.innerText =
+      pitchDiff > 0 ?
+      "⬇" : "⬆";
+    }
 
-        worldLockPitch =
-        rawPitch;
+    // ===== STATUS =====
+
+    statusText.innerHTML =
+    `
+    Capture ${currentIndex+1}
+    / ${totalPoints}
+
+    <br>
+
+    Target:
+    Y ${active.yaw}
+    P ${active.pitch}
+    `;
+
+    // ===== ALIGN =====
+
+    const aligned =
+
+      Math.abs(yawDiff) < 6 &&
+      Math.abs(pitchDiff) < 6;
+
+    if(aligned){
+
+      if(!holding){
+
+        holding = true;
+
+        holdStart =
+        Date.now();
       }
 
-      await captureHQ(active);
+      let progressValue =
+      (Date.now()-holdStart)/700;
 
-      active.done = true;
+      progress.style.background =
+      `conic-gradient(
+        lime ${progressValue*360}deg,
+        transparent 0deg
+      )`;
 
-      updateGuideVisuals();
+      if(progressValue >= 1){
+
+        await capture(active);
+
+        currentIndex++;
+
+        holding = false;
+
+        progress.style.background =
+        "none";
+      }
+
+    }else{
 
       holding = false;
 
       progress.style.background =
       "none";
-
-      if(
-        capturedImages.length===
-        totalPoints
-      ){
-        finish();
-      }
-
     }
 
-  }else{
+    // ===== DEBUG =====
 
-    holding = false;
+    debug.innerHTML =
+    `
+    Yaw:
+    ${smoothYaw.toFixed(1)}
 
-    progress.style.background =
-    "none";
+    <br>
+
+    Pitch:
+    ${smoothPitch.toFixed(1)}
+
+    <br>
+
+    Roll:
+    ${smoothRoll.toFixed(1)}
+
+    <br>
+
+    TargetYaw:
+    ${active.yaw}
+
+    <br>
+
+    TargetPitch:
+    ${active.pitch}
+    `;
+
+  }catch(err){
+
+    debug.innerHTML =
+    "SENSOR ERROR:<br>" + err;
   }
-
-  // DEBUG
-
-  debug.innerHTML = `
-  Yaw:${smoothYaw.toFixed(1)}<br>
-  Pitch:${smoothPitch.toFixed(1)}<br>
-  Roll:${smoothRoll.toFixed(1)}
-  `;
 
 });
 
 // ===== CAPTURE =====
 
-async function captureHQ(active){
+async function capture(active){
 
   const canvas =
   document.createElement("canvas");
@@ -630,81 +564,13 @@ async function captureHQ(active){
       pitch:smoothPitch,
       roll:smoothRoll
 
-    }
+    },
+
+    timestamp:
+    Date.now()
 
   });
 
-  placeImage(
-    imgData,
-    active.mesh.position
-  );
-}
-
-// ===== PLACE IMAGE =====
-
-function placeImage(img,pos){
-
-  const plane =
-  BABYLON.MeshBuilder.CreatePlane(
-    "img",
-    {
-      width:1.2,
-      height:1.6
-    },
-    scene
-  );
-
-  plane.parent = worldRoot;
-
-  plane.position = pos.clone();
-
-  plane.lookAt(
-    BABYLON.Vector3.Zero()
-  );
-
-  const tex =
-  new BABYLON.DynamicTexture(
-    "dt",
-    {
-      width:512,
-      height:512
-    },
-    scene
-  );
-
-  const ctx =
-  tex.getContext();
-
-  const image =
-  new Image();
-
-  image.onload=()=>{
-
-    ctx.drawImage(
-      image,
-      0,
-      0,
-      512,
-      512
-    );
-
-    tex.update();
-  };
-
-  image.src = img;
-
-  const mat =
-  new BABYLON.StandardMaterial(
-    "mat",
-    scene
-  );
-
-  mat.diffuseTexture = tex;
-
-  mat.emissiveColor =
-  new BABYLON.Color3(1,1,1);
-
-  plane.material = mat;
 }
 
 // ===== FINISH =====
