@@ -32,16 +32,21 @@ document.getElementById("debug");
 const statusText =
 document.getElementById("status");
 
-// ===== 3D =====
+// ===== BABYLON =====
 
 let engine;
 let scene;
+
 let camera3D;
+
+let previewRoot;
 let worldRoot;
 
-// ===== CAMERA =====
+// ===== SENSOR =====
 
-let stream;
+let smoothYaw = 0;
+let smoothPitch = 0;
+let smoothRoll = 0;
 
 // ===== LOCK =====
 
@@ -49,11 +54,6 @@ let environmentLocked = false;
 
 let worldLockYaw = 0;
 let worldLockPitch = 0;
-
-// ===== SENSOR =====
-
-let smoothYaw = 0;
-let smoothPitch = 0;
 
 // ===== STATE =====
 
@@ -68,21 +68,29 @@ let holdStart = 0;
 let capturedImages = [];
 let captureData = [];
 
-// ===== GUIDE =====
-
 let guidePoints = [];
+
+// ===== CAMERA =====
+
+let stream;
 
 // ===== RINGS =====
 
 const rings = [
 
-  { pitch:80, yaws:[0,180] },
+  // TOP
+  {
+    pitch:90,
+    yaws:[0]
+  },
 
+  // UPPER
   {
     pitch:45,
     yaws:[0,60,120,180,240,300]
   },
 
+  // HORIZON
   {
     pitch:0,
     yaws:[
@@ -91,14 +99,16 @@ const rings = [
     ]
   },
 
+  // LOWER
   {
     pitch:-45,
     yaws:[0,60,120,180,240,300]
   },
 
+  // BOTTOM
   {
-    pitch:-80,
-    yaws:[90,270]
+    pitch:-90,
+    yaws:[0]
   }
 
 ];
@@ -114,6 +124,25 @@ function norm360(a){
 
 function angleDiff(a,b){
   return ((a-b+540)%360)-180;
+}
+
+// ===== FOV =====
+
+function getCameraFOV(){
+
+  const aspect =
+  video.videoWidth /
+  video.videoHeight;
+
+  const vertical = 50;
+
+  return {
+
+    vertical,
+
+    horizontal:
+    vertical * aspect
+  };
 }
 
 // ===== INIT =====
@@ -132,6 +161,8 @@ function init3D(){
   scene.clearColor =
   new BABYLON.Color4(0,0,0,0);
 
+  // CAMERA
+
   camera3D =
   new BABYLON.FreeCamera(
     "cam",
@@ -145,17 +176,32 @@ function init3D(){
 
   camera3D.fov = 1.0;
 
+  // LIGHT
+
   new BABYLON.HemisphericLight(
     "light",
     new BABYLON.Vector3(0,1,0),
     scene
   );
 
+  // PREVIEW ROOT
+
+  previewRoot =
+  new BABYLON.TransformNode(
+    "previewRoot",
+    scene
+  );
+
+  // WORLD ROOT
+
   worldRoot =
   new BABYLON.TransformNode(
     "worldRoot",
     scene
   );
+
+  worldRoot.parent =
+  previewRoot;
 
   createPoints();
 
@@ -195,7 +241,9 @@ function createPoints(){
       const mesh =
       BABYLON.MeshBuilder.CreateSphere(
         "pt",
-        {diameter:0.25},
+        {
+          diameter:0.25
+        },
         scene
       );
 
@@ -245,7 +293,7 @@ function updateGuideVisuals(){
 
     if(p.done){
 
-      // GREEN DONE
+      // DONE
 
       p.mesh.material.emissiveColor =
       new BABYLON.Color3(0,1,0);
@@ -336,9 +384,15 @@ async e=>{
 
   if(e.alpha==null) return;
 
+  // ===== RAW =====
+
   let rawYaw = e.alpha;
 
-  let rawPitch = e.beta - 90;
+  // FIXED PITCH
+  let rawPitch = e.beta;
+
+  // ROLL
+  let rawRoll = e.gamma;
 
   // ===== FIRST LOCK =====
 
@@ -346,6 +400,7 @@ async e=>{
 
     smoothYaw = 0;
     smoothPitch = 0;
+    smoothRoll = 0;
 
   }else{
 
@@ -355,17 +410,34 @@ async e=>{
     let pitch =
     rawPitch-worldLockPitch;
 
-    let yawDelta =
-    angleDiff(yaw,smoothYaw);
+    // SMOOTH
 
     smoothYaw =
     norm360(
-      smoothYaw + yawDelta*0.08
+      smoothYaw +
+      angleDiff(yaw,smoothYaw)*0.08
     );
 
     smoothPitch +=
     (pitch-smoothPitch)*0.08;
+
+    smoothRoll +=
+    (rawRoll-smoothRoll)*0.08;
   }
+
+  // ===== PREVIEW ROTATION =====
+
+  previewRoot.rotation.y =
+  BABYLON.Tools.ToRadians(
+    smoothYaw * 0.25
+  );
+
+  previewRoot.rotation.x =
+  BABYLON.Tools.ToRadians(
+    -smoothPitch * 0.25
+  );
+
+  // ===== ACTIVE =====
 
   const active =
   guidePoints.find(p=>!p.done);
@@ -456,16 +528,6 @@ async e=>{
 
         worldLockPitch =
         rawPitch;
-
-        worldRoot.rotation.y =
-        -BABYLON.Tools.ToRadians(
-          worldLockYaw
-        );
-
-        worldRoot.rotation.x =
-        BABYLON.Tools.ToRadians(
-          worldLockPitch
-        );
       }
 
       await captureHQ(active);
@@ -496,9 +558,12 @@ async e=>{
     "none";
   }
 
+  // DEBUG
+
   debug.innerHTML = `
   Yaw:${smoothYaw.toFixed(1)}<br>
-  Pitch:${smoothPitch.toFixed(1)}
+  Pitch:${smoothPitch.toFixed(1)}<br>
+  Roll:${smoothRoll.toFixed(1)}
   `;
 
 });
@@ -551,11 +616,23 @@ async function captureHQ(active){
     smoothYaw,
 
     actualPitch:
-    smoothPitch
+    smoothPitch,
+
+    roll:
+    smoothRoll,
+
+    fov:
+    getCameraFOV(),
+
+    deviceOrientation:{
+
+      yaw:smoothYaw,
+      pitch:smoothPitch,
+      roll:smoothRoll
+
+    }
 
   });
-
-  // PREVIEW IMAGE IN 3D
 
   placeImage(
     imgData,
@@ -588,7 +665,10 @@ function placeImage(img,pos){
   const tex =
   new BABYLON.DynamicTexture(
     "dt",
-    {width:512,height:512},
+    {
+      width:512,
+      height:512
+    },
     scene
   );
 
