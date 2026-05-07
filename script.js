@@ -51,7 +51,6 @@ let smoothRoll = 0;
 let environmentLocked = false;
 
 let worldLockYaw = 0;
-let worldLockPitch = 0;
 
 // ===== STATE =====
 
@@ -78,7 +77,7 @@ let currentIndex = 0;
 
 const rings = [
 
-  // ===== ZENITH =====
+  // ===== TOP =====
 
   {
     pitch: 90,
@@ -105,7 +104,7 @@ const rings = [
     ]
   },
 
-  // ===== HORIZON =====
+  // ===== MIDDLE =====
 
   {
     pitch: 0,
@@ -147,7 +146,7 @@ const rings = [
     ]
   },
 
-  // ===== NADIR =====
+  // ===== BOTTOM =====
 
   {
     pitch: -90,
@@ -191,14 +190,25 @@ function angleDiff(a,b){
   return ((a-b+540)%360)-180;
 }
 
-// ===== FIXED PITCH =====
-// middle = 0
-// up = +
-// down = -
+// ===== FINAL FIXED PITCH =====
+// YOUR DEVICE:
+// beta 0   -> -90
+// beta 90  -> 0
+// beta 180 -> +90
 
 function getStablePitch(beta){
 
-  return -beta;
+  let pitch = beta - 90;
+
+  // ===== CLAMP =====
+
+  if(pitch > 90)
+    pitch = 90;
+
+  if(pitch < -90)
+    pitch = -90;
+
+  return pitch;
 }
 
 // ===== FOV =====
@@ -324,8 +334,6 @@ async e=>{
     let rawYaw =
     360 - e.alpha;
 
-    // ===== FIXED PITCH =====
-
     let rawPitch =
     getStablePitch(
       e.beta || 0
@@ -340,9 +348,6 @@ async e=>{
 
       worldLockYaw =
       rawYaw;
-
-      worldLockPitch =
-      rawPitch;
 
       environmentLocked = true;
 
@@ -359,7 +364,7 @@ async e=>{
     );
 
     let pitch =
-    rawPitch - worldLockPitch;
+    rawPitch;
 
     // ===== SMOOTH =====
 
@@ -410,7 +415,6 @@ async e=>{
     active.pitch;
 
     // ===== DOT =====
-    // FIXED DIRECTION
 
     dot.style.transform =
 
