@@ -22,6 +22,9 @@ let smoothRoll=0;
 let stableYaw=0;
 let stablePitch=0;
 
+let displayedYaw=0;
+let displayedPitch=0;
+
 let captureCooldown=false;
 let isCapturingFrame=false;
 
@@ -248,15 +251,15 @@ smoothYaw+
 angleDiff(
 yaw,
 smoothYaw
-)*0.08
+)*0.14
 
 );
 
 smoothPitch+=
-(pitch-smoothPitch)*0.14;
+(pitch-smoothPitch)*0.20;
 
 smoothRoll+=
-(rawRoll-smoothRoll)*0.08;
+(rawRoll-smoothRoll)*0.12;
 
 stableYaw=
 norm360(
@@ -266,12 +269,27 @@ stableYaw+
 angleDiff(
 smoothYaw,
 stableYaw
-)*0.18
+)*0.35
 
 );
 
 stablePitch+=
-(smoothPitch-stablePitch)*0.18;
+(smoothPitch-stablePitch)*0.35;
+
+displayedYaw=
+norm360(
+
+displayedYaw+
+
+angleDiff(
+stableYaw,
+displayedYaw
+)*0.55
+
+);
+
+displayedPitch+=
+(stablePitch-displayedPitch)*0.55;
 
 const active=
 capturePoints[currentIndex];
@@ -292,35 +310,45 @@ let pitchDiff=
 active.pitch-
 stablePitch;
 
+let displayYawDiff=
+angleDiff(
+displayedYaw,
+active.yaw
+);
+
+let displayPitchDiff=
+active.pitch-
+displayedPitch;
+
 let visualYaw=
-yawDiff;
+displayYawDiff;
 
 let visualPitch=
-pitchDiff;
+displayPitchDiff;
 
-if(Math.abs(visualYaw)<3)
+if(Math.abs(visualYaw)<2)
 visualYaw=0;
 
-if(Math.abs(visualPitch)<3)
+if(Math.abs(visualPitch)<2)
 visualPitch=0;
 
 visualYaw=
 Math.max(
--20,
-Math.min(20,visualYaw)
+-18,
+Math.min(18,visualYaw)
 );
 
 visualPitch=
 Math.max(
--20,
-Math.min(20,visualPitch)
+-18,
+Math.min(18,visualPitch)
 );
 
 dot.style.transform=
 `
 translate(
-calc(-50% + ${-(visualYaw/20)*65}px),
-calc(-50% + ${(visualPitch/20)*65}px)
+calc(-50% + ${-(visualYaw/18)*70}px),
+calc(-50% + ${(visualPitch/18)*70}px)
 )
 `;
 
@@ -340,7 +368,7 @@ pitchDiff>0?"⬆":"⬇";
 
 statusText.innerHTML=
 `
-Capture ${currentIndex+1}
+Captured ${capturedImages.length}
 / ${totalPoints}
 
 <br>
@@ -366,7 +394,7 @@ Date.now();
 }
 
 let progressValue=
-(Date.now()-holdStart)/450;
+(Date.now()-holdStart)/500;
 
 progress.style.background=
 `
@@ -400,7 +428,7 @@ currentCapture
 currentIndex++;
 
 await new Promise(r=>
-setTimeout(r,700)
+setTimeout(r,550)
 );
 
 captureCooldown=false;
@@ -432,6 +460,11 @@ ${smoothRoll.toFixed(1)}
 
 <br>
 
+Captured:
+${capturedImages.length}
+
+<br>
+
 TargetYaw:
 ${active.yaw}
 
@@ -439,11 +472,6 @@ ${active.yaw}
 
 TargetPitch:
 ${active.pitch}
-
-<br>
-
-Capture:
-${currentIndex+1}
 `;
 
 }catch(err){
