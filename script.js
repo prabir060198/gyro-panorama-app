@@ -191,29 +191,31 @@ function angleDiff(a,b){
   return ((a-b+540)%360)-180;
 }
 
-// ===== STABLE PITCH =====
+// ===== FIXED PITCH =====
 
 function getStablePitch(beta,gamma){
 
   let pitch;
 
-  // PORTRAIT
+  // ===== PORTRAIT =====
 
   if(
     window.innerHeight >
     window.innerWidth
   ){
 
-    pitch = beta;
+    // FIXED DIRECTION
+
+    pitch = -beta;
 
   }else{
 
     // LANDSCAPE
 
-    pitch = gamma;
+    pitch = -gamma;
   }
 
-  // FIX OVERFLOW
+  // ===== FIX RANGE =====
 
   if(pitch > 90)
     pitch = 180 - pitch;
@@ -432,12 +434,13 @@ async e=>{
     active.pitch;
 
     // ===== DOT =====
+    // FIXED PITCH DIRECTION
 
     dot.style.transform =
 
     `translate(
       calc(-50% + ${-(yawDiff/30)*80}px),
-      calc(-50% + ${-(pitchDiff/30)*80}px)
+      calc(-50% + ${(pitchDiff/30)*80}px)
     )`;
 
     // ===== ARROW =====
@@ -672,4 +675,51 @@ function finish(){
   });
 
 }
+
+// ===== DOWNLOAD =====
+
+document.getElementById(
+"downloadBtn"
+).onclick = async ()=>{
+
+  const zip =
+  new JSZip();
+
+  capturedImages.forEach((img,i)=>{
+
+    zip.file(
+      `img_${i+1}.jpg`,
+      img.split(",")[1],
+      {base64:true}
+    );
+
+  });
+
+  zip.file(
+    "data.json",
+    JSON.stringify(
+      captureData,
+      null,
+      2
+    )
+  );
+
+  const blob =
+  await zip.generateAsync({
+    type:"blob"
+  });
+
+  const a =
+  document.createElement("a");
+
+  a.href =
+  URL.createObjectURL(blob);
+
+  a.download =
+  "360_capture.zip";
+
+  a.click();
+
+};
+
 });
