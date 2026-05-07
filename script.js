@@ -531,6 +531,49 @@ progress.style.background=
 "none";
 }
 
+debug.innerHTML=
+`
+Mode:
+${capturePoints.length} Points
+
+<br><br>
+
+Captured:
+${capturedImages.length}
+/
+${totalPoints}
+
+<br><br>
+
+Yaw:
+${stableYaw.toFixed(1)}
+
+<br>
+
+Pitch:
+${stablePitch.toFixed(1)}
+
+<br><br>
+
+Target Yaw:
+${active.yaw}
+
+<br>
+
+Target Pitch:
+${active.pitch}
+
+<br><br>
+
+Yaw Diff:
+${yawDiff.toFixed(1)}
+
+<br>
+
+Pitch Diff:
+${pitchDiff.toFixed(1)}
+`;
+
 });
 
 async function capture(active){
