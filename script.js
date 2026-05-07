@@ -23,6 +23,7 @@ let stableYaw=0;
 let stablePitch=0;
 
 let captureCooldown=false;
+let isCapturingFrame=false;
 
 let environmentLocked=false;
 let worldLockYaw=0;
@@ -99,7 +100,8 @@ pitch:r.pitch
 
 });
 
-const totalPoints=capturePoints.length;
+const totalPoints=
+capturePoints.length;
 
 function norm360(a){
 return (a%360+360)%360;
@@ -126,7 +128,8 @@ try{
 startScreen.style.display="none";
 captureScreen.style.display="block";
 
-statusText.innerHTML="Opening camera...";
+statusText.innerHTML=
+"Opening camera...";
 
 if(
 typeof DeviceOrientationEvent!=="undefined" &&
@@ -161,8 +164,11 @@ video.srcObject=stream;
 
 await video.play();
 
-cameraFOV.width=video.videoWidth;
-cameraFOV.height=video.videoHeight;
+cameraFOV.width=
+video.videoWidth;
+
+cameraFOV.height=
+video.videoHeight;
 
 cameraFOV.aspect=
 video.videoWidth/video.videoHeight;
@@ -176,7 +182,6 @@ statusText.innerHTML=
 
 debug.innerHTML=
 "START ERROR:<br>"+err;
-
 }
 
 };
@@ -190,7 +195,13 @@ async e=>{
 try{
 
 if(!capturing) return;
-if(captureCooldown) return;
+
+if(
+captureCooldown ||
+isCapturingFrame
+){
+return;
+}
 
 if(e.alpha==null){
 
@@ -226,7 +237,8 @@ norm360(
 rawYaw-worldLockYaw
 );
 
-let pitch=rawPitch;
+let pitch=
+rawPitch;
 
 smoothYaw=
 norm360(
@@ -280,8 +292,11 @@ let pitchDiff=
 active.pitch-
 stablePitch;
 
-let visualYaw=yawDiff;
-let visualPitch=pitchDiff;
+let visualYaw=
+yawDiff;
+
+let visualPitch=
+pitchDiff;
 
 if(Math.abs(visualYaw)<3)
 visualYaw=0;
@@ -346,7 +361,8 @@ if(!holding){
 
 holding=true;
 
-holdStart=Date.now();
+holdStart=
+Date.now();
 }
 
 let progressValue=
@@ -360,24 +376,35 @@ transparent 0deg
 )
 `;
 
-if(progressValue>=1){
+if(
+progressValue>=1 &&
+!captureCooldown &&
+!isCapturingFrame
+){
 
+isCapturingFrame=true;
 captureCooldown=true;
-
-await capture(active);
-
-currentIndex++;
 
 holding=false;
 
 progress.style.background=
 "none";
 
+const currentCapture=
+capturePoints[currentIndex];
+
+await capture(
+currentCapture
+);
+
+currentIndex++;
+
 await new Promise(r=>
-setTimeout(r,350)
+setTimeout(r,700)
 );
 
 captureCooldown=false;
+isCapturingFrame=false;
 }
 
 }else{
@@ -412,6 +439,11 @@ ${active.yaw}
 
 TargetPitch:
 ${active.pitch}
+
+<br>
+
+Capture:
+${currentIndex+1}
 `;
 
 }catch(err){
@@ -447,7 +479,9 @@ canvas.toDataURL(
 "image/png"
 );
 
-capturedImages.push(imgData);
+capturedImages.push(
+imgData
+);
 
 captureData.push({
 
@@ -540,6 +574,8 @@ const gallery=
 document.getElementById(
 "gallery"
 );
+
+gallery.innerHTML="";
 
 capturedImages.forEach(img=>{
 
