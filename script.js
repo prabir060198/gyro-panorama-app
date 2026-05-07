@@ -74,41 +74,44 @@ let stream;
 
 let currentIndex = 0;
 
-// ===== RINGS =====
+// ===== 30 PHOTO LARGE ROOM =====
 
 const rings = [
 
-  // TOP
+  // ===== ZENITH =====
+
   {
-    pitch: 75,
-    yaws: [
-      0,
-      120,
-      240
-    ]
+    pitch: 90,
+
+    yaws: [0]
   },
 
-  // UPPER
+  // ===== UPPER =====
+
   {
     pitch: 45,
+
     yaws: [
+
       0,
-      36,
-      72,
-      108,
-      144,
+      45,
+      90,
+      135,
       180,
-      216,
-      252,
-      288,
-      324
+      225,
+      270,
+      315
+
     ]
   },
 
-  // HORIZON
+  // ===== HORIZON =====
+
   {
     pitch: 0,
+
     yaws: [
+
       0,
       30,
       60,
@@ -121,34 +124,35 @@ const rings = [
       270,
       300,
       330
+
     ]
   },
 
-  // LOWER
+  // ===== LOWER =====
+
   {
     pitch: -45,
+
     yaws: [
+
       0,
-      36,
-      72,
-      108,
-      144,
+      45,
+      90,
+      135,
       180,
-      216,
-      252,
-      288,
-      324
+      225,
+      270,
+      315
+
     ]
   },
 
-  // BOTTOM
+  // ===== NADIR =====
+
   {
-    pitch: -75,
-    yaws: [
-      60,
-      180,
-      300
-    ]
+    pitch: -90,
+
+    yaws: [0]
   }
 
 ];
@@ -178,11 +182,46 @@ capturePoints.length;
 // ===== HELPERS =====
 
 function norm360(a){
+
   return (a%360+360)%360;
 }
 
 function angleDiff(a,b){
+
   return ((a-b+540)%360)-180;
+}
+
+// ===== STABLE PITCH =====
+
+function getStablePitch(beta,gamma){
+
+  let pitch;
+
+  // PORTRAIT
+
+  if(
+    window.innerHeight >
+    window.innerWidth
+  ){
+
+    pitch = beta;
+
+  }else{
+
+    // LANDSCAPE
+
+    pitch = gamma;
+  }
+
+  // FIX OVERFLOW
+
+  if(pitch > 90)
+    pitch = 180 - pitch;
+
+  if(pitch < -90)
+    pitch = -180 - pitch;
+
+  return pitch;
 }
 
 // ===== FOV =====
@@ -219,18 +258,21 @@ startBtn.onclick = async ()=>{
     statusText.innerHTML =
     "Opening camera...";
 
-    // iOS
+    // ===== iOS =====
 
     if(
+
       typeof DeviceOrientationEvent !==
       "undefined" &&
 
       typeof DeviceOrientationEvent
       .requestPermission ===
       "function"
+
     ){
 
       const permission =
+
       await DeviceOrientationEvent
       .requestPermission();
 
@@ -238,9 +280,10 @@ startBtn.onclick = async ()=>{
       "Permission: " + permission;
     }
 
-    // CAMERA
+    // ===== CAMERA =====
 
     stream =
+
     await navigator.mediaDevices
     .getUserMedia({
 
@@ -282,7 +325,9 @@ startBtn.onclick = async ()=>{
 // ===== SENSOR =====
 
 window.addEventListener(
+
 "deviceorientation",
+
 async e=>{
 
   try{
@@ -303,12 +348,9 @@ async e=>{
     360 - e.alpha;
 
     let rawPitch =
-    Math.max(
-      -89,
-      Math.min(
-        89,
-        e.beta || 0
-      )
+    getStablePitch(
+      e.beta || 0,
+      e.gamma || 0
     );
 
     let rawRoll =
@@ -333,6 +375,7 @@ async e=>{
     // ===== RELATIVE =====
 
     let yaw =
+
     norm360(
       rawYaw - worldLockYaw
     );
@@ -343,18 +386,24 @@ async e=>{
     // ===== SMOOTH =====
 
     smoothYaw =
+
     norm360(
+
       smoothYaw +
+
       angleDiff(
         yaw,
         smoothYaw
       ) * 0.12
+
     );
 
     smoothPitch +=
-    (pitch-smoothPitch)*0.12;
+
+    (pitch-smoothPitch)*0.25;
 
     smoothRoll +=
+
     (rawRoll-smoothRoll)*0.12;
 
     // ===== ACTIVE =====
@@ -371,18 +420,21 @@ async e=>{
     // ===== DIFF =====
 
     let yawDiff =
+
     -angleDiff(
       smoothYaw,
       active.yaw
     );
 
     let pitchDiff =
+
     smoothPitch -
     active.pitch;
 
     // ===== DOT =====
 
     dot.style.transform =
+
     `translate(
       calc(-50% + ${-(yawDiff/30)*80}px),
       calc(-50% + ${-(pitchDiff/30)*80}px)
@@ -396,12 +448,14 @@ async e=>{
     ){
 
       arrow.innerText =
+
       yawDiff > 0 ?
       "⬅" : "➡";
 
     }else{
 
       arrow.innerText =
+
       pitchDiff > 0 ?
       "⬇" : "⬆";
     }
@@ -409,6 +463,7 @@ async e=>{
     // ===== STATUS =====
 
     statusText.innerHTML =
+
     `
     Capture ${currentIndex+1}
     / ${totalPoints}
@@ -424,8 +479,8 @@ async e=>{
 
     const aligned =
 
-      Math.abs(yawDiff) < 6 &&
-      Math.abs(pitchDiff) < 6;
+      Math.abs(yawDiff) < 8 &&
+      Math.abs(pitchDiff) < 8;
 
     if(aligned){
 
@@ -438,9 +493,11 @@ async e=>{
       }
 
       let progressValue =
-      (Date.now()-holdStart)/700;
+
+      (Date.now()-holdStart)/500;
 
       progress.style.background =
+
       `conic-gradient(
         lime ${progressValue*360}deg,
         transparent 0deg
@@ -469,6 +526,7 @@ async e=>{
     // ===== DEBUG =====
 
     debug.innerHTML =
+
     `
     Yaw:
     ${smoothYaw.toFixed(1)}
@@ -477,6 +535,16 @@ async e=>{
 
     Pitch:
     ${smoothPitch.toFixed(1)}
+
+    <br>
+
+    RawBeta:
+    ${(e.beta||0).toFixed(1)}
+
+    <br>
+
+    RawGamma:
+    ${(e.gamma||0).toFixed(1)}
 
     <br>
 
@@ -525,6 +593,7 @@ async function capture(active){
   );
 
   const imgData =
+
   canvas.toDataURL(
     "image/jpeg",
     1.0
@@ -586,6 +655,7 @@ function finish(){
   "block";
 
   const gallery =
+
   document.getElementById(
     "gallery"
   );
@@ -602,51 +672,4 @@ function finish(){
   });
 
 }
-
-// ===== DOWNLOAD =====
-
-document.getElementById(
-"downloadBtn"
-).onclick = async ()=>{
-
-  const zip =
-  new JSZip();
-
-  capturedImages.forEach((img,i)=>{
-
-    zip.file(
-      `img_${i+1}.jpg`,
-      img.split(",")[1],
-      {base64:true}
-    );
-
-  });
-
-  zip.file(
-    "data.json",
-    JSON.stringify(
-      captureData,
-      null,
-      2
-    )
-  );
-
-  const blob =
-  await zip.generateAsync({
-    type:"blob"
-  });
-
-  const a =
-  document.createElement("a");
-
-  a.href =
-  URL.createObjectURL(blob);
-
-  a.download =
-  "360_capture.zip";
-
-  a.click();
-
-};
-
 });
