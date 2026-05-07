@@ -6,11 +6,10 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
-<title>360 Capture Pro</title>
+<title>360 Capture</title>
 
 <link rel="stylesheet" href="style.css">
 
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 </head>
@@ -26,7 +25,7 @@ content="width=device-width, initial-scale=1.0">
     <h1>360 Capture</h1>
 
     <p>
-      Professional 360 Capture
+      Professional Panorama Capture
     </p>
 
     <button id="startBtn">
@@ -41,9 +40,7 @@ content="width=device-width, initial-scale=1.0">
 
 <div id="captureScreen">
 
-  <canvas id="renderCanvas"></canvas>
-
-  <!-- CAMERA GUIDE -->
+  <!-- CAMERA -->
 
   <div id="cameraBox">
 
@@ -54,7 +51,7 @@ content="width=device-width, initial-scale=1.0">
       muted>
     </video>
 
-    <!-- CENTER TARGET -->
+    <!-- CENTER -->
 
     <div id="centerTarget"></div>
 
@@ -66,13 +63,13 @@ content="width=device-width, initial-scale=1.0">
 
     <div id="progress"></div>
 
-    <!-- DIRECTION -->
+    <!-- ARROW -->
 
     <div id="arrow">⬆</div>
 
   </div>
 
-  <!-- STATUS -->
+  <!-- INFO -->
 
   <div id="status">
     Align first capture
