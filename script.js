@@ -1,337 +1,185 @@
 window.addEventListener("load",()=>{
 
-// ======================================================
-// DOM
-// ======================================================
+const startBtn=document.getElementById("startBtn");
+const startScreen=document.getElementById("startScreen");
+const captureScreen=document.getElementById("captureScreen");
+const resultScreen=document.getElementById("resultScreen");
+const video=document.getElementById("video");
+const dot=document.getElementById("dot");
+const arrow=document.getElementById("arrow");
+const progress=document.getElementById("progress");
+const debug=document.getElementById("debug");
+const statusText=document.getElementById("status");
 
-const startBtn =
-document.getElementById("startBtn");
-
-const startScreen =
-document.getElementById("startScreen");
-
-const captureScreen =
-document.getElementById("captureScreen");
-
-const resultScreen =
-document.getElementById("resultScreen");
-
-const video =
-document.getElementById("video");
-
-const dot =
-document.getElementById("dot");
-
-const arrow =
-document.getElementById("arrow");
-
-const progress =
-document.getElementById("progress");
-
-const debug =
-document.getElementById("debug");
-
-const statusText =
-document.getElementById("status");
-
-// ======================================================
-// ERROR
-// ======================================================
-
-window.onerror = function(err){
-
-  debug.innerHTML =
-  "ERROR: " + err;
+window.onerror=function(err){
+debug.innerHTML="ERROR: "+err;
 };
 
-// ======================================================
-// SENSOR
-// ======================================================
+let smoothYaw=0;
+let smoothPitch=0;
+let smoothRoll=0;
 
-let smoothYaw = 0;
-let smoothPitch = 0;
-let smoothRoll = 0;
+let stableYaw=0;
+let stablePitch=0;
 
-// ======================================================
-// LOCK
-// ======================================================
+let captureCooldown=false;
 
-let environmentLocked = false;
+let environmentLocked=false;
+let worldLockYaw=0;
 
-let worldLockYaw = 0;
+let capturing=false;
+let holding=false;
+let holdStart=0;
 
-// ======================================================
-// STATE
-// ======================================================
-
-let capturing = false;
-
-let holding = false;
-
-let holdStart = 0;
-
-// ======================================================
-// DATA
-// ======================================================
-
-let capturedImages = [];
-let captureData = [];
-
-// ======================================================
-// CAMERA
-// ======================================================
+let capturedImages=[];
+let captureData=[];
 
 let stream;
 
-// ======================================================
-// CAPTURE INDEX
-// ======================================================
+let currentIndex=0;
 
-let currentIndex = 0;
+let cameraFOV={
+vertical:50,
+horizontal:58,
+width:0,
+height:0,
+aspect:0
+};
 
-// ======================================================
-// 38 CAPTURE PROFESSIONAL OVERLAP
-// ======================================================
+const rings=[
 
-const rings = [
+{
+pitch:75,
+yaws:[0,120,240]
+},
 
-  // ================= TOP =================
+{
+pitch:45,
+yaws:[
+0,36,72,108,144,
+180,216,252,288,324
+]
+},
 
-  {
-    pitch: 75,
+{
+pitch:0,
+yaws:[
+0,30,60,90,120,150,
+180,210,240,270,300,330
+]
+},
 
-    yaws: [
+{
+pitch:-45,
+yaws:[
+0,36,72,108,144,
+180,216,252,288,324
+]
+},
 
-      0,
-      120,
-      240
-
-    ]
-  },
-
-  // ================= UPPER =================
-
-  {
-    pitch: 45,
-
-    yaws: [
-
-      0,
-      36,
-      72,
-      108,
-      144,
-      180,
-      216,
-      252,
-      288,
-      324
-
-    ]
-  },
-
-  // ================= MIDDLE =================
-
-  {
-    pitch: 0,
-
-    yaws: [
-
-      0,
-      30,
-      60,
-      90,
-      120,
-      150,
-      180,
-      210,
-      240,
-      270,
-      300,
-      330
-
-    ]
-  },
-
-  // ================= LOWER =================
-
-  {
-    pitch: -45,
-
-    yaws: [
-
-      0,
-      36,
-      72,
-      108,
-      144,
-      180,
-      216,
-      252,
-      288,
-      324
-
-    ]
-  },
-
-  // ================= BOTTOM =================
-
-  {
-    pitch: -75,
-
-    yaws: [
-
-      60,
-      180,
-      300
-
-    ]
-  }
+{
+pitch:-75,
+yaws:[60,180,300]
+}
 
 ];
 
-// ======================================================
-// FLATTEN
-// ======================================================
-
-const capturePoints = [];
+const capturePoints=[];
 
 rings.forEach(r=>{
 
-  r.yaws.forEach(yaw=>{
+r.yaws.forEach(yaw=>{
 
-    capturePoints.push({
-
-      yaw,
-      pitch:r.pitch
-
-    });
-
-  });
+capturePoints.push({
+yaw,
+pitch:r.pitch
+});
 
 });
 
-const totalPoints =
-capturePoints.length;
+});
 
-// ======================================================
-// HELPERS
-// ======================================================
+const totalPoints=capturePoints.length;
 
 function norm360(a){
-
-  return (a%360+360)%360;
+return (a%360+360)%360;
 }
 
 function angleDiff(a,b){
-
-  return ((a-b+540)%360)-180;
+return ((a-b+540)%360)-180;
 }
-
-// ======================================================
-// PITCH FIX
-// beta 0   -> -90
-// beta 90  -> 0
-// beta 180 -> +90
-// ======================================================
 
 function getStablePitch(beta){
 
-  let pitch = beta - 90;
+let pitch=beta-90;
 
-  if(pitch > 90)
-    pitch = 90;
+if(pitch>90) pitch=90;
+if(pitch<-90) pitch=-90;
 
-  if(pitch < -90)
-    pitch = -90;
-
-  return pitch;
+return pitch;
 }
 
-// ======================================================
-// START
-// ======================================================
+startBtn.onclick=async()=>{
 
-startBtn.onclick = async ()=>{
+try{
 
-  try{
+startScreen.style.display="none";
+captureScreen.style.display="block";
 
-    startScreen.style.display =
-    "none";
+statusText.innerHTML="Opening camera...";
 
-    captureScreen.style.display =
-    "block";
+if(
+typeof DeviceOrientationEvent!=="undefined" &&
+typeof DeviceOrientationEvent.requestPermission==="function"
+){
 
-    statusText.innerHTML =
-    "Opening camera...";
+const permission=
+await DeviceOrientationEvent.requestPermission();
 
-    // ================= iOS =================
+debug.innerHTML=
+"Permission: "+permission;
+}
 
-    if(
+stream=
+await navigator.mediaDevices.getUserMedia({
 
-      typeof DeviceOrientationEvent !==
-      "undefined" &&
+video:{
+facingMode:{
+ideal:"environment"
+},
+width:{
+ideal:1920
+},
+height:{
+ideal:1080
+}
+}
 
-      typeof DeviceOrientationEvent
-      .requestPermission ===
-      "function"
+});
 
-    ){
+video.srcObject=stream;
 
-      const permission =
+await video.play();
 
-      await DeviceOrientationEvent
-      .requestPermission();
+cameraFOV.width=video.videoWidth;
+cameraFOV.height=video.videoHeight;
 
-      debug.innerHTML =
-      "Permission: " + permission;
-    }
+cameraFOV.aspect=
+video.videoWidth/video.videoHeight;
 
-    // ================= CAMERA =================
+capturing=true;
 
-    stream =
+statusText.innerHTML=
+"Move phone to start";
 
-    await navigator.mediaDevices
-    .getUserMedia({
+}catch(err){
 
-      video:{
+debug.innerHTML=
+"START ERROR:<br>"+err;
 
-        facingMode:{
-          ideal:"environment"
-        },
-
-        width:{
-          ideal:1920
-        },
-
-        height:{
-          ideal:1080
-        }
-
-      }
-
-    });
-
-    video.srcObject = stream;
-
-    await video.play();
-
-    capturing = true;
-
-    statusText.innerHTML =
-    "Move phone to start";
-
-  }catch(err){
-
-    debug.innerHTML =
-    "START ERROR:<br>" + err;
-  }
+}
 
 };
-
-// ======================================================
-// SENSOR
-// ======================================================
 
 window.addEventListener(
 
@@ -339,537 +187,489 @@ window.addEventListener(
 
 async e=>{
 
-  try{
+try{
 
-    if(!capturing) return;
+if(!capturing) return;
+if(captureCooldown) return;
 
-    if(e.alpha == null){
+if(e.alpha==null){
 
-      debug.innerHTML =
-      "No sensor data";
+debug.innerHTML=
+"No sensor data";
 
-      return;
-    }
+return;
+}
 
-    // ======================================================
-    // RAW
-    // ======================================================
+let rawYaw=
+360-e.alpha;
 
-    let rawYaw =
-    360 - e.alpha;
+let rawPitch=
+getStablePitch(
+e.beta||0
+);
 
-    let rawPitch =
-    getStablePitch(
-      e.beta || 0
-    );
+let rawRoll=
+e.gamma||0;
 
-    let rawRoll =
-    e.gamma || 0;
+if(!environmentLocked){
 
-    // ======================================================
-    // FIRST LOCK
-    // ======================================================
+worldLockYaw=rawYaw;
 
-    if(!environmentLocked){
+environmentLocked=true;
 
-      worldLockYaw =
-      rawYaw;
+debug.innerHTML=
+"Environment Locked";
+}
 
-      environmentLocked = true;
+let yaw=
+norm360(
+rawYaw-worldLockYaw
+);
 
-      debug.innerHTML =
-      "Environment Locked";
-    }
+let pitch=rawPitch;
 
-    // ======================================================
-    // RELATIVE
-    // ======================================================
+smoothYaw=
+norm360(
 
-    let yaw =
+smoothYaw+
 
-    norm360(
-      rawYaw - worldLockYaw
-    );
+angleDiff(
+yaw,
+smoothYaw
+)*0.08
 
-    let pitch =
-    rawPitch;
+);
 
-    // ======================================================
-    // SMOOTH
-    // ======================================================
+smoothPitch+=
+(pitch-smoothPitch)*0.14;
 
-    smoothYaw =
+smoothRoll+=
+(rawRoll-smoothRoll)*0.08;
 
-    norm360(
+stableYaw=
+norm360(
 
-      smoothYaw +
+stableYaw+
 
-      angleDiff(
-        yaw,
-        smoothYaw
-      ) * 0.06
+angleDiff(
+smoothYaw,
+stableYaw
+)*0.18
 
-    );
+);
 
-    smoothPitch +=
+stablePitch+=
+(smoothPitch-stablePitch)*0.18;
 
-    (pitch-smoothPitch)*0.12;
+const active=
+capturePoints[currentIndex];
 
-    smoothRoll +=
+if(!active){
 
-    (rawRoll-smoothRoll)*0.08;
+finish();
+return;
+}
 
-    // ======================================================
-    // ACTIVE
-    // ======================================================
+let yawDiff=
+angleDiff(
+stableYaw,
+active.yaw
+);
 
-    const active =
-    capturePoints[currentIndex];
+let pitchDiff=
+active.pitch-
+stablePitch;
 
-    if(!active){
+let visualYaw=yawDiff;
+let visualPitch=pitchDiff;
 
-      finish();
-      return;
-    }
+if(Math.abs(visualYaw)<3)
+visualYaw=0;
 
-    // ======================================================
-    // DIFF
-    // ======================================================
+if(Math.abs(visualPitch)<3)
+visualPitch=0;
 
-    let yawDiff =
+visualYaw=
+Math.max(
+-20,
+Math.min(20,visualYaw)
+);
 
-    angleDiff(
-      smoothYaw,
-      active.yaw
-    );
+visualPitch=
+Math.max(
+-20,
+Math.min(20,visualPitch)
+);
 
-    let pitchDiff =
+dot.style.transform=
+`
+translate(
+calc(-50% + ${-(visualYaw/20)*65}px),
+calc(-50% + ${(visualPitch/20)*65}px)
+)
+`;
 
-    active.pitch -
-    smoothPitch;
+if(
+Math.abs(yawDiff)>
+Math.abs(pitchDiff)
+){
 
-    // ======================================================
-    // DEADZONE
-    // ======================================================
+arrow.innerText=
+yawDiff>0?"⬅":"➡";
 
-    if(Math.abs(yawDiff) < 1.5)
-      yawDiff = 0;
+}else{
 
-    if(Math.abs(pitchDiff) < 1.5)
-      pitchDiff = 0;
+arrow.innerText=
+pitchDiff>0?"⬆":"⬇";
+}
 
-    // ======================================================
-    // DOT
-    // ======================================================
+statusText.innerHTML=
+`
+Capture ${currentIndex+1}
+/ ${totalPoints}
 
-    dot.style.transform =
+<br>
 
-    `translate(
-      calc(-50% + ${-(yawDiff/30)*55}px),
-      calc(-50% + ${(pitchDiff/30)*55}px)
-    )`;
+Target:
+Y ${active.yaw}
+P ${active.pitch}
+`;
 
-    // ======================================================
-    // ARROW
-    // ======================================================
+const aligned=
 
-    if(
-      Math.abs(yawDiff) >
-      Math.abs(pitchDiff)
-    ){
+Math.abs(yawDiff)<10 &&
+Math.abs(pitchDiff)<10;
 
-      arrow.innerText =
+if(aligned){
 
-      yawDiff > 0 ?
-      "⬅" : "➡";
+if(!holding){
 
-    }else{
+holding=true;
 
-      arrow.innerText =
+holdStart=Date.now();
+}
 
-      pitchDiff > 0 ?
-      "⬆" : "⬇";
-    }
+let progressValue=
+(Date.now()-holdStart)/450;
 
-    // ======================================================
-    // STATUS
-    // ======================================================
+progress.style.background=
+`
+conic-gradient(
+lime ${progressValue*360}deg,
+transparent 0deg
+)
+`;
 
-    statusText.innerHTML =
+if(progressValue>=1){
 
-    `
-    Capture ${currentIndex+1}
-    / ${totalPoints}
+captureCooldown=true;
 
-    <br>
+await capture(active);
 
-    Target:
-    Y ${active.yaw}
-    P ${active.pitch}
-    `;
+currentIndex++;
 
-    // ======================================================
-    // ALIGN
-    // ======================================================
+holding=false;
 
-    const aligned =
+progress.style.background=
+"none";
 
-      Math.abs(yawDiff) < 6 &&
-      Math.abs(pitchDiff) < 6;
+await new Promise(r=>
+setTimeout(r,350)
+);
 
-    // ======================================================
-    // CAPTURE FLOW
-    // ======================================================
+captureCooldown=false;
+}
 
-    if(aligned){
+}else{
 
-      if(!holding){
+holding=false;
 
-        holding = true;
+progress.style.background=
+"none";
+}
 
-        holdStart =
-        Date.now();
-      }
+debug.innerHTML=
+`
+StableYaw:
+${stableYaw.toFixed(1)}
 
-      let progressValue =
+<br>
 
-      (Date.now()-holdStart)/700;
+StablePitch:
+${stablePitch.toFixed(1)}
 
-      // ===== CLAMP =====
+<br>
 
-      const clamped =
+Roll:
+${smoothRoll.toFixed(1)}
 
-      Math.min(progressValue,1);
+<br>
 
-      // ===== PROGRESS =====
+TargetYaw:
+${active.yaw}
 
-      progress.style.background =
+<br>
 
-      `conic-gradient(
-        lime ${clamped*360}deg,
-        rgba(255,255,255,0.15) 0deg
-      )`;
+TargetPitch:
+${active.pitch}
+`;
 
-      // ===== COMPLETE =====
+}catch(err){
 
-      if(progressValue >= 1){
-
-        // ===== SUCCESS =====
-
-        progress.style.background =
-        "rgba(0,255,120,0.35)";
-
-        dot.style.background =
-        "#00ff66";
-
-        // ===== WAIT =====
-
-        await new Promise(r=>
-          setTimeout(r,180)
-        );
-
-        // ===== CAPTURE =====
-
-        await capture(active);
-
-        currentIndex++;
-
-        // ===== RESET =====
-
-        holding = false;
-
-        progress.style.background =
-        "none";
-
-        dot.style.background =
-        "#00ffcc";
-      }
-
-    }else{
-
-      holding = false;
-
-      progress.style.background =
-      "none";
-
-      dot.style.background =
-      "#00ffcc";
-    }
-
-    // ======================================================
-    // DEBUG
-    // ======================================================
-
-    debug.innerHTML =
-
-    `
-    Yaw:
-    ${smoothYaw.toFixed(1)}
-
-    <br>
-
-    Pitch:
-    ${smoothPitch.toFixed(1)}
-
-    <br>
-
-    RawBeta:
-    ${(e.beta||0).toFixed(1)}
-
-    <br>
-
-    Roll:
-    ${smoothRoll.toFixed(1)}
-
-    <br>
-
-    TargetYaw:
-    ${active.yaw}
-
-    <br>
-
-    TargetPitch:
-    ${active.pitch}
-    `;
-
-  }catch(err){
-
-    debug.innerHTML =
-    "SENSOR ERROR:<br>" + err;
-  }
+debug.innerHTML=
+"SENSOR ERROR:<br>"+err;
+}
 
 });
 
-// ======================================================
-// CAPTURE PNG
-// ======================================================
-
 async function capture(active){
 
-  const canvas =
-  document.createElement("canvas");
+const canvas=
+document.createElement("canvas");
 
-  canvas.width =
-  video.videoWidth;
+canvas.width=
+video.videoWidth;
 
-  canvas.height =
-  video.videoHeight;
+canvas.height=
+video.videoHeight;
 
-  const ctx =
-  canvas.getContext("2d");
+const ctx=
+canvas.getContext("2d");
 
-  ctx.drawImage(
-    video,
-    0,
-    0
-  );
+ctx.drawImage(
+video,
+0,
+0
+);
 
-  // ======================================================
-  // PNG
-  // ======================================================
+const imgData=
+canvas.toDataURL(
+"image/png"
+);
 
-  const imgData =
+capturedImages.push(imgData);
 
-  canvas.toDataURL(
-    "image/png"
-  );
+captureData.push({
 
-  capturedImages.push(imgData);
+index:
+capturedImages.length,
 
-  // ======================================================
-  // META
-  // ======================================================
+file:
+`img_${capturedImages.length}.png`,
 
-  captureData.push({
+targetYaw:
+active.yaw,
 
-    index:
-    capturedImages.length,
+targetPitch:
+active.pitch,
 
-    file:
-    `img_${capturedImages.length}.png`,
+actualYaw:
+stableYaw,
 
-    targetYaw:
-    active.yaw,
+actualPitch:
+stablePitch,
 
-    targetPitch:
-    active.pitch,
+roll:
+smoothRoll,
 
-    actualYaw:
-    smoothYaw,
+camera:{
 
-    actualPitch:
-    smoothPitch,
+width:
+cameraFOV.width,
 
-    roll:
-    smoothRoll,
+height:
+cameraFOV.height,
 
-    fov:{
+aspect:
+cameraFOV.aspect,
 
-      vertical:50,
+fovHorizontal:
+cameraFOV.horizontal,
 
-      horizontal:58
-    },
+fovVertical:
+cameraFOV.vertical
 
-    deviceOrientation:{
+},
 
-      yaw:smoothYaw,
-      pitch:smoothPitch,
-      roll:smoothRoll
+deviceOrientation:{
 
-    },
+yaw:
+stableYaw,
 
-    timestamp:
-    Date.now()
+pitch:
+stablePitch,
 
-  });
+roll:
+smoothRoll
+
+},
+
+timestamp:
+Date.now()
+
+});
 
 }
-
-// ======================================================
-// FINISH
-// ======================================================
 
 function finish(){
 
-  capturing = false;
+capturing=false;
 
-  captureScreen.style.display =
-  "none";
+if(stream){
 
-  resultScreen.style.display =
-  "block";
+stream.getTracks().forEach(track=>{
 
-  const gallery =
+track.stop();
 
-  document.getElementById(
-    "gallery"
-  );
-
-  capturedImages.forEach(img=>{
-
-    const el =
-    document.createElement("img");
-
-    el.src = img;
-
-    gallery.appendChild(el);
-
-  });
+});
 
 }
 
-// ======================================================
-// DOWNLOAD
-// ======================================================
+video.srcObject=null;
+
+captureScreen.style.display=
+"none";
+
+resultScreen.style.display=
+"block";
+
+statusText.innerHTML=
+"Capture Complete";
+
+const gallery=
+document.getElementById(
+"gallery"
+);
+
+capturedImages.forEach(img=>{
+
+const el=
+document.createElement("img");
+
+el.src=img;
+
+gallery.appendChild(el);
+
+});
+
+}
 
 document.getElementById(
 "downloadBtn"
-).onclick = async ()=>{
+).onclick=async()=>{
 
-  const zip =
-  new JSZip();
+const zip=
+new JSZip();
 
-  // ======================================================
-  // SAVE PNG
-  // ======================================================
+capturedImages.forEach((img,i)=>{
 
-  capturedImages.forEach((img,i)=>{
+zip.file(
 
-    zip.file(
+`img_${i+1}.png`,
 
-      `img_${i+1}.png`,
+img.split(",")[1],
 
-      img.split(",")[1],
+{base64:true}
 
-      {base64:true}
+);
 
-    );
+});
 
-  });
+const stitchData={
 
-  // ======================================================
-  // STITCH FORMAT
-  // ======================================================
+camera:{
 
-  const stitchData = {
+width:
+cameraFOV.width,
 
-    images: []
+height:
+cameraFOV.height,
 
-  };
+aspect:
+cameraFOV.aspect,
 
-  captureData.forEach(d=>{
+fovHorizontal:
+cameraFOV.horizontal,
 
-    stitchData.images.push({
+fovVertical:
+cameraFOV.vertical
 
-      name:
-      d.file,
+},
 
-      yaw:
-      d.actualYaw,
+totalCaptures:
+captureData.length,
 
-      pitch:
-      d.actualPitch,
+images:[]
 
-      roll:
-      d.roll,
+};
 
-      targetYaw:
-      d.targetYaw,
+captureData.forEach(d=>{
 
-      targetPitch:
-      d.targetPitch,
+stitchData.images.push({
 
-      timestamp:
-      d.timestamp
+name:
+d.file,
 
-    });
+yaw:
+d.actualYaw,
 
-  });
+pitch:
+d.actualPitch,
 
-  // ======================================================
-  // SAVE JSON
-  // ======================================================
+roll:
+d.roll,
 
-  zip.file(
+targetYaw:
+d.targetYaw,
 
-    "data.json",
+targetPitch:
+d.targetPitch,
 
-    JSON.stringify(
-      stitchData,
-      null,
-      2
-    )
+camera:
+d.camera,
 
-  );
+timestamp:
+d.timestamp
 
-  // ======================================================
-  // ZIP
-  // ======================================================
+});
 
-  const blob =
+});
 
-  await zip.generateAsync({
+zip.file(
 
-    type:"blob",
+"data.json",
 
-    compression:"DEFLATE",
+JSON.stringify(
+stitchData,
+null,
+2
+)
 
-    compressionOptions:{
-      level:6
-    }
+);
 
-  });
+const blob=
+await zip.generateAsync({
 
-  const a =
-  document.createElement("a");
+type:"blob",
 
-  a.href =
-  URL.createObjectURL(blob);
+compression:"DEFLATE",
 
-  a.download =
-  "360_capture.zip";
+compressionOptions:{
+level:6
+}
 
-  a.click();
+});
+
+const a=
+document.createElement("a");
+
+a.href=
+URL.createObjectURL(blob);
+
+a.download=
+"360_capture.zip";
+
+a.click();
 
 };
 
