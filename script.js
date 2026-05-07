@@ -191,7 +191,6 @@ function angleDiff(a,b){
 }
 
 // ===== FINAL FIXED PITCH =====
-// YOUR DEVICE:
 // beta 0   -> -90
 // beta 90  -> 0
 // beta 180 -> +90
@@ -409,10 +408,13 @@ async e=>{
       active.yaw
     );
 
+    // ===== FIXED =====
+    // INVERTED CORRECTLY
+
     let pitchDiff =
 
-    smoothPitch -
-    active.pitch;
+    active.pitch -
+    smoothPitch;
 
     // ===== DOT =====
 
@@ -420,7 +422,7 @@ async e=>{
 
     `translate(
       calc(-50% + ${-(yawDiff/30)*80}px),
-      calc(-50% + ${-(pitchDiff/30)*80}px)
+      calc(-50% + ${(pitchDiff/30)*80}px)
     )`;
 
     // ===== ARROW =====
@@ -437,10 +439,12 @@ async e=>{
 
     }else{
 
+      // ===== FIXED =====
+
       arrow.innerText =
 
       pitchDiff > 0 ?
-      "⬇" : "⬆";
+      "⬆" : "⬇";
     }
 
     // ===== STATUS =====
