@@ -32,14 +32,12 @@ document.getElementById("debug");
 const statusText =
 document.getElementById("status");
 
-const capCanvas =
-document.getElementById("capCanvas");
-
 // ===== 3D =====
 
 let engine;
 let scene;
 let camera3D;
+let worldRoot;
 
 // ===== CAMERA =====
 
@@ -51,19 +49,23 @@ let imageCapture;
 let worldLockYaw = null;
 let worldLockPitch = null;
 
-let calibrationSamples = [];
+let environmentLocked = false;
 
-let latestOrientation = null;
+// ===== SENSOR =====
+
+let smoothYaw = 0;
+let smoothPitch = 0;
 
 // ===== STATE =====
 
 let capturing = false;
 
-let smoothYaw = 0;
-let smoothPitch = 0;
-
 let holding = false;
 let holdStart = 0;
+
+let latestOrientation = null;
+
+// ===== DATA =====
 
 let capturedImages = [];
 let captureData = [];
@@ -74,20 +76,28 @@ const rings = [
 
   { pitch:80, yaws:[0,180] },
 
-  { pitch:45,
-    yaws:[0,60,120,180,240,300] },
+  {
+    pitch:45,
+    yaws:[0,60,120,180,240,300]
+  },
 
-  { pitch:0,
+  {
+    pitch:0,
     yaws:[
       0,30,60,90,120,150,
       180,210,240,270,300,330
-    ]},
+    ]
+  },
 
-  { pitch:-45,
-    yaws:[0,60,120,180,240,300] },
+  {
+    pitch:-45,
+    yaws:[0,60,120,180,240,300]
+  },
 
-  { pitch:-80,
-    yaws:[90,270] }
+  {
+    pitch:-80,
+    yaws:[90,270]
+  }
 ];
 
 let guidePoints = [];
@@ -105,12 +115,15 @@ function angleDiff(a,b){
   return ((a-b+540)%360)-180;
 }
 
-// ===== INIT 3D =====
+// ===== INIT =====
 
 function init3D(){
 
   engine =
-  new BABYLON.Engine(renderCanvas,true);
+  new BABYLON.Engine(
+    renderCanvas,
+    true
+  );
 
   scene =
   new BABYLON.Scene(engine);
@@ -122,8 +135,19 @@ function init3D(){
     scene
   );
 
+  camera3D.rotation =
+  BABYLON.Vector3.Zero();
+
+  camera3D.fov = 1.2;
+
+  worldRoot =
+  new BABYLON.TransformNode(
+    "worldRoot",
+    scene
+  );
+
   new BABYLON.HemisphericLight(
-    "l",
+    "light",
     new BABYLON.Vector3(0,1,0),
     scene
   );
@@ -163,6 +187,8 @@ function createPoints(){
         scene
       );
 
+      mesh.parent = worldRoot;
+
       mesh.position = pos;
 
       const mat =
@@ -193,9 +219,11 @@ function createPoints(){
 
 startBtn.onclick = async ()=>{
 
-  startScreen.style.display="none";
+  startScreen.style.display =
+  "none";
 
-  captureScreen.style.display="block";
+  captureScreen.style.display =
+  "block";
 
   if(DeviceOrientationEvent.requestPermission){
 
@@ -219,9 +247,8 @@ startBtn.onclick = async ()=>{
 
       height:{
         ideal:2160
-      },
+      }
 
-      resizeMode:"none"
     }
 
   });
@@ -239,79 +266,22 @@ startBtn.onclick = async ()=>{
   init3D();
 
   statusText.innerHTML =
-  "Hold phone steady...";
+  "Align first capture to center";
+
+  capturing = true;
 };
-
-// ===== CALIBRATION =====
-
-function startCalibration(){
-
-  calibrationSamples = [];
-
-  const collect =
-  setInterval(()=>{
-
-    if(!latestOrientation) return;
-
-    calibrationSamples.push({
-      yaw:latestOrientation.yaw,
-      pitch:latestOrientation.pitch
-    });
-
-    if(calibrationSamples.length>=40){
-
-      clearInterval(collect);
-
-      let avgYawX=0;
-      let avgYawY=0;
-
-      let avgPitch=0;
-
-      calibrationSamples.forEach(s=>{
-
-        const r =
-        BABYLON.Tools.ToRadians(s.yaw);
-
-        avgYawX += Math.cos(r);
-        avgYawY += Math.sin(r);
-
-        avgPitch += s.pitch;
-
-      });
-
-      avgPitch /=
-      calibrationSamples.length;
-
-      worldLockYaw =
-      norm360(
-        BABYLON.Tools.ToDegrees(
-          Math.atan2(avgYawY,avgYawX)
-        )
-      );
-
-      worldLockPitch = avgPitch;
-
-      capturing = true;
-
-      statusText.innerHTML =
-      "LOCKED ✓";
-
-    }
-
-  },50);
-
-}
 
 // ===== SENSOR =====
 
 window.addEventListener(
 "deviceorientation",
-e=>{
+async e=>{
+
+  if(!capturing) return;
 
   if(e.alpha==null) return;
 
   let rawYaw = e.alpha;
-
   let rawPitch = e.beta - 90;
 
   latestOrientation = {
@@ -319,70 +289,72 @@ e=>{
     pitch:rawPitch
   };
 
-  if(worldLockYaw===null){
+  // ===== FIRST LOCK =====
 
-    startCalibration();
+  if(!environmentLocked){
 
-    return;
+    smoothYaw = 0;
+    smoothPitch = 0;
+
+  }else{
+
+    let yaw =
+    norm360(rawYaw-worldLockYaw);
+
+    let pitch =
+    rawPitch-worldLockPitch;
+
+    let yawDelta =
+    angleDiff(yaw,smoothYaw);
+
+    if(Math.abs(yawDelta)<0.1)
+      yawDelta=0;
+
+    smoothYaw =
+    norm360(
+      smoothYaw + yawDelta*0.08
+    );
+
+    let pitchDelta =
+    pitch-smoothPitch;
+
+    if(Math.abs(pitchDelta)<0.1)
+      pitchDelta=0;
+
+    smoothPitch +=
+    pitchDelta*0.08;
   }
 
-  if(!capturing) return;
-
-  let yaw =
-  norm360(rawYaw-worldLockYaw);
-
-  let pitch =
-  rawPitch-worldLockPitch;
-
-  let yawDelta =
-  angleDiff(yaw,smoothYaw);
-
-  if(Math.abs(yawDelta)<0.15)
-    yawDelta=0;
-
-  smoothYaw =
-  norm360(
-    smoothYaw + yawDelta*0.08
-  );
-
-  let pitchDelta =
-  pitch-smoothPitch;
-
-  if(Math.abs(pitchDelta)<0.15)
-    pitchDelta=0;
-
-  smoothPitch +=
-  pitchDelta*0.08;
-
-  // CAMERA
-
-  camera3D.rotation.y =
-  BABYLON.Tools.ToRadians(
-    smoothYaw
-  );
-
-  camera3D.rotation.x =
-  BABYLON.Tools.ToRadians(
-    -smoothPitch
-  );
-
-  // ACTIVE
+  // ===== ACTIVE =====
 
   const active =
   guidePoints.find(p=>!p.done);
 
   if(!active) return;
 
-  let yawDiff =
-  -angleDiff(
-    smoothYaw,
-    active.yaw
-  );
+  let yawDiff;
+  let pitchDiff;
 
-  let pitchDiff =
-  smoothPitch-active.pitch;
+  // ===== FIRST SHOT =====
 
-  // DOT
+  if(!environmentLocked){
+
+    yawDiff = 0;
+    pitchDiff = 0;
+
+  }else{
+
+    yawDiff =
+    -angleDiff(
+      smoothYaw,
+      active.yaw
+    );
+
+    pitchDiff =
+    smoothPitch-active.pitch;
+  }
+
+  // ===== DOT =====
 
   dot.style.transform =
   `translate(
@@ -390,7 +362,7 @@ e=>{
     calc(-50% + ${-(pitchDiff/30)*70}px)
   )`;
 
-  // ARROW
+  // ===== ARROW =====
 
   if(Math.abs(yawDiff)>
      Math.abs(pitchDiff)){
@@ -404,7 +376,7 @@ e=>{
     pitchDiff>0 ? "⬇":"⬆";
   }
 
-  // ALIGN
+  // ===== ALIGN =====
 
   if(
     Math.abs(yawDiff)<5 &&
@@ -413,9 +385,9 @@ e=>{
 
     if(!holding){
 
-      holding=true;
+      holding = true;
 
-      holdStart=Date.now();
+      holdStart = Date.now();
     }
 
     let p =
@@ -429,17 +401,40 @@ e=>{
 
     if(p>=1){
 
-      captureHQ();
+      // ===== FIRST ENV LOCK =====
 
-      active.done=true;
+      if(!environmentLocked){
+
+        environmentLocked = true;
+
+        worldLockYaw = rawYaw;
+        worldLockPitch = rawPitch;
+
+        worldRoot.rotation.y =
+        -BABYLON.Tools.ToRadians(
+          worldLockYaw
+        );
+
+        worldRoot.rotation.x =
+        BABYLON.Tools.ToRadians(
+          worldLockPitch
+        );
+
+        statusText.innerHTML =
+        "Environment Locked ✓";
+      }
+
+      await captureHQ(active);
+
+      active.done = true;
 
       active.mesh.material
       .emissiveColor =
       new BABYLON.Color3(0,1,0);
 
-      holding=false;
+      holding = false;
 
-      progress.style.background=
+      progress.style.background =
       "none";
 
       if(
@@ -448,13 +443,14 @@ e=>{
       ){
         finish();
       }
+
     }
 
   }else{
 
-    holding=false;
+    holding = false;
 
-    progress.style.background=
+    progress.style.background =
     "none";
   }
 
@@ -467,7 +463,7 @@ e=>{
 
 // ===== CAPTURE =====
 
-async function captureHQ(){
+async function captureHQ(active){
 
   try{
 
@@ -477,17 +473,12 @@ async function captureHQ(){
     const reader =
     new FileReader();
 
-    reader.onload=()=>{
+    reader.onload = ()=>{
 
       const imgData =
       reader.result;
 
       capturedImages.push(imgData);
-
-      const active =
-      guidePoints.find(
-        p=>!p.done
-      );
 
       captureData.push({
 
@@ -526,6 +517,7 @@ async function captureHQ(){
 
     console.log(err);
   }
+
 }
 
 // ===== PLACE IMAGE =====
@@ -538,6 +530,8 @@ function placeImage(img,pos){
     {size:1},
     scene
   );
+
+  plane.parent = worldRoot;
 
   plane.position = pos.clone();
 
@@ -568,10 +562,9 @@ function placeImage(img,pos){
     );
 
     tex.update();
-
   };
 
-  image.src=img;
+  image.src = img;
 
   const mat =
   new BABYLON.StandardMaterial(
@@ -588,12 +581,12 @@ function placeImage(img,pos){
 
 function finish(){
 
-  capturing=false;
+  capturing = false;
 
-  captureScreen.style.display=
+  captureScreen.style.display =
   "none";
 
-  resultScreen.style.display=
+  resultScreen.style.display =
   "block";
 
   const gallery =
@@ -618,7 +611,7 @@ function finish(){
 
 document.getElementById(
 "downloadBtn"
-).onclick=async()=>{
+).onclick = async ()=>{
 
   const zip =
   new JSZip();
