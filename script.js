@@ -1,19 +1,34 @@
 window.addEventListener("load", () => {
 
-  const startScreen = document.getElementById("startScreen");
-  const captureScreen = document.getElementById("captureScreen");
-  const resultScreen = document.getElementById("resultScreen");
-  const video = document.getElementById("video");
-  const dot = document.getElementById("dot");
-  const arrow = document.getElementById("arrow");
-  const progress = document.getElementById("progress");
-  const debug = document.getElementById("debug");
-  const statusText = document.getElementById("status");
+  const startScreen =
+    document.getElementById("startScreen");
+
+  const captureScreen =
+    document.getElementById("captureScreen");
+
+  const resultScreen =
+    document.getElementById("resultScreen");
+
+  const video =
+    document.getElementById("video");
+
+  const dot =
+    document.getElementById("dot");
+
+  const arrow =
+    document.getElementById("arrow");
+
+  const progress =
+    document.getElementById("progress");
+
+  const debug =
+    document.getElementById("debug");
+
+  const statusText =
+    document.getElementById("status");
 
   const modeButtons =
-    document.querySelectorAll(
-      ".modeBtn"
-    );
+    document.querySelectorAll(".modeBtn");
 
   let smoothYaw = 0;
   let smoothPitch = 0;
@@ -31,8 +46,8 @@ window.addEventListener("load", () => {
   let environmentLocked = false;
 
   let capturing = false;
-  let holding = false;
 
+  let holding = false;
   let holdStart = 0;
 
   let stream;
@@ -52,17 +67,23 @@ window.addEventListener("load", () => {
     height: 0,
     aspect: 0,
 
-    horizontal: 58,
-    vertical: 50
+    horizontal: 0,
+    vertical: 0,
+
+    focalLength: 0
 
   };
 
   function norm360(a) {
+
     return (a % 360 + 360) % 360;
+
   }
 
   function angleDiff(a, b) {
+
     return ((a - b + 540) % 360) - 180;
+
   }
 
   function getPitch(beta) {
@@ -73,6 +94,81 @@ window.addEventListener("load", () => {
     if (pitch < -90) pitch = -90;
 
     return pitch;
+
+  }
+
+  function estimateCameraFOV(
+    width,
+    height
+  ) {
+
+    const aspect =
+      width / height;
+
+    let horizontalFOV;
+
+    if (aspect > 1.9) {
+
+      horizontalFOV = 74;
+
+    }
+
+    else if (aspect > 1.7) {
+
+      horizontalFOV = 69;
+
+    }
+
+    else if (aspect > 1.5) {
+
+      horizontalFOV = 66;
+
+    }
+
+    else if (aspect > 1.3) {
+
+      horizontalFOV = 62;
+
+    }
+
+    else {
+
+      horizontalFOV = 58;
+
+    }
+
+    const verticalFOV =
+
+      horizontalFOV / aspect;
+
+    const focalLength =
+
+      width /
+
+      (
+        2 *
+
+        Math.tan(
+          (
+            horizontalFOV *
+            Math.PI /
+            180
+          ) / 2
+        )
+      );
+
+    return {
+
+      horizontal:
+        horizontalFOV,
+
+      vertical:
+        verticalFOV,
+
+      focalLength
+
+    };
+
   }
 
   function setCaptureMode(mode) {
@@ -190,78 +286,40 @@ window.addEventListener("load", () => {
 
         {
           pitch: 80,
-          yaws: [
-            0,
-            90,
-            180,
-            270
-          ]
+          yaws: [0, 90, 180, 270]
         },
 
         {
           pitch: 50,
           yaws: [
-            0,
-            30,
-            60,
-            90,
-            120,
-            150,
-            180,
-            210,
-            240,
-            270,
-            300,
-            330
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
           ]
         },
 
         {
           pitch: 20,
           yaws: [
-            0,
-            25,
-            50,
-            75,
-            100,
-            125,
-            150,
-            175,
-            200,
-            225,
-            250,
-            275,
-            300,
-            325
+            0, 25, 50, 75,
+            100, 125, 150, 175,
+            200, 225, 250, 275,
+            300, 325
           ]
         },
 
         {
           pitch: -20,
           yaws: [
-            12,
-            42,
-            72,
-            102,
-            132,
-            162,
-            192,
-            222,
-            252,
-            282,
-            312,
-            342
+            12, 42, 72, 102,
+            132, 162, 192, 222,
+            252, 282, 312, 342
           ]
         },
 
         {
           pitch: -75,
-          yaws: [
-            45,
-            135,
-            225,
-            315
-          ]
+          yaws: [45, 135, 225, 315]
         }
 
       ];
@@ -319,15 +377,19 @@ window.addEventListener("load", () => {
             .getUserMedia({
 
               video: {
+
                 facingMode: {
                   ideal: "environment"
                 },
+
                 width: {
                   ideal: 1920
                 },
+
                 height: {
                   ideal: 1080
                 }
+
               }
 
             });
@@ -346,9 +408,26 @@ window.addEventListener("load", () => {
           video.videoWidth /
           video.videoHeight;
 
+        const estimatedFOV =
+          estimateCameraFOV(
+            video.videoWidth,
+            video.videoHeight
+          );
+
+        cameraFOV.horizontal =
+          estimatedFOV.horizontal;
+
+        cameraFOV.vertical =
+          estimatedFOV.vertical;
+
+        cameraFOV.focalLength =
+          estimatedFOV.focalLength;
+
         capturing = true;
 
-      } catch (err) {
+      }
+
+      catch (err) {
 
         debug.innerHTML =
           err;
@@ -386,6 +465,7 @@ window.addEventListener("load", () => {
           rawYaw;
 
         environmentLocked = true;
+
       }
 
       let yaw =
@@ -401,12 +481,12 @@ window.addEventListener("load", () => {
           angleDiff(
             yaw,
             smoothYaw
-          ) * 0.14
+          ) * 0.08
 
         );
 
       smoothPitch +=
-        (rawPitch - smoothPitch) * 0.2;
+        (rawPitch - smoothPitch) * 0.12;
 
       stableYaw =
         norm360(
@@ -416,12 +496,12 @@ window.addEventListener("load", () => {
           angleDiff(
             smoothYaw,
             stableYaw
-          ) * 0.35
+          ) * 0.22
 
         );
 
       stablePitch +=
-        (smoothPitch - stablePitch) * 0.35;
+        (smoothPitch - stablePitch) * 0.22;
 
       displayYaw =
         norm360(
@@ -431,12 +511,12 @@ window.addEventListener("load", () => {
           angleDiff(
             stableYaw,
             displayYaw
-          ) * 0.55
+          ) * 0.18
 
         );
 
       displayPitch +=
-        (stablePitch - displayPitch) * 0.55;
+        (stablePitch - displayPitch) * 0.18;
 
       const active =
         capturePoints[currentIndex];
@@ -445,6 +525,7 @@ window.addEventListener("load", () => {
 
         finish();
         return;
+
       }
 
       let yawDiff =
@@ -470,23 +551,43 @@ window.addEventListener("load", () => {
       dot.style.transform =
         `
 translate(
-calc(-50% + ${-(visualYaw / 18) * 70}px),
-calc(-50% + ${(visualPitch / 18) * 70}px)
+calc(-50% + ${-(visualYaw / 18) * 45}px),
+calc(-50% + ${(visualPitch / 18) * 45}px)
 )
 `;
 
+      const absYaw =
+        Math.abs(yawDiff);
+
+      const absPitch =
+        Math.abs(pitchDiff);
+
       if (
-        Math.abs(yawDiff) >
-        Math.abs(pitchDiff)
+        absYaw > 4 ||
+        absPitch > 4
       ) {
 
-        arrow.innerText =
-          yawDiff > 0 ? "⬅" : "➡";
+        if (absYaw > absPitch) {
 
-      } else {
+          arrow.innerText =
+            yawDiff > 0 ? "⬅" : "➡";
+
+        }
+
+        else {
+
+          arrow.innerText =
+            pitchDiff > 0 ? "⬆" : "⬇";
+
+        }
+
+      }
+
+      else {
 
         arrow.innerText =
-          pitchDiff > 0 ? "⬆" : "⬇";
+          "✅";
+
       }
 
       statusText.innerHTML =
@@ -499,10 +600,27 @@ ${totalPoints}
 
       const aligned =
 
-        Math.abs(yawDiff) < 10 &&
-        Math.abs(pitchDiff) < 10;
+        Math.abs(yawDiff) < 4 &&
+        Math.abs(pitchDiff) < 4;
 
-      if (aligned) {
+      const motionStable =
+
+        Math.abs(
+          angleDiff(
+            smoothYaw,
+            stableYaw
+          )
+        ) < 1.2 &&
+
+        Math.abs(
+          smoothPitch -
+          stablePitch
+        ) < 1.2;
+
+      if (
+        aligned &&
+        motionStable
+      ) {
 
         if (!holding) {
 
@@ -512,7 +630,7 @@ ${totalPoints}
         }
 
         let progressValue =
-          (Date.now() - holdStart) / 500;
+          (Date.now() - holdStart) / 900;
 
         progress.style.background =
           `
@@ -537,19 +655,23 @@ transparent 0deg
             "none";
 
           await new Promise(r =>
-            setTimeout(r, 550)
+            setTimeout(r, 350)
           );
 
           captureCooldown = false;
           isCapturing = false;
+
         }
 
-      } else {
+      }
+
+      else {
 
         holding = false;
 
         progress.style.background =
           "none";
+
       }
 
       debug.innerHTML =
@@ -593,6 +715,26 @@ ${yawDiff.toFixed(1)}
 
 Pitch Diff:
 ${pitchDiff.toFixed(1)}
+
+<br><br>
+
+HFOV:
+${cameraFOV.horizontal.toFixed(1)}
+
+<br>
+
+VFOV:
+${cameraFOV.vertical.toFixed(1)}
+
+<br>
+
+Focal:
+${cameraFOV.focalLength.toFixed(1)}
+
+<br><br>
+
+Motion Stable:
+${motionStable}
 `;
 
     });
@@ -600,9 +742,7 @@ ${pitchDiff.toFixed(1)}
   async function capture(active) {
 
     const canvas =
-      document.createElement(
-        "canvas"
-      );
+      document.createElement("canvas");
 
     canvas.width =
       video.videoWidth;
@@ -643,8 +783,27 @@ ${pitchDiff.toFixed(1)}
       targetPitch:
         active.pitch,
 
-      camera:
-        cameraFOV,
+      camera: {
+
+        width:
+          cameraFOV.width,
+
+        height:
+          cameraFOV.height,
+
+        aspect:
+          cameraFOV.aspect,
+
+        horizontal:
+          cameraFOV.horizontal,
+
+        vertical:
+          cameraFOV.vertical,
+
+        focalLength:
+          cameraFOV.focalLength
+
+      },
 
       timestamp:
         Date.now()
@@ -721,8 +880,27 @@ ${pitchDiff.toFixed(1)}
 
       JSON.stringify({
 
-        camera:
-          cameraFOV,
+        camera: {
+
+          width:
+            cameraFOV.width,
+
+          height:
+            cameraFOV.height,
+
+          aspect:
+            cameraFOV.aspect,
+
+          horizontal:
+            cameraFOV.horizontal,
+
+          vertical:
+            cameraFOV.vertical,
+
+          focalLength:
+            cameraFOV.focalLength
+
+        },
 
         images:
           captureData
