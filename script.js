@@ -563,8 +563,8 @@ calc(-50% + ${(visualPitch / 18) * 45}px)
         Math.abs(pitchDiff);
 
       if (
-        absYaw > 10 ||
-        absPitch > 10
+        absYaw > 8 ||
+        absPitch > 8
       ) {
 
         if (absYaw > absPitch) {
@@ -600,8 +600,8 @@ ${totalPoints}
 
       const aligned =
 
-        Math.abs(yawDiff) < 4 &&
-        Math.abs(pitchDiff) < 4;
+        Math.abs(yawDiff) < 8 &&
+        Math.abs(pitchDiff) < 8;
 
       const motionStable =
 
@@ -610,12 +610,12 @@ ${totalPoints}
             smoothYaw,
             stableYaw
           )
-        ) < 1.2 &&
+        ) < 2.5 &&
 
         Math.abs(
           smoothPitch -
           stablePitch
-        ) < 1.2;
+        ) < 2.5;
 
       if (
         aligned &&
