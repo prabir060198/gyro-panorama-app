@@ -563,8 +563,8 @@ calc(-50% + ${(visualPitch / 18) * 45}px)
         Math.abs(pitchDiff);
 
       if (
-        absYaw > 4 ||
-        absPitch > 4
+        absYaw > 10 ||
+        absPitch > 10
       ) {
 
         if (absYaw > absPitch) {
