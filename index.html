@@ -10,19 +10,20 @@ name="viewport"
 content="
 width=device-width,
 initial-scale=1.0,
-maximum-scale=1.0,
 user-scalable=no
 ">
 
 <title>
-Panorama Capture
+Vision Panorama
 </title>
 
 <link
 rel="stylesheet"
 href="style.css">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
+</script>
 
 <script
 async
@@ -33,94 +34,38 @@ src="https://docs.opencv.org/4.x/opencv.js">
 
 <body>
 
-<div id="startScreen">
+<div id="loading">
+Loading OpenCV...
+</div>
 
-  <div id="startPanel">
+<video
+id="video"
+autoplay
+playsinline
+muted>
+</video>
 
-    <h1>
-      Panorama Capture
-    </h1>
+<canvas id="preview"></canvas>
 
-    <div id="modeButtons">
+<div id="overlay">
 
-      <button
-      class="modeBtn"
-      data-mode="horizontal"
-      >
+<div id="center"></div>
 
-        Full Horizontal Panorama
+<div id="status">
+Initializing...
+</div>
 
-        <span>
-          18 Photos
-        </span>
+<div id="debug"></div>
 
-      </button>
-
-      <button
-      class="modeBtn"
-      data-mode="360"
-      >
-
-        Full 360 Capture
-
-        <span>
-          34 Photos
-        </span>
-
-      </button>
-
-    </div>
-
-  </div>
+<div id="captureCount">
+0
+</div>
 
 </div>
 
-<div id="captureScreen">
-
-  <div id="cameraBox">
-
-    <video
-    id="video"
-    autoplay
-    playsinline
-    muted>
-    </video>
-
-    <div id="centerTarget"></div>
-
-    <div id="dot"></div>
-
-    <div id="progress"></div>
-
-    <div id="arrow">
-      ⬆
-    </div>
-
-  </div>
-
-  <div id="status">
-    Initializing...
-  </div>
-
-  <div id="debug">
-    Loading...
-  </div>
-
-</div>
-
-<div id="resultScreen">
-
-  <h2>
-    Capture Complete
-  </h2>
-
-  <div id="gallery"></div>
-
-  <button id="downloadBtn">
-    Download ZIP
-  </button>
-
-</div>
+<button id="startBtn">
+Start Capture
+</button>
 
 <script src="script.js"></script>
 

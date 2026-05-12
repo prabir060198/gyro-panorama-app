@@ -1,373 +1,71 @@
-window.addEventListener("load", () => {
-
-const startScreen =
-document.getElementById("startScreen");
-
-const captureScreen =
-document.getElementById("captureScreen");
-
-const resultScreen =
-document.getElementById("resultScreen");
+window.addEventListener("load", async()=>{
 
 const video =
 document.getElementById("video");
 
-const dot =
-document.getElementById("dot");
+const preview =
+document.getElementById("preview");
 
-const arrow =
-document.getElementById("arrow");
-
-const progress =
-document.getElementById("progress");
-
-const debug =
-document.getElementById("debug");
+const ctx =
+preview.getContext("2d");
 
 const statusText =
 document.getElementById("status");
 
-const modeButtons =
-document.querySelectorAll(".modeBtn");
+const debug =
+document.getElementById("debug");
 
-let smoothYaw = 0;
-let smoothPitch = 0;
+const captureCount =
+document.getElementById("captureCount");
 
-let stableYaw = 0;
-let stablePitch = 0;
+const loading =
+document.getElementById("loading");
 
-let displayYaw = 0;
-let displayPitch = 0;
-
-let captureCooldown = false;
-let isCapturing = false;
-
-let worldLockYaw = 0;
-let environmentLocked = false;
-
-let capturing = false;
-
-let holding = false;
-let holdStart = 0;
+const startBtn =
+document.getElementById("startBtn");
 
 let stream;
 
-let currentIndex = 0;
+let running = false;
 
-let capturedImages = [];
-let captureData = [];
-
-let capturePoints = [];
-let totalPoints = 0;
+let lastCaptureTime = 0;
 
 let previousDescriptors = null;
+let previousKeypoints = null;
 
-let featureMatchScore = 0;
-let overlapConfidence = 0;
+let captures = [];
+
+let overlap = 0;
 let blurScore = 0;
+let visualDistance = 0;
+let goodMatchesCount = 0;
 
-function norm360(a){
+let focalLength = 700;
 
-return (a % 360 + 360) % 360;
-
-}
-
-function angleDiff(a,b){
-
-return ((a - b + 540) % 360) - 180;
-
-}
-
-function getPitch(beta){
-
-let pitch = beta - 90;
-
-if(pitch > 90) pitch = 90;
-if(pitch < -90) pitch = -90;
-
-return pitch;
-
-}
-
-function detectBlur(gray){
-
-const lap = new cv.Mat();
-
-cv.Laplacian(
-gray,
-lap,
-cv.CV_64F
-);
-
-const mean = new cv.Mat();
-const stddev = new cv.Mat();
-
-cv.meanStdDev(
-lap,
-mean,
-stddev
-);
-
-const variance =
-stddev.doubleAt(0,0) *
-stddev.doubleAt(0,0);
-
-lap.delete();
-mean.delete();
-stddev.delete();
-
-return variance;
-
-}
-
-async function analyzeFrame(){
-
-if(
+while(
 typeof cv === "undefined" ||
-!video.videoWidth
-){
-return;
-}
-
-const canvas =
-document.createElement("canvas");
-
-canvas.width = 320;
-canvas.height = 240;
-
-const ctx =
-canvas.getContext("2d");
-
-ctx.drawImage(
-video,
-0,
-0,
-320,
-240
-);
-
-const src =
-cv.imread(canvas);
-
-const gray =
-new cv.Mat();
-
-cv.cvtColor(
-src,
-gray,
-cv.COLOR_RGBA2GRAY
-);
-
-blurScore =
-detectBlur(gray);
-
-const orb =
-new cv.ORB(800);
-
-const keypoints =
-new cv.KeyPointVector();
-
-const descriptors =
-new cv.Mat();
-
-orb.detectAndCompute(
-gray,
-new cv.Mat(),
-keypoints,
-descriptors
-);
-
-featureMatchScore = 0;
-overlapConfidence = 0;
-
-if(
-previousDescriptors &&
-!previousDescriptors.empty() &&
-!descriptors.empty()
+!cv.Mat
 ){
 
-const matcher =
-new cv.BFMatcher(
-cv.NORM_HAMMING,
-false
+await new Promise(r=>
+setTimeout(r,100)
 );
 
-const matches =
-new cv.DMatchVectorVector();
-
-matcher.knnMatch(
-descriptors,
-previousDescriptors,
-matches,
-2
-);
-
-let goodMatches = 0;
-
-for(
-let i = 0;
-i < matches.size();
-i++
-){
-
-const pair =
-matches.get(i);
-
-if(pair.size() < 2)
-continue;
-
-const m1 = pair.get(0);
-const m2 = pair.get(1);
-
-if(
-m1.distance <
-0.75 * m2.distance
-){
-
-goodMatches++;
-
 }
 
-}
-
-featureMatchScore =
-goodMatches /
-Math.max(
-keypoints.size(),
-1
-);
-
-overlapConfidence =
-Math.min(
-featureMatchScore * 2,
-1
-);
-
-matches.delete();
-matcher.delete();
-
-}
-
-if(previousDescriptors){
-
-previousDescriptors.delete();
-
-}
-
-previousDescriptors =
-descriptors.clone();
-
-src.delete();
-gray.delete();
-descriptors.delete();
-keypoints.delete();
-orb.delete();
-
-}
-
-function setMode(mode){
-
-capturePoints = [];
-
-if(mode === "horizontal"){
-
-for(
-let y = 0;
-y < 360;
-y += 20
-){
-
-capturePoints.push({
-
-yaw:y,
-pitch:0
-
-});
-
-}
-
-}
-else{
-
-const rings = [
-
-{
-pitch:60,
-yaws:[0,90,180,270]
-},
-
-{
-pitch:20,
-yaws:[
-0,30,60,90,
-120,150,180,210,
-240,270,300,330
-]
-},
-
-{
-pitch:-20,
-yaws:[
-15,45,75,105,
-135,165,195,225,
-255,285,315,345
-]
-},
-
-{
-pitch:-60,
-yaws:[45,135,225,315]
-}
-
-];
-
-rings.forEach(r=>{
-
-r.yaws.forEach(yaw=>{
-
-capturePoints.push({
-
-yaw,
-pitch:r.pitch
-
-});
-
-});
-
-});
-
-}
-
-totalPoints =
-capturePoints.length;
-
-}
-
-modeButtons.forEach(btn=>{
-
-btn.onclick = async()=>{
-
-setMode(
-btn.dataset.mode
-);
-
-try{
-
-startScreen.style.display =
+loading.style.display =
 "none";
 
-captureScreen.style.display =
-"block";
+preview.width =
+window.innerWidth;
 
-if(
-typeof DeviceOrientationEvent !== "undefined" &&
-typeof DeviceOrientationEvent.requestPermission === "function"
-){
+preview.height =
+window.innerHeight;
 
-await DeviceOrientationEvent
-.requestPermission();
+startBtn.onclick = async()=>{
 
-}
+startBtn.style.display =
+"none";
 
 stream =
 await navigator.mediaDevices
@@ -395,301 +93,423 @@ video.srcObject = stream;
 
 await video.play();
 
-capturing = true;
+running = true;
 
-}
-catch(err){
-
-debug.innerHTML = err;
-
-}
+processLoop();
 
 };
 
-});
+function detectBlur(gray){
 
-window.addEventListener(
-"deviceorientation",
-async e=>{
+const lap =
+new cv.Mat();
 
-if(!capturing) return;
+cv.Laplacian(
+gray,
+lap,
+cv.CV_64F
+);
+
+const mean =
+new cv.Mat();
+
+const stddev =
+new cv.Mat();
+
+cv.meanStdDev(
+lap,
+mean,
+stddev
+);
+
+const variance =
+stddev.doubleAt(0,0) *
+stddev.doubleAt(0,0);
+
+lap.delete();
+mean.delete();
+stddev.delete();
+
+return variance;
+
+}
+
+function cylindricalWarp(src,f){
+
+const dst =
+new cv.Mat.zeros(
+src.rows,
+src.cols,
+src.type()
+);
+
+const cx = src.cols / 2;
+const cy = src.rows / 2;
+
+for(let y=0;y<src.rows;y++){
+
+for(let x=0;x<src.cols;x++){
+
+const theta =
+(x - cx) / f;
+
+const h =
+(y - cy) / f;
+
+const X =
+Math.sin(theta);
+
+const Y = h;
+
+const Z =
+Math.cos(theta);
+
+const x2 =
+f * X / Z + cx;
+
+const y2 =
+f * Y / Z + cy;
 
 if(
-captureCooldown ||
-isCapturing
+x2 >= 0 &&
+x2 < src.cols &&
+y2 >= 0 &&
+y2 < src.rows
 ){
+
+const pixel =
+src.ucharPtr(y,x);
+
+const target =
+dst.ucharPtr(
+Math.floor(y2),
+Math.floor(x2)
+);
+
+for(let i=0;i<4;i++){
+
+target[i] = pixel[i];
+
+}
+
+}
+
+}
+
+}
+
+return dst;
+
+}
+
+async function processLoop(){
+
+if(!running)
 return;
-}
 
-let rawYaw =
-360 - e.alpha;
-
-let rawPitch =
-getPitch(
-e.beta || 0
+ctx.clearRect(
+0,
+0,
+preview.width,
+preview.height
 );
 
-if(!environmentLocked){
+const canvas =
+document.createElement("canvas");
 
-worldLockYaw =
-rawYaw;
+canvas.width = 480;
+canvas.height = 270;
 
-environmentLocked = true;
+const cctx =
+canvas.getContext("2d");
 
-}
-
-let yaw =
-norm360(
-rawYaw - worldLockYaw
+cctx.drawImage(
+video,
+0,
+0,
+480,
+270
 );
 
-smoothYaw =
-norm360(
+const src =
+cv.imread(canvas);
 
-smoothYaw +
-
-angleDiff(
-yaw,
-smoothYaw
-) * 0.08
-
+const warped =
+cylindricalWarp(
+src,
+focalLength
 );
 
-smoothPitch +=
-(rawPitch - smoothPitch) * 0.1;
+const gray =
+new cv.Mat();
 
-stableYaw =
-norm360(
-
-stableYaw +
-
-angleDiff(
-smoothYaw,
-stableYaw
-) * 0.2
-
+cv.cvtColor(
+warped,
+gray,
+cv.COLOR_RGBA2GRAY
 );
 
-stablePitch +=
-(smoothPitch - stablePitch) * 0.2;
+blurScore =
+detectBlur(gray);
 
-displayYaw =
-norm360(
+const orb =
+new cv.ORB(1200);
 
-displayYaw +
+const keypoints =
+new cv.KeyPointVector();
 
-angleDiff(
-stableYaw,
-displayYaw
-) * 0.16
+const descriptors =
+new cv.Mat();
 
+orb.detectAndCompute(
+gray,
+new cv.Mat(),
+keypoints,
+descriptors
 );
 
-displayPitch +=
-(stablePitch - displayPitch) * 0.16;
-
-const active =
-capturePoints[currentIndex];
-
-if(!active){
-
-finish();
-return;
-
-}
-
-let yawDiff =
-angleDiff(
-stableYaw,
-active.yaw
-);
-
-let pitchDiff =
-active.pitch -
-stablePitch;
-
-let visualYaw =
-angleDiff(
-displayYaw,
-active.yaw
-);
-
-let visualPitch =
-active.pitch -
-displayPitch;
-
-dot.style.transform =
-`
-translate(
-calc(-50% + ${-(visualYaw / 20) * 40}px),
-calc(-50% + ${(visualPitch / 20) * 40}px)
-)
-`;
-
-await analyzeFrame();
-
-const aligned =
-
-Math.abs(yawDiff) < 8 &&
-Math.abs(pitchDiff) < 8;
-
-const motionStable =
-
-Math.abs(
-angleDiff(
-smoothYaw,
-stableYaw
-)
-) < 3 &&
-
-Math.abs(
-smoothPitch -
-stablePitch
-) < 3;
+let goodMatches = [];
 
 if(
-Math.abs(yawDiff) > 8 ||
-Math.abs(pitchDiff) > 8
+previousDescriptors &&
+!previousDescriptors.empty() &&
+!descriptors.empty()
 ){
 
-if(
-Math.abs(yawDiff) >
-Math.abs(pitchDiff)
-){
-
-arrow.innerText =
-yawDiff > 0
-? "⬅"
-: "➡";
-
-}
-else{
-
-arrow.innerText =
-pitchDiff > 0
-? "⬆"
-: "⬇";
-
-}
-
-}
-else{
-
-arrow.innerText = "✅";
-
-}
-
-if(
-aligned &&
-motionStable
-){
-
-if(!holding){
-
-holding = true;
-holdStart = Date.now();
-
-}
-
-let progressValue =
-(Date.now() - holdStart) / 500;
-
-progress.style.background =
-`
-conic-gradient(
-lime ${progressValue * 360}deg,
-transparent 0deg
-)
-`;
-
-if(progressValue >= 1){
-
-isCapturing = true;
-captureCooldown = true;
-
-await capture(active);
-
-currentIndex++;
-
-holding = false;
-
-progress.style.background =
-"none";
-
-await new Promise(r=>
-setTimeout(r,300)
+const matcher =
+new cv.BFMatcher(
+cv.NORM_HAMMING,
+false
 );
 
-captureCooldown = false;
-isCapturing = false;
+const matches =
+new cv.DMatchVectorVector();
+
+matcher.knnMatch(
+descriptors,
+previousDescriptors,
+matches,
+2
+);
+
+for(
+let i=0;
+i<matches.size();
+i++
+){
+
+const pair =
+matches.get(i);
+
+if(pair.size() < 2)
+continue;
+
+const m1 = pair.get(0);
+const m2 = pair.get(1);
+
+if(
+m1.distance <
+0.72 * m2.distance
+){
+
+goodMatches.push(m1);
 
 }
 
 }
-else{
 
-holding = false;
+const srcPoints = [];
+const dstPoints = [];
 
-progress.style.background =
-"none";
+for(const m of goodMatches){
+
+const p1 =
+keypoints.get(m.queryIdx).pt;
+
+const p2 =
+previousKeypoints.get(m.trainIdx).pt;
+
+srcPoints.push(p1.x,p1.y);
+dstPoints.push(p2.x,p2.y);
+
+ctx.beginPath();
+
+ctx.arc(
+p1.x * 2,
+p1.y * 2,
+3,
+0,
+Math.PI * 2
+);
+
+ctx.fillStyle =
+"lime";
+
+ctx.fill();
+
+ctx.beginPath();
+
+ctx.moveTo(
+p1.x * 2,
+p1.y * 2
+);
+
+ctx.lineTo(
+p2.x * 2,
+p2.y * 2
+);
+
+ctx.strokeStyle =
+"rgba(0,255,0,0.4)";
+
+ctx.stroke();
+
+}
+
+if(goodMatches.length > 12){
+
+const srcMat =
+cv.matFromArray(
+goodMatches.length,
+1,
+cv.CV_32FC2,
+srcPoints
+);
+
+const dstMat =
+cv.matFromArray(
+goodMatches.length,
+1,
+cv.CV_32FC2,
+dstPoints
+);
+
+const H =
+cv.findHomography(
+srcMat,
+dstMat,
+cv.RANSAC,
+5
+);
+
+if(H && !H.empty()){
+
+const tx =
+H.data64F[2];
+
+const ty =
+H.data64F[5];
+
+visualDistance =
+Math.sqrt(
+tx * tx +
+ty * ty
+);
+
+}
+
+srcMat.delete();
+dstMat.delete();
+
+if(H)
+H.delete();
+
+}
+
+matcher.delete();
+matches.delete();
+
+}
+
+goodMatchesCount =
+goodMatches.length;
+
+overlap =
+Math.min(
+goodMatches.length / 120,
+1
+);
+
+const shouldCapture =
+
+visualDistance > 55 &&
+
+overlap > 0.15 &&
+
+blurScore > 35 &&
+
+Date.now() -
+lastCaptureTime >
+1200;
+
+if(shouldCapture){
+
+capture(canvas);
+
+lastCaptureTime =
+Date.now();
 
 }
 
 statusText.innerHTML =
 `
-Captured
-${capturedImages.length}
-/
-${totalPoints}
+Move Slowly
 `;
+
+captureCount.innerHTML =
+captures.length;
 
 debug.innerHTML =
 `
-Feature:
-${featureMatchScore.toFixed(2)}
-
-<br>
-
-Overlap:
-${(overlapConfidence * 100).toFixed(0)}%
-
-<br>
-
-Blur:
-${blurScore.toFixed(0)}
+Features:
+${keypoints.size()}
 
 <br><br>
 
-Yaw:
-${stableYaw.toFixed(1)}
+Matches:
+${goodMatchesCount}
 
-<br>
+<br><br>
 
-Pitch:
-${stablePitch.toFixed(1)}
+Overlap:
+${(overlap * 100).toFixed(0)}%
+
+<br><br>
+
+Distance:
+${visualDistance.toFixed(1)}
+
+<br><br>
+
+Blur:
+${blurScore.toFixed(0)}
 `;
 
-});
+if(previousDescriptors)
+previousDescriptors.delete();
 
-async function capture(active){
+if(previousKeypoints)
+previousKeypoints.delete();
 
-const canvas =
-document.createElement("canvas");
+previousDescriptors =
+descriptors.clone();
 
-canvas.width =
-video.videoWidth;
+previousKeypoints =
+keypoints;
 
-canvas.height =
-video.videoHeight;
+src.delete();
+warped.delete();
+gray.delete();
+descriptors.delete();
+orb.delete();
 
-const ctx =
-canvas.getContext("2d");
-
-ctx.drawImage(
-video,
-0,
-0
+requestAnimationFrame(
+processLoop
 );
+
+}
+
+function capture(canvas){
 
 const img =
 canvas.toDataURL(
@@ -697,136 +517,52 @@ canvas.toDataURL(
 0.92
 );
 
-capturedImages.push(img);
+captures.push({
 
-captureData.push({
-
-file:
-`img_${capturedImages.length}.jpg`,
-
-yaw:
-stableYaw,
-
-pitch:
-stablePitch,
-
-targetYaw:
-active.yaw,
-
-targetPitch:
-active.pitch,
-
-feature:
-featureMatchScore,
-
-overlap:
-overlapConfidence,
-
-blur:
-blurScore,
+image:img,
 
 timestamp:
-Date.now()
+Date.now(),
+
+overlap,
+
+blur:blurScore,
+
+distance:
+visualDistance,
+
+matches:
+goodMatchesCount
 
 });
 
-}
-
-function finish(){
-
-capturing = false;
-
-if(stream){
-
-stream.getTracks()
-.forEach(track=>{
-
-track.stop();
-
-});
+flashCapture();
 
 }
 
-captureScreen.style.display =
-"none";
+function flashCapture(){
 
-resultScreen.style.display =
-"block";
+ctx.fillStyle =
+"rgba(255,255,255,0.3)";
 
-const gallery =
-document.getElementById(
-"gallery"
+ctx.fillRect(
+0,
+0,
+preview.width,
+preview.height
 );
 
-capturedImages.forEach(img=>{
+setTimeout(()=>{
 
-const el =
-document.createElement("img");
-
-el.src = img;
-
-gallery.appendChild(el);
-
-});
-
-}
-
-document.getElementById(
-"downloadBtn"
-).onclick = async()=>{
-
-const zip =
-new JSZip();
-
-capturedImages.forEach((img,i)=>{
-
-zip.file(
-
-`img_${i + 1}.jpg`,
-
-img.split(",")[1],
-
-{
-base64:true
-}
-
+ctx.clearRect(
+0,
+0,
+preview.width,
+preview.height
 );
 
-});
+},100);
 
-zip.file(
-
-"data.json",
-
-JSON.stringify({
-
-images:
-captureData
-
-},
-null,
-2)
-
-);
-
-const blob =
-await zip.generateAsync({
-
-type:"blob"
-
-});
-
-const a =
-document.createElement("a");
-
-a.href =
-URL.createObjectURL(blob);
-
-a.download =
-"panorama_capture.zip";
-
-a.click();
-
-};
+}
 
 });
