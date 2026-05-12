@@ -14,16 +14,8 @@ maximum-scale=1.0,
 user-scalable=no
 ">
 
-<meta
-name="apple-mobile-web-app-capable"
-content="yes">
-
-<meta
-name="mobile-web-app-capable"
-content="yes">
-
 <title>
-360 Capture
+Panorama Capture
 </title>
 
 <link
@@ -46,21 +38,17 @@ src="https://docs.opencv.org/4.x/opencv.js">
   <div id="startPanel">
 
     <h1>
-      360 Capture
+      Panorama Capture
     </h1>
-
-    <p>
-      Choose Capture Mode
-    </p>
 
     <div id="modeButtons">
 
       <button
       class="modeBtn"
-      data-mode="quick"
+      data-mode="horizontal"
       >
 
-        Quick Room
+        Full Horizontal Panorama
 
         <span>
           18 Photos
@@ -70,39 +58,13 @@ src="https://docs.opencv.org/4.x/opencv.js">
 
       <button
       class="modeBtn"
-      data-mode="standard"
+      data-mode="360"
       >
 
-        Standard 360
+        Full 360 Capture
 
         <span>
-          30 Photos
-        </span>
-
-      </button>
-
-      <button
-      class="modeBtn"
-      data-mode="pro"
-      >
-
-        Pro Sphere
-
-        <span>
-          38 Photos
-        </span>
-
-      </button>
-
-      <button
-      class="modeBtn"
-      data-mode="full"
-      >
-
-        Full Interior
-
-        <span>
-          46 Photos
+          34 Photos
         </span>
 
       </button>
@@ -141,7 +103,7 @@ src="https://docs.opencv.org/4.x/opencv.js">
   </div>
 
   <div id="debug">
-    Loading OpenCV...
+    Loading...
   </div>
 
 </div>
@@ -159,45 +121,6 @@ src="https://docs.opencv.org/4.x/opencv.js">
   </button>
 
 </div>
-
-<script>
-
-window.cvReady = false;
-
-function waitForOpenCV() {
-
-  return new Promise(resolve => {
-
-    const check = () => {
-
-      if (
-        typeof cv !== "undefined" &&
-        cv.Mat
-      ) {
-
-        window.cvReady = true;
-
-        resolve();
-
-      }
-
-      else {
-
-        setTimeout(check, 100);
-
-      }
-
-    };
-
-    check();
-
-  });
-
-}
-
-waitForOpenCV();
-
-</script>
 
 <script src="script.js"></script>
 

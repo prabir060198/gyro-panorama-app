@@ -1,773 +1,662 @@
 window.addEventListener("load", () => {
 
-  const startScreen =
-    document.getElementById("startScreen");
+const startScreen =
+document.getElementById("startScreen");
 
-  const captureScreen =
-    document.getElementById("captureScreen");
+const captureScreen =
+document.getElementById("captureScreen");
 
-  const resultScreen =
-    document.getElementById("resultScreen");
+const resultScreen =
+document.getElementById("resultScreen");
 
-  const video =
-    document.getElementById("video");
+const video =
+document.getElementById("video");
 
-  const dot =
-    document.getElementById("dot");
+const dot =
+document.getElementById("dot");
 
-  const arrow =
-    document.getElementById("arrow");
+const arrow =
+document.getElementById("arrow");
 
-  const progress =
-    document.getElementById("progress");
+const progress =
+document.getElementById("progress");
 
-  const debug =
-    document.getElementById("debug");
+const debug =
+document.getElementById("debug");
 
-  const statusText =
-    document.getElementById("status");
+const statusText =
+document.getElementById("status");
 
-  const modeButtons =
-    document.querySelectorAll(".modeBtn");
+const modeButtons =
+document.querySelectorAll(".modeBtn");
 
-  let smoothYaw = 0;
-  let smoothPitch = 0;
+let smoothYaw = 0;
+let smoothPitch = 0;
 
-  let stableYaw = 0;
-  let stablePitch = 0;
+let stableYaw = 0;
+let stablePitch = 0;
 
-  let displayYaw = 0;
-  let displayPitch = 0;
+let displayYaw = 0;
+let displayPitch = 0;
 
-  let captureCooldown = false;
-  let isCapturing = false;
+let captureCooldown = false;
+let isCapturing = false;
 
-  let worldLockYaw = 0;
-  let environmentLocked = false;
+let worldLockYaw = 0;
+let environmentLocked = false;
 
-  let capturing = false;
+let capturing = false;
 
-  let holding = false;
-  let holdStart = 0;
+let holding = false;
+let holdStart = 0;
 
-  let stream;
+let stream;
 
-  let currentIndex = 0;
+let currentIndex = 0;
 
-  let capturedImages = [];
-  let captureData = [];
+let capturedImages = [];
+let captureData = [];
 
-  let rings = [];
-  let capturePoints = [];
-  let totalPoints = 0;
+let capturePoints = [];
+let totalPoints = 0;
 
-  let previousDescriptors = null;
+let previousDescriptors = null;
 
-  let featureMatchScore = 0;
-  let overlapConfidence = 0;
-  let homographyValid = false;
-  let visualStable = false;
-  let blurScore = 0;
+let featureMatchScore = 0;
+let overlapConfidence = 0;
+let blurScore = 0;
 
-  let cameraFOV = {
+function norm360(a){
 
-    width: 0,
-    height: 0,
-    aspect: 0,
+return (a % 360 + 360) % 360;
 
-    horizontal: 0,
-    vertical: 0,
+}
 
-    focalLength: 0
+function angleDiff(a,b){
 
-  };
+return ((a - b + 540) % 360) - 180;
 
-  function norm360(a) {
+}
 
-    return (a % 360 + 360) % 360;
+function getPitch(beta){
 
-  }
+let pitch = beta - 90;
 
-  function angleDiff(a, b) {
+if(pitch > 90) pitch = 90;
+if(pitch < -90) pitch = -90;
 
-    return ((a - b + 540) % 360) - 180;
+return pitch;
 
-  }
+}
 
-  function getPitch(beta) {
+function detectBlur(gray){
 
-    let pitch = beta - 90;
+const lap = new cv.Mat();
 
-    if (pitch > 90) pitch = 90;
-    if (pitch < -90) pitch = -90;
+cv.Laplacian(
+gray,
+lap,
+cv.CV_64F
+);
 
-    return pitch;
+const mean = new cv.Mat();
+const stddev = new cv.Mat();
+
+cv.meanStdDev(
+lap,
+mean,
+stddev
+);
+
+const variance =
+stddev.doubleAt(0,0) *
+stddev.doubleAt(0,0);
+
+lap.delete();
+mean.delete();
+stddev.delete();
+
+return variance;
+
+}
 
-  }
+async function analyzeFrame(){
+
+if(
+typeof cv === "undefined" ||
+!video.videoWidth
+){
+return;
+}
 
-  function detectBlur(gray) {
+const canvas =
+document.createElement("canvas");
 
-    const lap = new cv.Mat();
+canvas.width = 320;
+canvas.height = 240;
 
-    cv.Laplacian(
-      gray,
-      lap,
-      cv.CV_64F
-    );
+const ctx =
+canvas.getContext("2d");
 
-    const mean = new cv.Mat();
-    const stddev = new cv.Mat();
+ctx.drawImage(
+video,
+0,
+0,
+320,
+240
+);
+
+const src =
+cv.imread(canvas);
 
-    cv.meanStdDev(
-      lap,
-      mean,
-      stddev
-    );
+const gray =
+new cv.Mat();
 
-    const variance =
-      stddev.doubleAt(0, 0) *
-      stddev.doubleAt(0, 0);
+cv.cvtColor(
+src,
+gray,
+cv.COLOR_RGBA2GRAY
+);
 
-    lap.delete();
-    mean.delete();
-    stddev.delete();
+blurScore =
+detectBlur(gray);
 
-    return variance;
+const orb =
+new cv.ORB(800);
 
-  }
+const keypoints =
+new cv.KeyPointVector();
 
-  async function analyzeFrameFeatures() {
+const descriptors =
+new cv.Mat();
 
-    if (
-      typeof cv === "undefined" ||
-      !video.videoWidth
-    ) {
-      return;
-    }
+orb.detectAndCompute(
+gray,
+new cv.Mat(),
+keypoints,
+descriptors
+);
 
-    const canvas =
-      document.createElement("canvas");
+featureMatchScore = 0;
+overlapConfidence = 0;
 
-    canvas.width = 320;
-    canvas.height = 240;
+if(
+previousDescriptors &&
+!previousDescriptors.empty() &&
+!descriptors.empty()
+){
 
-    const ctx =
-      canvas.getContext("2d");
+const matcher =
+new cv.BFMatcher(
+cv.NORM_HAMMING,
+false
+);
 
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
+const matches =
+new cv.DMatchVectorVector();
 
-    const src =
-      cv.imread(canvas);
+matcher.knnMatch(
+descriptors,
+previousDescriptors,
+matches,
+2
+);
 
-    const gray =
-      new cv.Mat();
+let goodMatches = 0;
 
-    cv.cvtColor(
-      src,
-      gray,
-      cv.COLOR_RGBA2GRAY
-    );
+for(
+let i = 0;
+i < matches.size();
+i++
+){
 
-    blurScore =
-      detectBlur(gray);
+const pair =
+matches.get(i);
 
-    const orb =
-      new cv.ORB(1200);
+if(pair.size() < 2)
+continue;
 
-    const keypoints =
-      new cv.KeyPointVector();
+const m1 = pair.get(0);
+const m2 = pair.get(1);
 
-    const descriptors =
-      new cv.Mat();
+if(
+m1.distance <
+0.75 * m2.distance
+){
 
-    orb.detectAndCompute(
-      gray,
-      new cv.Mat(),
-      keypoints,
-      descriptors
-    );
+goodMatches++;
 
-    featureMatchScore = 0;
-    overlapConfidence = 0;
-    homographyValid = false;
-    visualStable = false;
+}
 
-    if (
-      previousDescriptors &&
-      !previousDescriptors.empty() &&
-      !descriptors.empty()
-    ) {
+}
 
-      const matcher =
-        new cv.BFMatcher(
-          cv.NORM_HAMMING,
-          false
-        );
+featureMatchScore =
+goodMatches /
+Math.max(
+keypoints.size(),
+1
+);
 
-      const matches =
-        new cv.DMatchVectorVector();
+overlapConfidence =
+Math.min(
+featureMatchScore * 2,
+1
+);
 
-      matcher.knnMatch(
-        descriptors,
-        previousDescriptors,
-        matches,
-        2
-      );
+matches.delete();
+matcher.delete();
 
-      let goodMatches = 0;
+}
 
-      for (
-        let i = 0;
-        i < matches.size();
-        i++
-      ) {
+if(previousDescriptors){
 
-        const pair =
-          matches.get(i);
+previousDescriptors.delete();
 
-        if (pair.size() < 2)
-          continue;
+}
 
-        const m1 = pair.get(0);
-        const m2 = pair.get(1);
+previousDescriptors =
+descriptors.clone();
 
-        if (
-          m1.distance <
-          0.72 * m2.distance
-        ) {
+src.delete();
+gray.delete();
+descriptors.delete();
+keypoints.delete();
+orb.delete();
 
-          goodMatches++;
+}
 
-        }
+function setMode(mode){
 
-      }
+capturePoints = [];
 
-      featureMatchScore =
-        goodMatches /
-        Math.max(
-          keypoints.size(),
-          1
-        );
+if(mode === "horizontal"){
 
-      overlapConfidence =
-        Math.min(
-          featureMatchScore * 2.5,
-          1
-        );
+for(
+let y = 0;
+y < 360;
+y += 20
+){
 
-      homographyValid =
-        goodMatches > 35;
+capturePoints.push({
 
-      visualStable =
-        goodMatches > 45 &&
-        blurScore > 80;
+yaw:y,
+pitch:0
 
-      matches.delete();
-      matcher.delete();
+});
 
-    }
+}
 
-    if (previousDescriptors) {
+}
+else{
 
-      previousDescriptors.delete();
+const rings = [
 
-    }
+{
+pitch:60,
+yaws:[0,90,180,270]
+},
 
-    previousDescriptors =
-      descriptors.clone();
+{
+pitch:20,
+yaws:[
+0,30,60,90,
+120,150,180,210,
+240,270,300,330
+]
+},
 
-    src.delete();
-    gray.delete();
-    descriptors.delete();
-    keypoints.delete();
-    orb.delete();
+{
+pitch:-20,
+yaws:[
+15,45,75,105,
+135,165,195,225,
+255,285,315,345
+]
+},
 
-  }
+{
+pitch:-60,
+yaws:[45,135,225,315]
+}
 
-  function estimateCameraFOV(
-    width,
-    height
-  ) {
+];
 
-    const aspect =
-      width / height;
+rings.forEach(r=>{
 
-    const horizontalFOV = 68;
+r.yaws.forEach(yaw=>{
 
-    const verticalFOV =
-      horizontalFOV / aspect;
+capturePoints.push({
 
-    const focalLength =
-      width /
+yaw,
+pitch:r.pitch
 
-      (
-        2 *
+});
 
-        Math.tan(
-          (
-            horizontalFOV *
-            Math.PI /
-            180
-          ) / 2
-        )
-      );
+});
 
-    return {
+});
 
-      horizontal:
-        horizontalFOV,
+}
 
-      vertical:
-        verticalFOV,
+totalPoints =
+capturePoints.length;
 
-      focalLength
+}
 
-    };
+modeButtons.forEach(btn=>{
 
-  }
+btn.onclick = async()=>{
 
-  function setCaptureMode(mode) {
+setMode(
+btn.dataset.mode
+);
 
-    capturePoints = [];
+try{
 
-    rings = [
+startScreen.style.display =
+"none";
 
-      {
-        pitch: 75,
-        yaws: [0, 120, 240]
-      },
+captureScreen.style.display =
+"block";
 
-      {
-        pitch: 45,
-        yaws: [
-          0, 36, 72, 108, 144,
-          180, 216, 252, 288, 324
-        ]
-      },
+if(
+typeof DeviceOrientationEvent !== "undefined" &&
+typeof DeviceOrientationEvent.requestPermission === "function"
+){
 
-      {
-        pitch: 10,
-        yaws: [
-          0, 25, 50, 75,
-          100, 125, 150, 175,
-          200, 225, 250, 275,
-          300, 325
-        ]
-      },
+await DeviceOrientationEvent
+.requestPermission();
 
-      {
-        pitch: -25,
-        yaws: [
-          12, 42, 72, 102,
-          132, 162, 192, 222,
-          252, 282, 312, 342
-        ]
-      },
+}
 
-      {
-        pitch: -70,
-        yaws: [45, 135, 225, 315]
-      }
+stream =
+await navigator.mediaDevices
+.getUserMedia({
 
-    ];
+video:{
 
-    rings.forEach(r => {
+facingMode:{
+ideal:"environment"
+},
 
-      r.yaws.forEach(yaw => {
+width:{
+ideal:1920
+},
 
-        capturePoints.push({
+height:{
+ideal:1080
+}
 
-          yaw,
-          pitch: r.pitch
+}
 
-        });
+});
 
-      });
+video.srcObject = stream;
 
-    });
+await video.play();
 
-    totalPoints =
-      capturePoints.length;
+capturing = true;
 
-  }
+}
+catch(err){
 
-  modeButtons.forEach(btn => {
+debug.innerHTML = err;
 
-    btn.onclick = async () => {
+}
 
-      setCaptureMode(
-        btn.dataset.mode
-      );
+};
 
-      try {
+});
 
-        startScreen.style.display =
-          "none";
+window.addEventListener(
+"deviceorientation",
+async e=>{
 
-        captureScreen.style.display =
-          "block";
+if(!capturing) return;
 
-        if (
-          typeof DeviceOrientationEvent !== "undefined" &&
-          typeof DeviceOrientationEvent.requestPermission === "function"
-        ) {
+if(
+captureCooldown ||
+isCapturing
+){
+return;
+}
 
-          await DeviceOrientationEvent
-            .requestPermission();
+let rawYaw =
+360 - e.alpha;
 
-        }
+let rawPitch =
+getPitch(
+e.beta || 0
+);
 
-        stream =
-          await navigator.mediaDevices
-            .getUserMedia({
+if(!environmentLocked){
 
-              video: {
+worldLockYaw =
+rawYaw;
 
-                facingMode: {
-                  ideal: "environment"
-                },
+environmentLocked = true;
 
-                width: {
-                  ideal: 1920
-                },
+}
 
-                height: {
-                  ideal: 1080
-                }
+let yaw =
+norm360(
+rawYaw - worldLockYaw
+);
 
-              }
+smoothYaw =
+norm360(
 
-            });
+smoothYaw +
 
-        video.srcObject = stream;
+angleDiff(
+yaw,
+smoothYaw
+) * 0.08
 
-        await video.play();
+);
 
-        cameraFOV.width =
-          video.videoWidth;
+smoothPitch +=
+(rawPitch - smoothPitch) * 0.1;
 
-        cameraFOV.height =
-          video.videoHeight;
+stableYaw =
+norm360(
 
-        cameraFOV.aspect =
-          video.videoWidth /
-          video.videoHeight;
+stableYaw +
 
-        const estimatedFOV =
-          estimateCameraFOV(
-            video.videoWidth,
-            video.videoHeight
-          );
+angleDiff(
+smoothYaw,
+stableYaw
+) * 0.2
 
-        cameraFOV.horizontal =
-          estimatedFOV.horizontal;
+);
 
-        cameraFOV.vertical =
-          estimatedFOV.vertical;
+stablePitch +=
+(smoothPitch - stablePitch) * 0.2;
 
-        cameraFOV.focalLength =
-          estimatedFOV.focalLength;
+displayYaw =
+norm360(
 
-        capturing = true;
+displayYaw +
 
-      }
+angleDiff(
+stableYaw,
+displayYaw
+) * 0.16
 
-      catch (err) {
+);
 
-        debug.innerHTML =
-          err;
+displayPitch +=
+(stablePitch - displayPitch) * 0.16;
 
-      }
+const active =
+capturePoints[currentIndex];
 
-    };
+if(!active){
 
-  });
+finish();
+return;
 
-  window.addEventListener(
-    "deviceorientation",
-    async e => {
+}
 
-      if (!capturing) return;
+let yawDiff =
+angleDiff(
+stableYaw,
+active.yaw
+);
 
-      if (
-        captureCooldown ||
-        isCapturing
-      ) {
-        return;
-      }
+let pitchDiff =
+active.pitch -
+stablePitch;
 
-      let rawYaw =
-        360 - e.alpha;
+let visualYaw =
+angleDiff(
+displayYaw,
+active.yaw
+);
 
-      let rawPitch =
-        getPitch(
-          e.beta || 0
-        );
+let visualPitch =
+active.pitch -
+displayPitch;
 
-      if (!environmentLocked) {
-
-        worldLockYaw =
-          rawYaw;
-
-        environmentLocked = true;
-
-      }
-
-      let yaw =
-        norm360(
-          rawYaw - worldLockYaw
-        );
-
-      smoothYaw =
-        norm360(
-
-          smoothYaw +
-
-          angleDiff(
-            yaw,
-            smoothYaw
-          ) * 0.06
-
-        );
-
-      smoothPitch +=
-        (rawPitch - smoothPitch) * 0.08;
-
-      stableYaw =
-        norm360(
-
-          stableYaw +
-
-          angleDiff(
-            smoothYaw,
-            stableYaw
-          ) * 0.18
-
-        );
-
-      stablePitch +=
-        (smoothPitch - stablePitch) * 0.18;
-
-      displayYaw =
-        norm360(
-
-          displayYaw +
-
-          angleDiff(
-            stableYaw,
-            displayYaw
-          ) * 0.15
-
-        );
-
-      displayPitch +=
-        (stablePitch - displayPitch) * 0.15;
-
-      const active =
-        capturePoints[currentIndex];
-
-      if (!active) {
-
-        finish();
-        return;
-
-      }
-
-      let yawDiff =
-        angleDiff(
-          stableYaw,
-          active.yaw
-        );
-
-      let pitchDiff =
-        active.pitch -
-        stablePitch;
-
-      let visualYaw =
-        angleDiff(
-          displayYaw,
-          active.yaw
-        );
-
-      let visualPitch =
-        active.pitch -
-        displayPitch;
-
-      dot.style.transform =
-        `
+dot.style.transform =
+`
 translate(
 calc(-50% + ${-(visualYaw / 20) * 40}px),
 calc(-50% + ${(visualPitch / 20) * 40}px)
 )
 `;
 
-      await analyzeFrameFeatures();
+await analyzeFrame();
 
-      const sensorAligned =
+const aligned =
 
-        Math.abs(yawDiff) < 7 &&
-        Math.abs(pitchDiff) < 7;
+Math.abs(yawDiff) < 8 &&
+Math.abs(pitchDiff) < 8;
 
-      const aligned =
+const motionStable =
 
-        sensorAligned &&
-        overlapConfidence > 0.12 &&
-        homographyValid;
+Math.abs(
+angleDiff(
+smoothYaw,
+stableYaw
+)
+) < 3 &&
 
-      const motionStable =
+Math.abs(
+smoothPitch -
+stablePitch
+) < 3;
 
-        Math.abs(
-          angleDiff(
-            smoothYaw,
-            stableYaw
-          )
-        ) < 1.8 &&
+if(
+Math.abs(yawDiff) > 8 ||
+Math.abs(pitchDiff) > 8
+){
 
-        Math.abs(
-          smoothPitch -
-          stablePitch
-        ) < 1.8 &&
+if(
+Math.abs(yawDiff) >
+Math.abs(pitchDiff)
+){
 
-        visualStable;
+arrow.innerText =
+yawDiff > 0
+? "⬅"
+: "➡";
 
-      if (
-        Math.abs(yawDiff) > 7 ||
-        Math.abs(pitchDiff) > 7
-      ) {
+}
+else{
 
-        if (
-          Math.abs(yawDiff) >
-          Math.abs(pitchDiff)
-        ) {
+arrow.innerText =
+pitchDiff > 0
+? "⬆"
+: "⬇";
 
-          arrow.innerText =
-            yawDiff > 0
-              ? "⬅"
-              : "➡";
+}
 
-        }
+}
+else{
 
-        else {
+arrow.innerText = "✅";
 
-          arrow.innerText =
-            pitchDiff > 0
-              ? "⬆"
-              : "⬇";
+}
 
-        }
+if(
+aligned &&
+motionStable
+){
 
-      }
+if(!holding){
 
-      else {
+holding = true;
+holdStart = Date.now();
 
-        arrow.innerText =
-          "✅";
+}
 
-      }
+let progressValue =
+(Date.now() - holdStart) / 500;
 
-      if (
-        aligned &&
-        motionStable
-      ) {
-
-        if (!holding) {
-
-          holding = true;
-          holdStart = Date.now();
-
-        }
-
-        let progressValue =
-          (Date.now() - holdStart) / 900;
-
-        progress.style.background =
-          `
+progress.style.background =
+`
 conic-gradient(
 lime ${progressValue * 360}deg,
 transparent 0deg
 )
 `;
 
-        if (progressValue >= 1) {
+if(progressValue >= 1){
 
-          if (
-            overlapConfidence > 0.85
-          ) {
+isCapturing = true;
+captureCooldown = true;
 
-            holding = false;
+await capture(active);
 
-            progress.style.background =
-              "none";
+currentIndex++;
 
-            return;
+holding = false;
 
-          }
+progress.style.background =
+"none";
 
-          isCapturing = true;
-          captureCooldown = true;
+await new Promise(r=>
+setTimeout(r,300)
+);
 
-          await capture(active);
+captureCooldown = false;
+isCapturing = false;
 
-          currentIndex++;
+}
 
-          holding = false;
+}
+else{
 
-          progress.style.background =
-            "none";
+holding = false;
 
-          await new Promise(r =>
-            setTimeout(r, 450)
-          );
+progress.style.background =
+"none";
 
-          captureCooldown = false;
-          isCapturing = false;
+}
 
-        }
-
-      }
-
-      else {
-
-        holding = false;
-
-        progress.style.background =
-          "none";
-
-      }
-
-      statusText.innerHTML =
-        `
+statusText.innerHTML =
+`
 Captured
 ${capturedImages.length}
 /
 ${totalPoints}
 `;
 
-      debug.innerHTML =
-        `
+debug.innerHTML =
+`
 Feature:
-${featureMatchScore.toFixed(3)}
+${featureMatchScore.toFixed(2)}
 
 <br>
 
 Overlap:
-${(overlapConfidence * 100).toFixed(1)}%
+${(overlapConfidence * 100).toFixed(0)}%
 
 <br>
 
 Blur:
 ${blurScore.toFixed(0)}
-
-<br>
-
-Visual Stable:
-${visualStable}
 
 <br><br>
 
@@ -778,201 +667,166 @@ ${stableYaw.toFixed(1)}
 
 Pitch:
 ${stablePitch.toFixed(1)}
-
-<br><br>
-
-Target:
-${active.yaw}
-/
-${active.pitch}
-
-<br><br>
-
-Motion Stable:
-${motionStable}
 `;
 
-    });
+});
 
-  async function capture(active) {
+async function capture(active){
 
-    const canvas =
-      document.createElement("canvas");
+const canvas =
+document.createElement("canvas");
 
-    canvas.width =
-      video.videoWidth;
+canvas.width =
+video.videoWidth;
 
-    canvas.height =
-      video.videoHeight;
+canvas.height =
+video.videoHeight;
 
-    const ctx =
-      canvas.getContext("2d");
+const ctx =
+canvas.getContext("2d");
 
-    ctx.drawImage(
-      video,
-      0,
-      0
-    );
+ctx.drawImage(
+video,
+0,
+0
+);
 
-    const img =
-      canvas.toDataURL(
-        "image/png"
-      );
+const img =
+canvas.toDataURL(
+"image/jpeg",
+0.92
+);
 
-    capturedImages.push(img);
+capturedImages.push(img);
 
-    captureData.push({
+captureData.push({
 
-      file:
-        `img_${capturedImages.length}.png`,
+file:
+`img_${capturedImages.length}.jpg`,
 
-      yaw:
-        stableYaw,
+yaw:
+stableYaw,
 
-      pitch:
-        stablePitch,
+pitch:
+stablePitch,
 
-      targetYaw:
-        active.yaw,
+targetYaw:
+active.yaw,
 
-      targetPitch:
-        active.pitch,
+targetPitch:
+active.pitch,
 
-      overlap:
-        overlapConfidence,
+feature:
+featureMatchScore,
 
-      blur:
-        blurScore,
+overlap:
+overlapConfidence,
 
-      featureScore:
-        featureMatchScore,
+blur:
+blurScore,
 
-      camera: {
+timestamp:
+Date.now()
 
-        width:
-          cameraFOV.width,
+});
 
-        height:
-          cameraFOV.height,
+}
 
-        aspect:
-          cameraFOV.aspect,
+function finish(){
 
-        horizontal:
-          cameraFOV.horizontal,
+capturing = false;
 
-        vertical:
-          cameraFOV.vertical,
+if(stream){
 
-        focalLength:
-          cameraFOV.focalLength
+stream.getTracks()
+.forEach(track=>{
 
-      },
+track.stop();
 
-      timestamp:
-        Date.now()
+});
 
-    });
+}
 
-  }
+captureScreen.style.display =
+"none";
 
-  function finish() {
+resultScreen.style.display =
+"block";
 
-    capturing = false;
+const gallery =
+document.getElementById(
+"gallery"
+);
 
-    if (stream) {
+capturedImages.forEach(img=>{
 
-      stream.getTracks()
-        .forEach(track => {
+const el =
+document.createElement("img");
 
-          track.stop();
+el.src = img;
 
-        });
+gallery.appendChild(el);
 
-    }
+});
 
-    captureScreen.style.display =
-      "none";
+}
 
-    resultScreen.style.display =
-      "block";
+document.getElementById(
+"downloadBtn"
+).onclick = async()=>{
 
-    const gallery =
-      document.getElementById(
-        "gallery"
-      );
+const zip =
+new JSZip();
 
-    capturedImages.forEach(img => {
+capturedImages.forEach((img,i)=>{
 
-      const el =
-        document.createElement("img");
+zip.file(
 
-      el.src = img;
+`img_${i + 1}.jpg`,
 
-      gallery.appendChild(el);
+img.split(",")[1],
 
-    });
+{
+base64:true
+}
 
-  }
+);
 
-  document.getElementById(
-    "downloadBtn"
-  ).onclick = async () => {
+});
 
-    const zip =
-      new JSZip();
+zip.file(
 
-    capturedImages.forEach((img, i) => {
+"data.json",
 
-      zip.file(
+JSON.stringify({
 
-        `img_${i + 1}.png`,
+images:
+captureData
 
-        img.split(",")[1],
+},
+null,
+2)
 
-        {
-          base64: true
-        }
+);
 
-      );
+const blob =
+await zip.generateAsync({
 
-    });
+type:"blob"
 
-    zip.file(
+});
 
-      "data.json",
+const a =
+document.createElement("a");
 
-      JSON.stringify({
+a.href =
+URL.createObjectURL(blob);
 
-        camera: cameraFOV,
+a.download =
+"panorama_capture.zip";
 
-        images:
-          captureData
+a.click();
 
-      },
-        null,
-        2)
-
-    );
-
-    const blob =
-      await zip.generateAsync({
-
-        type: "blob"
-
-      });
-
-    const a =
-      document.createElement("a");
-
-    a.href =
-      URL.createObjectURL(blob);
-
-    a.download =
-      "360_capture.zip";
-
-    a.click();
-
-  };
+};
 
 });

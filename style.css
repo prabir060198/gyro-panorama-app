@@ -30,19 +30,14 @@ text-align:center;
 }
 
 #startPanel h1{
-font-size:42px;
-margin-bottom:10px;
-}
-
-#startPanel p{
-opacity:0.7;
-margin-bottom:25px;
+font-size:38px;
+margin-bottom:30px;
 }
 
 #modeButtons{
 display:flex;
 flex-direction:column;
-gap:14px;
+gap:16px;
 }
 
 .modeBtn{
@@ -57,8 +52,6 @@ font-size:18px;
 font-weight:600;
 
 cursor:pointer;
-
-transition:0.2s;
 }
 
 .modeBtn span{
@@ -70,13 +63,8 @@ opacity:0.7;
 font-weight:400;
 }
 
-.modeBtn:active{
-transform:scale(0.98);
-}
-
 .modeBtn:hover{
 border-color:#00ffaa;
-background:#202020;
 }
 
 #captureScreen{
@@ -126,9 +114,6 @@ border:3px solid rgba(255,255,255,0.9);
 border-radius:50%;
 
 transform:translate(-50%,-50%);
-
-box-shadow:
-0 0 20px rgba(255,255,255,0.5);
 }
 
 #dot{
@@ -229,13 +214,11 @@ padding:20px;
 #gallery{
 display:flex;
 flex-wrap:wrap;
+gap:8px;
 }
 
 #gallery img{
 width:120px;
-
-margin:5px;
-
 border-radius:10px;
 }
 
