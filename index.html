@@ -3,11 +3,28 @@
 
 <head>
 
+<meta charset="UTF-8">
+
 <meta
 name="viewport"
-content="width=device-width, initial-scale=1.0">
+content="
+width=device-width,
+initial-scale=1.0,
+maximum-scale=1.0,
+user-scalable=no
+">
 
-<title>360 Capture</title>
+<meta
+name="apple-mobile-web-app-capable"
+content="yes">
+
+<meta
+name="mobile-web-app-capable"
+content="yes">
+
+<title>
+360 Capture
+</title>
 
 <link
 rel="stylesheet"
@@ -15,124 +32,172 @@ href="style.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
+<script
+async
+src="https://docs.opencv.org/4.x/opencv.js">
+</script>
+
 </head>
 
 <body>
 
 <div id="startScreen">
 
-<div id="startPanel">
+  <div id="startPanel">
 
-<h1>360 Capture</h1>
+    <h1>
+      360 Capture
+    </h1>
 
-<p>
-Choose Capture Mode
-</p>
+    <p>
+      Choose Capture Mode
+    </p>
 
-<div id="modeButtons">
+    <div id="modeButtons">
 
-<button
-class="modeBtn"
-data-mode="quick"
->
+      <button
+      class="modeBtn"
+      data-mode="quick"
+      >
 
-Quick Room
+        Quick Room
 
-<span>
-18 Photos
-</span>
+        <span>
+          18 Photos
+        </span>
 
-</button>
+      </button>
 
-<button
-class="modeBtn"
-data-mode="standard"
->
+      <button
+      class="modeBtn"
+      data-mode="standard"
+      >
 
-Standard 360
+        Standard 360
 
-<span>
-30 Photos
-</span>
+        <span>
+          30 Photos
+        </span>
 
-</button>
+      </button>
 
-<button
-class="modeBtn"
-data-mode="pro"
->
+      <button
+      class="modeBtn"
+      data-mode="pro"
+      >
 
-Pro Sphere
+        Pro Sphere
 
-<span>
-38 Photos
-</span>
+        <span>
+          38 Photos
+        </span>
 
-</button>
+      </button>
 
-<button
-class="modeBtn"
-data-mode="full"
->
+      <button
+      class="modeBtn"
+      data-mode="full"
+      >
 
-Full Interior
+        Full Interior
 
-<span>
-46 Photos
-</span>
+        <span>
+          46 Photos
+        </span>
 
-</button>
+      </button>
 
-</div>
+    </div>
 
-</div>
+  </div>
 
 </div>
 
 <div id="captureScreen">
 
-<div id="cameraBox">
+  <div id="cameraBox">
 
-<video
-id="video"
-autoplay
-playsinline
-muted>
-</video>
+    <video
+    id="video"
+    autoplay
+    playsinline
+    muted>
+    </video>
 
-<div id="centerTarget"></div>
+    <div id="centerTarget"></div>
 
-<div id="dot"></div>
+    <div id="dot"></div>
 
-<div id="progress"></div>
+    <div id="progress"></div>
 
-<div id="arrow">
-⬆
-</div>
+    <div id="arrow">
+      ⬆
+    </div>
 
-</div>
+  </div>
 
-<div id="status">
-Initializing...
-</div>
+  <div id="status">
+    Initializing...
+  </div>
 
-<div id="debug"></div>
+  <div id="debug">
+    Loading OpenCV...
+  </div>
 
 </div>
 
 <div id="resultScreen">
 
-<h2>
-Capture Complete
-</h2>
+  <h2>
+    Capture Complete
+  </h2>
 
-<div id="gallery"></div>
+  <div id="gallery"></div>
 
-<button id="downloadBtn">
-Download ZIP
-</button>
+  <button id="downloadBtn">
+    Download ZIP
+  </button>
 
 </div>
+
+<script>
+
+window.cvReady = false;
+
+function waitForOpenCV() {
+
+  return new Promise(resolve => {
+
+    const check = () => {
+
+      if (
+        typeof cv !== "undefined" &&
+        cv.Mat
+      ) {
+
+        window.cvReady = true;
+
+        resolve();
+
+      }
+
+      else {
+
+        setTimeout(check, 100);
+
+      }
+
+    };
+
+    check();
+
+  });
+
+}
+
+waitForOpenCV();
+
+</script>
 
 <script src="script.js"></script>
 
