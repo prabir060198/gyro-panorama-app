@@ -3,11 +3,11 @@ window.addEventListener("load", async()=>{
 const video =
 document.getElementById("video");
 
-const preview =
-document.getElementById("preview");
+const overlay =
+document.getElementById("overlay");
 
 const ctx =
-preview.getContext("2d");
+overlay.getContext("2d");
 
 const statusText =
 document.getElementById("status");
@@ -24,14 +24,34 @@ document.getElementById("loading");
 const startBtn =
 document.getElementById("startBtn");
 
+const downloadBtn =
+document.getElementById("downloadBtn");
+
+overlay.width =
+window.innerWidth;
+
+overlay.height =
+window.innerHeight;
+
 let stream;
 
 let running = false;
 
-let lastCaptureTime = 0;
-
 let previousDescriptors = null;
 let previousKeypoints = null;
+
+let panoCanvas =
+document.createElement("canvas");
+
+panoCanvas.width = 12000;
+panoCanvas.height = 1400;
+
+let panoCtx =
+panoCanvas.getContext("2d");
+
+let panoX = 3000;
+
+let totalMovement = 0;
 
 let captures = [];
 
@@ -56,16 +76,7 @@ setTimeout(r,100)
 loading.style.display =
 "none";
 
-preview.width =
-window.innerWidth;
-
-preview.height =
-window.innerHeight;
-
 startBtn.onclick = async()=>{
-
-startBtn.style.display =
-"none";
 
 stream =
 await navigator.mediaDevices
@@ -210,20 +221,20 @@ return;
 ctx.clearRect(
 0,
 0,
-preview.width,
-preview.height
+overlay.width,
+overlay.height
 );
 
-const canvas =
+const frameCanvas =
 document.createElement("canvas");
 
-canvas.width = 480;
-canvas.height = 270;
+frameCanvas.width = 480;
+frameCanvas.height = 270;
 
-const cctx =
-canvas.getContext("2d");
+const frameCtx =
+frameCanvas.getContext("2d");
 
-cctx.drawImage(
+frameCtx.drawImage(
 video,
 0,
 0,
@@ -232,7 +243,7 @@ video,
 );
 
 const src =
-cv.imread(canvas);
+cv.imread(frameCanvas);
 
 const warped =
 cylindricalWarp(
@@ -269,6 +280,8 @@ descriptors
 );
 
 let goodMatches = [];
+
+let tx = 0;
 
 if(
 previousDescriptors &&
@@ -329,8 +342,15 @@ keypoints.get(m.queryIdx).pt;
 const p2 =
 previousKeypoints.get(m.trainIdx).pt;
 
-srcPoints.push(p1.x,p1.y);
-dstPoints.push(p2.x,p2.y);
+srcPoints.push(
+p1.x,
+p1.y
+);
+
+dstPoints.push(
+p2.x,
+p2.y
+);
 
 ctx.beginPath();
 
@@ -360,7 +380,7 @@ p2.y * 2
 );
 
 ctx.strokeStyle =
-"rgba(0,255,0,0.4)";
+"rgba(0,255,0,0.3)";
 
 ctx.stroke();
 
@@ -394,17 +414,11 @@ cv.RANSAC,
 
 if(H && !H.empty()){
 
-const tx =
+tx =
 H.data64F[2];
 
-const ty =
-H.data64F[5];
-
 visualDistance =
-Math.sqrt(
-tx * tx +
-ty * ty
-);
+Math.abs(tx);
 
 }
 
@@ -432,32 +446,54 @@ goodMatches.length / 120,
 
 const shouldCapture =
 
-visualDistance > 55 &&
+visualDistance > 25 &&
 
-overlap > 0.15 &&
+overlap > 0.12 &&
 
-blurScore > 35 &&
-
-Date.now() -
-lastCaptureTime >
-1200;
+blurScore > 30;
 
 if(shouldCapture){
 
-capture(canvas);
+panoX += tx * 2;
 
-lastCaptureTime =
-Date.now();
+panoCtx.drawImage(
+frameCanvas,
+panoX,
+500,
+640,
+360
+);
 
-}
+captures.push({
 
-statusText.innerHTML =
-`
-Move Slowly
-`;
+x:panoX,
+
+distance:
+visualDistance,
+
+overlap,
+
+blur:
+blurScore
+
+});
 
 captureCount.innerHTML =
 captures.length;
+
+totalMovement +=
+Math.abs(tx);
+
+flashCapture();
+
+}
+
+drawPanoramaPreview();
+
+statusText.innerHTML =
+`
+360 Panorama Scanning
+`;
 
 debug.innerHTML =
 `
@@ -481,9 +517,23 @@ ${visualDistance.toFixed(1)}
 
 <br><br>
 
+Movement:
+${totalMovement.toFixed(0)}
+
+<br><br>
+
 Blur:
 ${blurScore.toFixed(0)}
 `;
+
+if(totalMovement > 6000){
+
+statusText.innerHTML =
+"360 Panorama Complete";
+
+running = false;
+
+}
 
 if(previousDescriptors)
 previousDescriptors.delete();
@@ -509,47 +559,55 @@ processLoop
 
 }
 
-function capture(canvas){
+function drawPanoramaPreview(){
 
-const img =
-canvas.toDataURL(
-"image/jpeg",
-0.92
+ctx.drawImage(
+
+panoCanvas,
+
+panoX - 1200,
+300,
+2400,
+700,
+
+0,
+0,
+overlay.width,
+220
+
 );
 
-captures.push({
+ctx.beginPath();
 
-image:img,
+ctx.moveTo(
+overlay.width / 2,
+0
+);
 
-timestamp:
-Date.now(),
+ctx.lineTo(
+overlay.width / 2,
+220
+);
 
-overlap,
+ctx.strokeStyle =
+"yellow";
 
-blur:blurScore,
+ctx.lineWidth = 3;
 
-distance:
-visualDistance,
-
-matches:
-goodMatchesCount
-
-});
-
-flashCapture();
+ctx.stroke();
 
 }
 
 function flashCapture(){
 
 ctx.fillStyle =
-"rgba(255,255,255,0.3)";
+"rgba(255,255,255,0.25)";
 
 ctx.fillRect(
 0,
 0,
-preview.width,
-preview.height
+overlay.width,
+overlay.height
 );
 
 setTimeout(()=>{
@@ -557,12 +615,68 @@ setTimeout(()=>{
 ctx.clearRect(
 0,
 0,
-preview.width,
-preview.height
+overlay.width,
+overlay.height
 );
 
-},100);
+},80);
 
 }
+
+downloadBtn.onclick =
+async()=>{
+
+const zip =
+new JSZip();
+
+const pano =
+panoCanvas.toDataURL(
+"image/jpeg",
+0.95
+);
+
+zip.file(
+
+"panorama.jpg",
+
+pano.split(",")[1],
+
+{
+base64:true
+}
+
+);
+
+zip.file(
+
+"captures.json",
+
+JSON.stringify(
+captures,
+null,
+2
+)
+
+);
+
+const blob =
+await zip.generateAsync({
+
+type:"blob"
+
+});
+
+const a =
+document.createElement("a");
+
+a.href =
+URL.createObjectURL(blob);
+
+a.download =
+"360_panorama.zip";
+
+a.click();
+
+};
 
 });

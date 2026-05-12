@@ -14,16 +14,14 @@ user-scalable=no
 ">
 
 <title>
-Vision Panorama
+Live 360 Panorama
 </title>
 
 <link
 rel="stylesheet"
 href="style.css">
 
-<script
-src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script
 async
@@ -45,11 +43,9 @@ playsinline
 muted>
 </video>
 
-<canvas id="preview"></canvas>
+<canvas id="overlay"></canvas>
 
-<div id="overlay">
-
-<div id="center"></div>
+<div id="ui">
 
 <div id="status">
 Initializing...
@@ -61,11 +57,15 @@ Initializing...
 0
 </div>
 
-</div>
-
 <button id="startBtn">
-Start Capture
+Start
 </button>
+
+<button id="downloadBtn">
+Download
+</button>
+
+</div>
 
 <script src="script.js"></script>
 

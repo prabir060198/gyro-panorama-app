@@ -22,7 +22,7 @@ object-fit:cover;
 z-index:1;
 }
 
-#preview{
+#overlay{
 position:fixed;
 inset:0;
 
@@ -30,32 +30,15 @@ width:100vw;
 height:100vh;
 
 z-index:2;
-
-pointer-events:none;
 }
 
-#overlay{
+#ui{
 position:fixed;
 inset:0;
 
 z-index:3;
 
 pointer-events:none;
-}
-
-#center{
-position:absolute;
-
-left:50%;
-top:50%;
-
-width:120px;
-height:120px;
-
-transform:translate(-50%,-50%);
-
-border:3px solid white;
-border-radius:50%;
 }
 
 #status{
@@ -99,8 +82,8 @@ max-width:260px;
 #captureCount{
 position:absolute;
 
-right:20px;
 top:20px;
+right:20px;
 
 width:70px;
 height:70px;
@@ -131,30 +114,47 @@ background:black;
 
 color:white;
 
-z-index:20;
+z-index:10;
 
-font-size:22px;
+font-size:24px;
+}
+
+button{
+pointer-events:auto;
 }
 
 #startBtn{
-position:fixed;
+position:absolute;
 
-left:50%;
-bottom:90px;
+left:20px;
+bottom:20px;
 
-transform:translateX(-50%);
-
-z-index:5;
-
-padding:16px 34px;
+padding:14px 26px;
 
 border:none;
-border-radius:16px;
+border-radius:14px;
 
 background:#00ffaa;
 
 font-size:18px;
-font-weight:bold;
 
-cursor:pointer;
+font-weight:bold;
+}
+
+#downloadBtn{
+position:absolute;
+
+right:20px;
+bottom:20px;
+
+padding:14px 26px;
+
+border:none;
+border-radius:14px;
+
+background:#ffaa00;
+
+font-size:18px;
+
+font-weight:bold;
 }
