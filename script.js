@@ -171,188 +171,290 @@ window.addEventListener("load", () => {
 
   }
 
-  function setCaptureMode(mode) {
+ function setCaptureMode(mode) {
 
-    capturePoints = [];
+  capturePoints = [];
 
-    if (mode === "quick") {
+  // =========================================
+  // QUICK MODE
+  // =========================================
 
-      rings = [
+  if (mode === "quick") {
 
-        {
-          pitch: 0,
-          yaws: [
-            0, 20, 40, 60,
-            80, 100, 120, 140,
-            160, 180, 200, 220,
-            240, 260, 280, 300,
-            320, 340
-          ]
-        }
+    rings = [
 
-      ];
+      {
+        ring: 1,
+        pitch: 0,
 
-    }
+        yaws: [
 
-    else if (mode === "standard") {
+          0, 30, 60, 90,
+          120, 150, 180, 210,
+          240, 270, 300, 330
 
-      rings = [
+        ]
+      }
 
-        {
-          pitch: 90,
-          yaws: [0]
-        },
+    ];
 
-        {
-          pitch: 45,
-          yaws: [
-            0, 45, 90, 135,
-            180, 225, 270, 315
-          ]
-        },
+  }
 
-        {
-          pitch: 0,
-          yaws: [
-            0, 30, 60, 90,
-            120, 150, 180, 210,
-            240, 270, 300, 330
-          ]
-        },
+  // =========================================
+  // STANDARD MODE
+  // =========================================
 
-        {
-          pitch: -45,
-          yaws: [
-            0, 45, 90, 135,
-            180, 225, 270, 315
-          ]
-        },
+  else if (mode === "standard") {
 
-        {
-          pitch: -90,
-          yaws: [0]
-        }
+    rings = [
 
-      ];
+      {
+        ring: 1,
+        pitch: 45,
 
-    }
+        yaws: [
 
-    else if (mode === "pro") {
+          0, 45, 90, 135,
+          180, 225, 270, 315
 
-      rings = [
+        ]
+      },
 
-        {
-          pitch: 75,
-          yaws: [0, 120, 240]
-        },
+      {
+        ring: 2,
+        pitch: 0,
 
-        {
-          pitch: 45,
-          yaws: [
-            0, 36, 72, 108, 144,
-            180, 216, 252, 288, 324
-          ]
-        },
+        yaws: [
 
-        {
-          pitch: 0,
-          yaws: [
-            0, 30, 60, 90,
-            120, 150, 180, 210,
-            240, 270, 300, 330
-          ]
-        },
+          0, 30, 60, 90,
+          120, 150, 180, 210,
+          240, 270, 300, 330
 
-        {
-          pitch: -45,
-          yaws: [
-            0, 36, 72, 108, 144,
-            180, 216, 252, 288, 324
-          ]
-        },
+        ]
+      },
 
-        {
-          pitch: -75,
-          yaws: [60, 180, 300]
-        }
+      {
+        ring: 3,
+        pitch: -45,
 
-      ];
+        yaws: [
 
-    }
+          0, 45, 90, 135,
+          180, 225, 270, 315
 
-    else {
+        ]
+      }
 
-      rings = [
+    ];
 
-        {
-          pitch: 80,
-          yaws: [0, 90, 180, 270]
-        },
+  }
 
-        {
-          pitch: 50,
-          yaws: [
-            0, 30, 60, 90,
-            120, 150, 180, 210,
-            240, 270, 300, 330
-          ]
-        },
+  // =========================================
+  // PRO MODE
+  // =========================================
 
-        {
-          pitch: 20,
-          yaws: [
-            0, 25, 50, 75,
-            100, 125, 150, 175,
-            200, 225, 250, 275,
-            300, 325
-          ]
-        },
+  else if (mode === "pro") {
 
-        {
-          pitch: -20,
-          yaws: [
-            12, 42, 72, 102,
-            132, 162, 192, 222,
-            252, 282, 312, 342
-          ]
-        },
+    rings = [
 
-        {
-          pitch: -75,
-          yaws: [45, 135, 225, 315]
-        }
+      {
+        ring: 1,
+        pitch: 60,
 
-      ];
+        yaws: [
 
-    }
+          0, 60, 120,
+          180, 240, 300
 
-    rings.forEach(r => {
+        ]
+      },
 
-      r.yaws.forEach(yaw => {
+      {
+        ring: 2,
+        pitch: 30,
 
-        capturePoints.push({
+        yaws: [
 
-          yaw,
-          pitch: r.pitch
+          0, 36, 72, 108,
+          144, 180, 216,
+          252, 288, 324
 
-        });
+        ]
+      },
+
+      {
+        ring: 3,
+        pitch: 0,
+
+        yaws: [
+
+          0, 30, 60, 90,
+          120, 150, 180, 210,
+          240, 270, 300, 330
+
+        ]
+      },
+
+      {
+        ring: 4,
+        pitch: -30,
+
+        yaws: [
+
+          18, 54, 90, 126,
+          162, 198, 234,
+          270, 306, 342
+
+        ]
+      },
+
+      {
+        ring: 5,
+        pitch: -60,
+
+        yaws: [
+
+          30, 90, 150,
+          210, 270, 330
+
+        ]
+      }
+
+    ];
+
+  }
+
+  // =========================================
+  // ULTRA MODE
+  // =========================================
+
+  else {
+
+    rings = [
+
+      // =========================
+      // RING 1 → MIDDLE
+      // =========================
+
+      {
+        ring: 1,
+        pitch: 0,
+
+        yaws: [
+
+          0, 20, 40, 60,
+          80, 100, 120, 140,
+          160, 180, 200, 220,
+          240, 260, 280, 300,
+          320, 340
+
+        ]
+      },
+
+      // =========================
+      // RING 2 → UPPER
+      // =========================
+
+      {
+        ring: 2,
+        pitch: 36,
+
+        yaws: [
+
+          0, 24, 48, 72,
+          96, 120, 144, 168,
+          192, 216, 240, 264,
+          288, 312, 336
+
+        ]
+      },
+
+      // =========================
+      // RING 3 → TOP
+      // =========================
+
+      {
+        ring: 3,
+        pitch: 72,
+
+        yaws: [
+
+          0, 24, 48, 72,
+          96, 120, 144, 168,
+          192, 216, 240, 264,
+          288, 312, 336
+
+        ]
+      },
+
+      // =========================
+      // RING 4 → LOWER
+      // =========================
+
+      {
+        ring: 4,
+        pitch: -36,
+
+        yaws: [
+
+          12, 36, 60, 84,
+          108, 132, 156, 180,
+          204, 228, 252, 276,
+          300, 324, 348
+
+        ]
+      },
+
+      // =========================
+      // RING 5 → BOTTOM
+      // =========================
+
+      {
+        ring: 5,
+        pitch: -72,
+
+        yaws: [
+
+          12, 36, 60, 84,
+          108, 132, 156, 180,
+          204, 228, 252, 276,
+          300, 324, 348
+
+        ]
+      }
+
+    ];
+
+  }
+
+  rings.forEach(r => {
+
+    r.yaws.forEach(yaw => {
+
+      capturePoints.push({
+
+        ring: r.ring,
+
+        yaw,
+
+        pitch: r.pitch
 
       });
 
     });
 
-    totalPoints =
-      capturePoints.length;
+  });
 
-  }
+  totalPoints =
+    capturePoints.length;
+
+}
 
   modeButtons.forEach(btn => {
 
     btn.onclick = async () => {
 
-      setCaptureMode(
-        btn.dataset.mode
-      );
+      setCaptureMode();
 
       try {
 
@@ -383,11 +485,11 @@ window.addEventListener("load", () => {
                 },
 
                 width: {
-                  ideal: 1920
+                  ideal: 2016
                 },
 
                 height: {
-                  ideal: 1080
+                  ideal: 1512
                 }
 
               }
@@ -676,17 +778,17 @@ transparent 0deg
 
       debug.innerHTML =
         `
-Mode:
-${capturePoints.length} Points
-
-<br><br>
-
 Captured:
 ${capturedImages.length}
 /
 ${totalPoints}
 
 <br><br>
+
+Ring:
+${active.ring}
+
+<br>
 
 Yaw:
 ${stableYaw.toFixed(1)}
@@ -708,16 +810,6 @@ ${active.pitch}
 
 <br><br>
 
-Yaw Diff:
-${yawDiff.toFixed(1)}
-
-<br>
-
-Pitch Diff:
-${pitchDiff.toFixed(1)}
-
-<br><br>
-
 HFOV:
 ${cameraFOV.horizontal.toFixed(1)}
 
@@ -730,11 +822,6 @@ ${cameraFOV.vertical.toFixed(1)}
 
 Focal:
 ${cameraFOV.focalLength.toFixed(1)}
-
-<br><br>
-
-Motion Stable:
-${motionStable}
 `;
 
     });
@@ -761,52 +848,41 @@ ${motionStable}
 
     const img =
       canvas.toDataURL(
-        "image/png"
+        "image/jpeg",
+        0.92
       );
 
     capturedImages.push(img);
 
     captureData.push({
 
-      file:
-        `img_${capturedImages.length}.png`,
+      degrees:
+        Math.round(active.yaw),
 
-      yaw:
-        stableYaw,
+      ring:
+        active.ring,
 
-      pitch:
-        stablePitch,
+      sensors: {
 
-      targetYaw:
-        active.yaw,
+        fileUri:
+          `img-r${active.ring}-${String(
+            Math.round(active.yaw)
+          ).padStart(3, "0")}.jpg`,
 
-      targetPitch:
-        active.pitch,
+        roll_pitch_yaw: {
 
-      camera: {
+          pitch:
+            stablePitch,
 
-        width:
-          cameraFOV.width,
+          roll:
+            window.orientation || 0,
 
-        height:
-          cameraFOV.height,
+          yaw:
+            stableYaw
 
-        aspect:
-          cameraFOV.aspect,
+        }
 
-        horizontal:
-          cameraFOV.horizontal,
-
-        vertical:
-          cameraFOV.vertical,
-
-        focalLength:
-          cameraFOV.focalLength
-
-      },
-
-      timestamp:
-        Date.now()
+      }
 
     });
 
@@ -862,7 +938,9 @@ ${motionStable}
 
       zip.file(
 
-        `img_${i + 1}.png`,
+        captureData[i]
+        .sensors
+        .fileUri,
 
         img.split(",")[1],
 
@@ -880,29 +958,16 @@ ${motionStable}
 
       JSON.stringify({
 
-        camera: {
+        angleViewX:
+          cameraFOV.horizontal,
 
-          width:
-            cameraFOV.width,
+        angleViewY:
+          cameraFOV.vertical,
 
-          height:
-            cameraFOV.height,
+        focalLength:
+          cameraFOV.focalLength,
 
-          aspect:
-            cameraFOV.aspect,
-
-          horizontal:
-            cameraFOV.horizontal,
-
-          vertical:
-            cameraFOV.vertical,
-
-          focalLength:
-            cameraFOV.focalLength
-
-        },
-
-        images:
+        pictures:
           captureData
 
       },
