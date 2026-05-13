@@ -3,19 +3,11 @@
 
 <head>
 
-<meta charset="UTF-8">
-
 <meta
 name="viewport"
-content="
-width=device-width,
-initial-scale=1.0,
-user-scalable=no
-">
+content="width=device-width, initial-scale=1.0">
 
-<title>
-Live 360 Panorama
-</title>
+<title>360 Capture</title>
 
 <link
 rel="stylesheet"
@@ -23,18 +15,83 @@ href="style.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-<script
-async
-src="https://docs.opencv.org/4.x/opencv.js">
-</script>
-
 </head>
 
 <body>
 
-<div id="loading">
-Loading OpenCV...
+<div id="startScreen">
+
+<div id="startPanel">
+
+<h1>360 Capture</h1>
+
+<p>
+Choose Capture Mode
+</p>
+
+<div id="modeButtons">
+
+<button
+class="modeBtn"
+data-mode="quick"
+>
+
+Quick Room
+
+<span>
+18 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="standard"
+>
+
+Standard 360
+
+<span>
+30 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="pro"
+>
+
+Pro Sphere
+
+<span>
+38 Photos
+</span>
+
+</button>
+
+<button
+class="modeBtn"
+data-mode="full"
+>
+
+Full Interior
+
+<span>
+46 Photos
+</span>
+
+</button>
+
 </div>
+
+</div>
+
+</div>
+
+<div id="captureScreen">
+
+<div id="cameraBox">
 
 <video
 id="video"
@@ -43,9 +100,17 @@ playsinline
 muted>
 </video>
 
-<canvas id="overlay"></canvas>
+<div id="centerTarget"></div>
 
-<div id="ui">
+<div id="dot"></div>
+
+<div id="progress"></div>
+
+<div id="arrow">
+⬆
+</div>
+
+</div>
 
 <div id="status">
 Initializing...
@@ -53,16 +118,18 @@ Initializing...
 
 <div id="debug"></div>
 
-<div id="captureCount">
-0
 </div>
 
-<button id="startBtn">
-Start
-</button>
+<div id="resultScreen">
+
+<h2>
+Capture Complete
+</h2>
+
+<div id="gallery"></div>
 
 <button id="downloadBtn">
-Download
+Download ZIP
 </button>
 
 </div>

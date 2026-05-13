@@ -1,682 +1,934 @@
-window.addEventListener("load", async()=>{
+window.addEventListener("load", () => {
 
-const video =
-document.getElementById("video");
+  const startScreen =
+    document.getElementById("startScreen");
 
-const overlay =
-document.getElementById("overlay");
+  const captureScreen =
+    document.getElementById("captureScreen");
 
-const ctx =
-overlay.getContext("2d");
+  const resultScreen =
+    document.getElementById("resultScreen");
 
-const statusText =
-document.getElementById("status");
+  const video =
+    document.getElementById("video");
 
-const debug =
-document.getElementById("debug");
+  const dot =
+    document.getElementById("dot");
 
-const captureCount =
-document.getElementById("captureCount");
+  const arrow =
+    document.getElementById("arrow");
 
-const loading =
-document.getElementById("loading");
+  const progress =
+    document.getElementById("progress");
 
-const startBtn =
-document.getElementById("startBtn");
+  const debug =
+    document.getElementById("debug");
 
-const downloadBtn =
-document.getElementById("downloadBtn");
+  const statusText =
+    document.getElementById("status");
 
-overlay.width =
-window.innerWidth;
+  const modeButtons =
+    document.querySelectorAll(".modeBtn");
 
-overlay.height =
-window.innerHeight;
+  let smoothYaw = 0;
+  let smoothPitch = 0;
 
-let stream;
+  let stableYaw = 0;
+  let stablePitch = 0;
 
-let running = false;
+  let displayYaw = 0;
+  let displayPitch = 0;
 
-let previousDescriptors = null;
-let previousKeypoints = null;
+  let captureCooldown = false;
+  let isCapturing = false;
 
-let panoCanvas =
-document.createElement("canvas");
+  let worldLockYaw = 0;
+  let environmentLocked = false;
 
-panoCanvas.width = 12000;
-panoCanvas.height = 1400;
+  let capturing = false;
 
-let panoCtx =
-panoCanvas.getContext("2d");
+  let holding = false;
+  let holdStart = 0;
 
-let panoX = 3000;
+  let stream;
 
-let totalMovement = 0;
+  let currentIndex = 0;
 
-let captures = [];
+  let capturedImages = [];
+  let captureData = [];
 
-let overlap = 0;
-let blurScore = 0;
-let visualDistance = 0;
-let goodMatchesCount = 0;
+  let rings = [];
+  let capturePoints = [];
+  let totalPoints = 0;
 
-let focalLength = 700;
+  let cameraFOV = {
 
-while(
-typeof cv === "undefined" ||
-!cv.Mat
-){
+    width: 0,
+    height: 0,
+    aspect: 0,
 
-await new Promise(r=>
-setTimeout(r,100)
-);
+    horizontal: 0,
+    vertical: 0,
 
-}
+    focalLength: 0
 
-loading.style.display =
-"none";
+  };
 
-startBtn.onclick = async()=>{
+  function norm360(a) {
 
-stream =
-await navigator.mediaDevices
-.getUserMedia({
+    return (a % 360 + 360) % 360;
 
-video:{
+  }
 
-facingMode:{
-ideal:"environment"
-},
+  function angleDiff(a, b) {
 
-width:{
-ideal:1920
-},
+    return ((a - b + 540) % 360) - 180;
 
-height:{
-ideal:1080
-}
+  }
 
-}
+  function getPitch(beta) {
 
-});
+    let pitch = beta - 90;
 
-video.srcObject = stream;
+    if (pitch > 90) pitch = 90;
+    if (pitch < -90) pitch = -90;
 
-await video.play();
+    return pitch;
 
-running = true;
+  }
 
-processLoop();
+  function estimateCameraFOV(
+    width,
+    height
+  ) {
 
-};
+    const aspect =
+      width / height;
 
-function detectBlur(gray){
+    let horizontalFOV;
 
-const lap =
-new cv.Mat();
+    if (aspect > 1.9) {
 
-cv.Laplacian(
-gray,
-lap,
-cv.CV_64F
-);
+      horizontalFOV = 74;
 
-const mean =
-new cv.Mat();
+    }
 
-const stddev =
-new cv.Mat();
+    else if (aspect > 1.7) {
 
-cv.meanStdDev(
-lap,
-mean,
-stddev
-);
+      horizontalFOV = 69;
 
-const variance =
-stddev.doubleAt(0,0) *
-stddev.doubleAt(0,0);
+    }
 
-lap.delete();
-mean.delete();
-stddev.delete();
+    else if (aspect > 1.5) {
 
-return variance;
+      horizontalFOV = 66;
 
-}
+    }
 
-function cylindricalWarp(src,f){
+    else if (aspect > 1.3) {
 
-const dst =
-new cv.Mat.zeros(
-src.rows,
-src.cols,
-src.type()
-);
+      horizontalFOV = 62;
 
-const cx = src.cols / 2;
-const cy = src.rows / 2;
+    }
 
-for(let y=0;y<src.rows;y++){
+    else {
 
-for(let x=0;x<src.cols;x++){
+      horizontalFOV = 58;
 
-const theta =
-(x - cx) / f;
+    }
 
-const h =
-(y - cy) / f;
+    const verticalFOV =
 
-const X =
-Math.sin(theta);
+      horizontalFOV / aspect;
 
-const Y = h;
+    const focalLength =
 
-const Z =
-Math.cos(theta);
+      width /
 
-const x2 =
-f * X / Z + cx;
+      (
+        2 *
 
-const y2 =
-f * Y / Z + cy;
+        Math.tan(
+          (
+            horizontalFOV *
+            Math.PI /
+            180
+          ) / 2
+        )
+      );
 
-if(
-x2 >= 0 &&
-x2 < src.cols &&
-y2 >= 0 &&
-y2 < src.rows
-){
+    return {
 
-const pixel =
-src.ucharPtr(y,x);
+      horizontal:
+        horizontalFOV,
 
-const target =
-dst.ucharPtr(
-Math.floor(y2),
-Math.floor(x2)
-);
+      vertical:
+        verticalFOV,
 
-for(let i=0;i<4;i++){
+      focalLength
 
-target[i] = pixel[i];
+    };
 
-}
+  }
 
-}
+  function setCaptureMode(mode) {
 
-}
+    capturePoints = [];
 
-}
+    if (mode === "quick") {
 
-return dst;
+      rings = [
 
-}
+        {
+          pitch: 0,
+          yaws: [
+            0, 20, 40, 60,
+            80, 100, 120, 140,
+            160, 180, 200, 220,
+            240, 260, 280, 300,
+            320, 340
+          ]
+        }
 
-async function processLoop(){
+      ];
 
-if(!running)
-return;
+    }
 
-ctx.clearRect(
-0,
-0,
-overlay.width,
-overlay.height
-);
+    else if (mode === "standard") {
 
-const frameCanvas =
-document.createElement("canvas");
+      rings = [
 
-frameCanvas.width = 480;
-frameCanvas.height = 270;
+        {
+          pitch: 90,
+          yaws: [0]
+        },
 
-const frameCtx =
-frameCanvas.getContext("2d");
+        {
+          pitch: 45,
+          yaws: [
+            0, 45, 90, 135,
+            180, 225, 270, 315
+          ]
+        },
 
-frameCtx.drawImage(
-video,
-0,
-0,
-480,
-270
-);
+        {
+          pitch: 0,
+          yaws: [
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
+          ]
+        },
 
-const src =
-cv.imread(frameCanvas);
+        {
+          pitch: -45,
+          yaws: [
+            0, 45, 90, 135,
+            180, 225, 270, 315
+          ]
+        },
 
-const warped =
-cylindricalWarp(
-src,
-focalLength
-);
+        {
+          pitch: -90,
+          yaws: [0]
+        }
 
-const gray =
-new cv.Mat();
+      ];
 
-cv.cvtColor(
-warped,
-gray,
-cv.COLOR_RGBA2GRAY
-);
+    }
 
-blurScore =
-detectBlur(gray);
+    else if (mode === "pro") {
 
-const orb =
-new cv.ORB(1200);
+      rings = [
 
-const keypoints =
-new cv.KeyPointVector();
+        {
+          pitch: 75,
+          yaws: [0, 120, 240]
+        },
 
-const descriptors =
-new cv.Mat();
+        {
+          pitch: 45,
+          yaws: [
+            0, 36, 72, 108, 144,
+            180, 216, 252, 288, 324
+          ]
+        },
 
-orb.detectAndCompute(
-gray,
-new cv.Mat(),
-keypoints,
-descriptors
-);
+        {
+          pitch: 0,
+          yaws: [
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
+          ]
+        },
 
-let goodMatches = [];
+        {
+          pitch: -45,
+          yaws: [
+            0, 36, 72, 108, 144,
+            180, 216, 252, 288, 324
+          ]
+        },
 
-let tx = 0;
+        {
+          pitch: -75,
+          yaws: [60, 180, 300]
+        }
 
-if(
-previousDescriptors &&
-!previousDescriptors.empty() &&
-!descriptors.empty()
-){
+      ];
 
-const matcher =
-new cv.BFMatcher(
-cv.NORM_HAMMING,
-false
-);
+    }
 
-const matches =
-new cv.DMatchVectorVector();
+    else {
 
-matcher.knnMatch(
-descriptors,
-previousDescriptors,
-matches,
-2
-);
+      rings = [
 
-for(
-let i=0;
-i<matches.size();
-i++
-){
+        {
+          pitch: 80,
+          yaws: [0, 90, 180, 270]
+        },
 
-const pair =
-matches.get(i);
+        {
+          pitch: 50,
+          yaws: [
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
+          ]
+        },
 
-if(pair.size() < 2)
-continue;
+        {
+          pitch: 20,
+          yaws: [
+            0, 25, 50, 75,
+            100, 125, 150, 175,
+            200, 225, 250, 275,
+            300, 325
+          ]
+        },
 
-const m1 = pair.get(0);
-const m2 = pair.get(1);
+        {
+          pitch: -20,
+          yaws: [
+            12, 42, 72, 102,
+            132, 162, 192, 222,
+            252, 282, 312, 342
+          ]
+        },
 
-if(
-m1.distance <
-0.72 * m2.distance
-){
+        {
+          pitch: -75,
+          yaws: [45, 135, 225, 315]
+        }
 
-goodMatches.push(m1);
+      ];
 
-}
+    }
 
-}
+    rings.forEach(r => {
 
-const srcPoints = [];
-const dstPoints = [];
+      r.yaws.forEach(yaw => {
 
-for(const m of goodMatches){
+        capturePoints.push({
 
-const p1 =
-keypoints.get(m.queryIdx).pt;
+          yaw,
+          pitch: r.pitch
 
-const p2 =
-previousKeypoints.get(m.trainIdx).pt;
+        });
 
-srcPoints.push(
-p1.x,
-p1.y
-);
+      });
 
-dstPoints.push(
-p2.x,
-p2.y
-);
+    });
 
-ctx.beginPath();
+    totalPoints =
+      capturePoints.length;
 
-ctx.arc(
-p1.x * 2,
-p1.y * 2,
-3,
-0,
-Math.PI * 2
-);
+  }
 
-ctx.fillStyle =
-"lime";
+  modeButtons.forEach(btn => {
 
-ctx.fill();
+    btn.onclick = async () => {
 
-ctx.beginPath();
+      setCaptureMode(
+        btn.dataset.mode
+      );
 
-ctx.moveTo(
-p1.x * 2,
-p1.y * 2
-);
+      try {
 
-ctx.lineTo(
-p2.x * 2,
-p2.y * 2
-);
+        startScreen.style.display =
+          "none";
 
-ctx.strokeStyle =
-"rgba(0,255,0,0.3)";
+        captureScreen.style.display =
+          "block";
 
-ctx.stroke();
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
 
-}
+          await DeviceOrientationEvent
+            .requestPermission();
 
-if(goodMatches.length > 12){
+        }
 
-const srcMat =
-cv.matFromArray(
-goodMatches.length,
-1,
-cv.CV_32FC2,
-srcPoints
-);
+        stream =
+          await navigator.mediaDevices
+            .getUserMedia({
 
-const dstMat =
-cv.matFromArray(
-goodMatches.length,
-1,
-cv.CV_32FC2,
-dstPoints
-);
+              video: {
 
-const H =
-cv.findHomography(
-srcMat,
-dstMat,
-cv.RANSAC,
-5
-);
+                facingMode: {
+                  ideal: "environment"
+                },
 
-if(H && !H.empty()){
+                width: {
+                  ideal: 1920
+                },
 
-tx =
-H.data64F[2];
+                height: {
+                  ideal: 1080
+                }
 
-visualDistance =
-Math.abs(tx);
+              }
 
-}
+            });
 
-srcMat.delete();
-dstMat.delete();
+        video.srcObject = stream;
 
-if(H)
-H.delete();
+        await video.play();
 
-}
+        cameraFOV.width =
+          video.videoWidth;
 
-matcher.delete();
-matches.delete();
+        cameraFOV.height =
+          video.videoHeight;
 
-}
+        cameraFOV.aspect =
+          video.videoWidth /
+          video.videoHeight;
 
-goodMatchesCount =
-goodMatches.length;
+        const estimatedFOV =
+          estimateCameraFOV(
+            video.videoWidth,
+            video.videoHeight
+          );
 
-overlap =
-Math.min(
-goodMatches.length / 120,
-1
-);
+        cameraFOV.horizontal =
+          estimatedFOV.horizontal;
 
-const shouldCapture =
+        cameraFOV.vertical =
+          estimatedFOV.vertical;
 
-visualDistance > 25 &&
+        cameraFOV.focalLength =
+          estimatedFOV.focalLength;
 
-overlap > 0.12 &&
+        capturing = true;
 
-blurScore > 30;
+      }
 
-if(shouldCapture){
+      catch (err) {
 
-panoX += tx * 2;
+        debug.innerHTML =
+          err;
 
-panoCtx.drawImage(
-frameCanvas,
-panoX,
-500,
-640,
-360
-);
+      }
 
-captures.push({
+    };
 
-x:panoX,
+  });
 
-distance:
-visualDistance,
+  window.addEventListener(
+    "deviceorientation",
+    async e => {
 
-overlap,
+      if (!capturing) return;
 
-blur:
-blurScore
+      if (
+        captureCooldown ||
+        isCapturing
+      ) {
+        return;
+      }
 
-});
+      let rawYaw =
+        360 - e.alpha;
 
-captureCount.innerHTML =
-captures.length;
+      let rawPitch =
+        getPitch(
+          e.beta || 0
+        );
 
-totalMovement +=
-Math.abs(tx);
+      if (!environmentLocked) {
 
-flashCapture();
+        worldLockYaw =
+          rawYaw;
 
-}
+        environmentLocked = true;
 
-drawPanoramaPreview();
+      }
 
-statusText.innerHTML =
-`
-360 Panorama Scanning
-`;
+      let yaw =
+        norm360(
+          rawYaw - worldLockYaw
+        );
 
-debug.innerHTML =
-`
-Features:
-${keypoints.size()}
+      smoothYaw =
+        norm360(
 
-<br><br>
+          smoothYaw +
 
-Matches:
-${goodMatchesCount}
+          angleDiff(
+            yaw,
+            smoothYaw
+          ) * 0.08
 
-<br><br>
+        );
 
-Overlap:
-${(overlap * 100).toFixed(0)}%
+      smoothPitch +=
+        (rawPitch - smoothPitch) * 0.12;
 
-<br><br>
+      stableYaw =
+        norm360(
 
-Distance:
-${visualDistance.toFixed(1)}
+          stableYaw +
 
-<br><br>
+          angleDiff(
+            smoothYaw,
+            stableYaw
+          ) * 0.22
 
-Movement:
-${totalMovement.toFixed(0)}
+        );
 
-<br><br>
+      stablePitch +=
+        (smoothPitch - stablePitch) * 0.22;
 
-Blur:
-${blurScore.toFixed(0)}
-`;
+      displayYaw =
+        norm360(
 
-if(totalMovement > 6000){
+          displayYaw +
 
-statusText.innerHTML =
-"360 Panorama Complete";
+          angleDiff(
+            stableYaw,
+            displayYaw
+          ) * 0.18
 
-running = false;
+        );
 
-}
+      displayPitch +=
+        (stablePitch - displayPitch) * 0.18;
 
-if(previousDescriptors)
-previousDescriptors.delete();
+      const active =
+        capturePoints[currentIndex];
 
-if(previousKeypoints)
-previousKeypoints.delete();
+      if (!active) {
 
-previousDescriptors =
-descriptors.clone();
+        finish();
+        return;
 
-previousKeypoints =
-keypoints;
+      }
 
-src.delete();
-warped.delete();
-gray.delete();
-descriptors.delete();
-orb.delete();
+      let yawDiff =
+        angleDiff(
+          stableYaw,
+          active.yaw
+        );
 
-requestAnimationFrame(
-processLoop
-);
+      let pitchDiff =
+        active.pitch -
+        stablePitch;
 
-}
+      let visualYaw =
+        angleDiff(
+          displayYaw,
+          active.yaw
+        );
 
-function drawPanoramaPreview(){
+      let visualPitch =
+        active.pitch -
+        displayPitch;
 
-ctx.drawImage(
-
-panoCanvas,
-
-panoX - 1200,
-300,
-2400,
-700,
-
-0,
-0,
-overlay.width,
-220
-
-);
-
-ctx.beginPath();
-
-ctx.moveTo(
-overlay.width / 2,
-0
-);
-
-ctx.lineTo(
-overlay.width / 2,
-220
-);
-
-ctx.strokeStyle =
-"yellow";
-
-ctx.lineWidth = 3;
-
-ctx.stroke();
-
-}
-
-function flashCapture(){
-
-ctx.fillStyle =
-"rgba(255,255,255,0.25)";
-
-ctx.fillRect(
-0,
-0,
-overlay.width,
-overlay.height
-);
-
-setTimeout(()=>{
-
-ctx.clearRect(
-0,
-0,
-overlay.width,
-overlay.height
-);
-
-},80);
-
-}
-
-downloadBtn.onclick =
-async()=>{
-
-const zip =
-new JSZip();
-
-const pano =
-panoCanvas.toDataURL(
-"image/jpeg",
-0.95
-);
-
-zip.file(
-
-"panorama.jpg",
-
-pano.split(",")[1],
-
-{
-base64:true
-}
-
-);
-
-zip.file(
-
-"captures.json",
-
-JSON.stringify(
-captures,
-null,
-2
+      dot.style.transform =
+        `
+translate(
+calc(-50% + ${-(visualYaw / 18) * 45}px),
+calc(-50% + ${(visualPitch / 18) * 45}px)
 )
+`;
 
-);
+      const absYaw =
+        Math.abs(yawDiff);
 
-const blob =
-await zip.generateAsync({
+      const absPitch =
+        Math.abs(pitchDiff);
 
-type:"blob"
+      if (
+        absYaw > 8 ||
+        absPitch > 8
+      ) {
 
-});
+        if (absYaw > absPitch) {
 
-const a =
-document.createElement("a");
+          arrow.innerText =
+            yawDiff > 0 ? "⬅" : "➡";
 
-a.href =
-URL.createObjectURL(blob);
+        }
 
-a.download =
-"360_panorama.zip";
+        else {
 
-a.click();
+          arrow.innerText =
+            pitchDiff > 0 ? "⬆" : "⬇";
 
-};
+        }
+
+      }
+
+      else {
+
+        arrow.innerText =
+          "✅";
+
+      }
+
+      statusText.innerHTML =
+        `
+Captured
+${capturedImages.length}
+/
+${totalPoints}
+`;
+
+      const aligned =
+
+        Math.abs(yawDiff) < 8 &&
+        Math.abs(pitchDiff) < 8;
+
+      const motionStable =
+
+        Math.abs(
+          angleDiff(
+            smoothYaw,
+            stableYaw
+          )
+        ) < 2.5 &&
+
+        Math.abs(
+          smoothPitch -
+          stablePitch
+        ) < 2.5;
+
+      if (
+        aligned &&
+        motionStable
+      ) {
+
+        if (!holding) {
+
+          holding = true;
+          holdStart = Date.now();
+
+        }
+
+        let progressValue =
+          (Date.now() - holdStart) / 900;
+
+        progress.style.background =
+          `
+conic-gradient(
+lime ${progressValue * 360}deg,
+transparent 0deg
+)
+`;
+
+        if (progressValue >= 1) {
+
+          isCapturing = true;
+          captureCooldown = true;
+
+          await capture(active);
+
+          currentIndex++;
+
+          holding = false;
+
+          progress.style.background =
+            "none";
+
+          await new Promise(r =>
+            setTimeout(r, 350)
+          );
+
+          captureCooldown = false;
+          isCapturing = false;
+
+        }
+
+      }
+
+      else {
+
+        holding = false;
+
+        progress.style.background =
+          "none";
+
+      }
+
+      debug.innerHTML =
+        `
+Mode:
+${capturePoints.length} Points
+
+<br><br>
+
+Captured:
+${capturedImages.length}
+/
+${totalPoints}
+
+<br><br>
+
+Yaw:
+${stableYaw.toFixed(1)}
+
+<br>
+
+Pitch:
+${stablePitch.toFixed(1)}
+
+<br><br>
+
+Target Yaw:
+${active.yaw}
+
+<br>
+
+Target Pitch:
+${active.pitch}
+
+<br><br>
+
+Yaw Diff:
+${yawDiff.toFixed(1)}
+
+<br>
+
+Pitch Diff:
+${pitchDiff.toFixed(1)}
+
+<br><br>
+
+HFOV:
+${cameraFOV.horizontal.toFixed(1)}
+
+<br>
+
+VFOV:
+${cameraFOV.vertical.toFixed(1)}
+
+<br>
+
+Focal:
+${cameraFOV.focalLength.toFixed(1)}
+
+<br><br>
+
+Motion Stable:
+${motionStable}
+`;
+
+    });
+
+  async function capture(active) {
+
+    const canvas =
+      document.createElement("canvas");
+
+    canvas.width =
+      video.videoWidth;
+
+    canvas.height =
+      video.videoHeight;
+
+    const ctx =
+      canvas.getContext("2d");
+
+    ctx.drawImage(
+      video,
+      0,
+      0
+    );
+
+    const img =
+      canvas.toDataURL(
+        "image/png"
+      );
+
+    capturedImages.push(img);
+
+    captureData.push({
+
+      file:
+        `img_${capturedImages.length}.png`,
+
+      yaw:
+        stableYaw,
+
+      pitch:
+        stablePitch,
+
+      targetYaw:
+        active.yaw,
+
+      targetPitch:
+        active.pitch,
+
+      camera: {
+
+        width:
+          cameraFOV.width,
+
+        height:
+          cameraFOV.height,
+
+        aspect:
+          cameraFOV.aspect,
+
+        horizontal:
+          cameraFOV.horizontal,
+
+        vertical:
+          cameraFOV.vertical,
+
+        focalLength:
+          cameraFOV.focalLength
+
+      },
+
+      timestamp:
+        Date.now()
+
+    });
+
+  }
+
+  function finish() {
+
+    capturing = false;
+
+    if (stream) {
+
+      stream.getTracks()
+        .forEach(track => {
+
+          track.stop();
+
+        });
+
+    }
+
+    captureScreen.style.display =
+      "none";
+
+    resultScreen.style.display =
+      "block";
+
+    const gallery =
+      document.getElementById(
+        "gallery"
+      );
+
+    capturedImages.forEach(img => {
+
+      const el =
+        document.createElement("img");
+
+      el.src = img;
+
+      gallery.appendChild(el);
+
+    });
+
+  }
+
+  document.getElementById(
+    "downloadBtn"
+  ).onclick = async () => {
+
+    const zip =
+      new JSZip();
+
+    capturedImages.forEach((img, i) => {
+
+      zip.file(
+
+        `img_${i + 1}.png`,
+
+        img.split(",")[1],
+
+        {
+          base64: true
+        }
+
+      );
+
+    });
+
+    zip.file(
+
+      "data.json",
+
+      JSON.stringify({
+
+        camera: {
+
+          width:
+            cameraFOV.width,
+
+          height:
+            cameraFOV.height,
+
+          aspect:
+            cameraFOV.aspect,
+
+          horizontal:
+            cameraFOV.horizontal,
+
+          vertical:
+            cameraFOV.vertical,
+
+          focalLength:
+            cameraFOV.focalLength
+
+        },
+
+        images:
+          captureData
+
+      },
+        null,
+        2)
+
+    );
+
+    const blob =
+      await zip.generateAsync({
+
+        type: "blob"
+
+      });
+
+    const a =
+      document.createElement("a");
+
+    a.href =
+      URL.createObjectURL(blob);
+
+    a.download =
+      "360_capture.zip";
+
+    a.click();
+
+  };
 
 });
