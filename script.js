@@ -74,6 +74,10 @@ window.addEventListener("load", () => {
 
   };
 
+  // =========================================
+  // HELPERS
+  // =========================================
+
   function norm360(a) {
 
     return (a % 360 + 360) % 360;
@@ -138,16 +142,12 @@ window.addEventListener("load", () => {
     }
 
     const verticalFOV =
-
       horizontalFOV / aspect;
 
     const focalLength =
-
       width /
-
       (
         2 *
-
         Math.tan(
           (
             horizontalFOV *
@@ -171,290 +171,322 @@ window.addEventListener("load", () => {
 
   }
 
- function setCaptureMode(mode) {
-
-  capturePoints = [];
-
   // =========================================
-  // QUICK MODE
+  // CAPTURE MODES
   // =========================================
 
-  if (mode === "quick") {
+  function setCaptureMode(mode) {
 
-    rings = [
+    capturePoints = [];
 
-      {
-        ring: 1,
-        pitch: 0,
+    // =====================================
+    // QUICK
+    // =====================================
 
-        yaws: [
+    if (mode === "quick") {
 
-          0, 30, 60, 90,
-          120, 150, 180, 210,
-          240, 270, 300, 330
+      rings = [
 
-        ]
-      }
+        {
+          ring: 1,
+          pitch: 0,
 
-    ];
+          yaws: [
 
-  }
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
 
-  // =========================================
-  // STANDARD MODE
-  // =========================================
+          ]
+        },
 
-  else if (mode === "standard") {
+        {
+          ring: 2,
+          pitch: 60,
 
-    rings = [
+          yaws: [
 
-      {
-        ring: 1,
-        pitch: 45,
+            0, 60, 120,
+            180, 240, 300
 
-        yaws: [
+          ]
+        }
 
-          0, 45, 90, 135,
-          180, 225, 270, 315
+      ];
 
-        ]
-      },
+    }
 
-      {
-        ring: 2,
-        pitch: 0,
+    // =====================================
+    // STANDARD
+    // =====================================
 
-        yaws: [
+    else if (mode === "standard") {
 
-          0, 30, 60, 90,
-          120, 150, 180, 210,
-          240, 270, 300, 330
+      rings = [
 
-        ]
-      },
+        {
+          ring: 1,
+          pitch: 0,
 
-      {
-        ring: 3,
-        pitch: -45,
+          yaws: [
 
-        yaws: [
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
 
-          0, 45, 90, 135,
-          180, 225, 270, 315
+          ]
+        },
 
-        ]
-      }
+        {
+          ring: 2,
+          pitch: 45,
 
-    ];
+          yaws: [
 
-  }
+            0, 45, 90, 135,
+            180, 225, 270, 315
 
-  // =========================================
-  // PRO MODE
-  // =========================================
+          ]
+        },
 
-  else if (mode === "pro") {
+        {
+          ring: 3,
+          pitch: -45,
 
-    rings = [
+          yaws: [
 
-      {
-        ring: 1,
-        pitch: 60,
+            22, 67, 112, 157,
+            202, 247, 292, 337
 
-        yaws: [
+          ]
+        }
 
-          0, 60, 120,
-          180, 240, 300
+      ];
 
-        ]
-      },
+    }
 
-      {
-        ring: 2,
-        pitch: 30,
+    // =====================================
+    // PRO
+    // =====================================
 
-        yaws: [
+    else if (mode === "pro") {
 
-          0, 36, 72, 108,
-          144, 180, 216,
-          252, 288, 324
+      rings = [
 
-        ]
-      },
+        {
+          ring: 1,
+          pitch: 0,
 
-      {
-        ring: 3,
-        pitch: 0,
+          yaws: [
 
-        yaws: [
+            0, 30, 60, 90,
+            120, 150, 180, 210,
+            240, 270, 300, 330
 
-          0, 30, 60, 90,
-          120, 150, 180, 210,
-          240, 270, 300, 330
+          ]
+        },
 
-        ]
-      },
+        {
+          ring: 2,
+          pitch: 30,
 
-      {
-        ring: 4,
-        pitch: -30,
+          yaws: [
 
-        yaws: [
+            0, 36, 72, 108,
+            144, 180, 216,
+            252, 288, 324
 
-          18, 54, 90, 126,
-          162, 198, 234,
-          270, 306, 342
+          ]
+        },
 
-        ]
-      },
+        {
+          ring: 3,
+          pitch: 60,
 
-      {
-        ring: 5,
-        pitch: -60,
+          yaws: [
 
-        yaws: [
+            0, 60, 120,
+            180, 240, 300
 
-          30, 90, 150,
-          210, 270, 330
+          ]
+        },
 
-        ]
-      }
+        {
+          ring: 4,
+          pitch: -30,
 
-    ];
+          yaws: [
 
-  }
+            18, 54, 90, 126,
+            162, 198, 234,
+            270, 306, 342
 
-  // =========================================
-  // ULTRA MODE
-  // =========================================
+          ]
+        },
 
-  else {
+        {
+          ring: 5,
+          pitch: -60,
 
-    rings = [
+          yaws: [
 
-      // =========================
-      // RING 1 → MIDDLE
-      // =========================
+            30, 90, 150,
+            210, 270, 330
 
-      {
-        ring: 1,
-        pitch: 0,
+          ]
+        }
 
-        yaws: [
+      ];
 
-          0, 20, 40, 60,
-          80, 100, 120, 140,
-          160, 180, 200, 220,
-          240, 260, 280, 300,
-          320, 340
+    }
 
-        ]
-      },
+    // =====================================
+    // ULTRA
+    // =====================================
 
-      // =========================
-      // RING 2 → UPPER
-      // =========================
+    else {
 
-      {
-        ring: 2,
-        pitch: 36,
+      rings = [
 
-        yaws: [
+        {
+          ring: 1,
+          pitch: 0,
 
-          0, 24, 48, 72,
-          96, 120, 144, 168,
-          192, 216, 240, 264,
-          288, 312, 336
+          yaws: [
 
-        ]
-      },
+            0, 24, 48, 72,
+            96, 120, 144, 168,
+            192, 216, 240, 264,
+            288, 312, 336
 
-      // =========================
-      // RING 3 → TOP
-      // =========================
+          ]
+        },
 
-      {
-        ring: 3,
-        pitch: 72,
+        {
+          ring: 2,
+          pitch: 36,
 
-        yaws: [
+          yaws: [
 
-          0, 24, 48, 72,
-          96, 120, 144, 168,
-          192, 216, 240, 264,
-          288, 312, 336
+            0, 24, 48, 72,
+            96, 120, 144, 168,
+            192, 216, 240, 264,
+            288, 312, 336
 
-        ]
-      },
+          ]
+        },
 
-      // =========================
-      // RING 4 → LOWER
-      // =========================
+        {
+          ring: 3,
+          pitch: 72,
 
-      {
-        ring: 4,
-        pitch: -36,
+          yaws: [
 
-        yaws: [
+            0, 24, 48, 72,
+            96, 120, 144, 168,
+            192, 216, 240, 264,
+            288, 312, 336
 
-          12, 36, 60, 84,
-          108, 132, 156, 180,
-          204, 228, 252, 276,
-          300, 324, 348
+          ]
+        },
 
-        ]
-      },
+        {
+          ring: 4,
+          pitch: -36,
 
-      // =========================
-      // RING 5 → BOTTOM
-      // =========================
+          yaws: [
 
-      {
-        ring: 5,
-        pitch: -72,
+            12, 36, 60, 84,
+            108, 132, 156, 180,
+            204, 228, 252, 276,
+            300, 324, 348
 
-        yaws: [
+          ]
+        },
 
-          12, 36, 60, 84,
-          108, 132, 156, 180,
-          204, 228, 252, 276,
-          300, 324, 348
+        {
+          ring: 5,
+          pitch: -72,
 
-        ]
-      }
+          yaws: [
 
-    ];
+            12, 36, 60, 84,
+            108, 132, 156, 180,
+            204, 228, 252, 276,
+            300, 324, 348
 
-  }
+          ]
+        }
 
-  rings.forEach(r => {
+      ];
 
-    r.yaws.forEach(yaw => {
+    }
 
-      capturePoints.push({
+    rings.forEach(r => {
 
-        ring: r.ring,
+      r.yaws.forEach(yaw => {
 
-        yaw,
+        capturePoints.push({
 
-        pitch: r.pitch
+          ring: r.ring,
+
+          yaw,
+
+          pitch: r.pitch
+
+        });
 
       });
 
     });
 
-  });
+    totalPoints =
+      capturePoints.length;
 
-  totalPoints =
-    capturePoints.length;
+  }
 
-}
+  // =========================================
+  // BUTTONS
+  // =========================================
 
   modeButtons.forEach(btn => {
 
     btn.onclick = async () => {
 
-      setCaptureMode();
+      currentIndex = 0;
+
+      capturedImages = [];
+
+      captureData = [];
+
+      capturePoints = [];
+
+      rings = [];
+
+      totalPoints = 0;
+
+      smoothYaw = 0;
+      smoothPitch = 0;
+
+      stableYaw = 0;
+      stablePitch = 0;
+
+      displayYaw = 0;
+      displayPitch = 0;
+
+      captureCooldown = false;
+
+      isCapturing = false;
+
+      holding = false;
+
+      environmentLocked = false;
+
+      worldLockYaw = 0;
+
+      setCaptureMode(
+        btn.dataset.mode
+      );
 
       try {
 
@@ -539,6 +571,10 @@ window.addEventListener("load", () => {
     };
 
   });
+
+  // =========================================
+  // DEVICE ORIENTATION
+  // =========================================
 
   window.addEventListener(
     "deviceorientation",
@@ -826,6 +862,10 @@ ${cameraFOV.focalLength.toFixed(1)}
 
     });
 
+  // =========================================
+  // CAPTURE
+  // =========================================
+
   async function capture(active) {
 
     const canvas =
@@ -888,6 +928,10 @@ ${cameraFOV.focalLength.toFixed(1)}
 
   }
 
+  // =========================================
+  // FINISH
+  // =========================================
+
   function finish() {
 
     capturing = false;
@@ -914,6 +958,8 @@ ${cameraFOV.focalLength.toFixed(1)}
         "gallery"
       );
 
+    gallery.innerHTML = "";
+
     capturedImages.forEach(img => {
 
       const el =
@@ -926,6 +972,10 @@ ${cameraFOV.focalLength.toFixed(1)}
     });
 
   }
+
+  // =========================================
+  // DOWNLOAD ZIP
+  // =========================================
 
   document.getElementById(
     "downloadBtn"
