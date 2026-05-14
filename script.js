@@ -60,7 +60,7 @@ window.addEventListener("load", () => {
   let rings = [];
   let capturePoints = [];
   let totalPoints = 0;
-
+  let selectedMode = "";
   let cameraFOV = {
 
     width: 0,
@@ -192,23 +192,11 @@ window.addEventListener("load", () => {
           pitch: 0,
 
           yaws: [
-
-            0, 30, 60, 90,
-            120, 150, 180, 210,
-            240, 270, 300, 330
-
-          ]
-        },
-
-        {
-          ring: 2,
-          pitch: 60,
-
-          yaws: [
-
-            0, 60, 120,
-            180, 240, 300
-
+            0, 20, 40, 60,
+            80, 100, 120, 140,
+            160, 180, 200, 220,
+            240, 260, 280, 300,
+            320, 340
           ]
         }
 
@@ -224,40 +212,57 @@ window.addEventListener("load", () => {
 
       rings = [
 
+        // Horizon
         {
           ring: 1,
           pitch: 0,
 
           yaws: [
-
             0, 30, 60, 90,
             120, 150, 180, 210,
             240, 270, 300, 330
-
           ]
         },
 
+        // Upper
         {
           ring: 2,
           pitch: 45,
 
           yaws: [
-
             0, 45, 90, 135,
             180, 225, 270, 315
-
           ]
         },
 
+        // Top
         {
           ring: 3,
+          pitch: 75,
+
+          yaws: [
+            0, 180
+          ]
+        },
+
+        // Lower
+        {
+          ring: 4,
           pitch: -45,
 
           yaws: [
-
             22, 67, 112, 157,
             202, 247, 292, 337
+          ]
+        },
 
+        // Bottom
+        {
+          ring: 5,
+          pitch: -75,
+
+          yaws: [
+            90, 270
           ]
         }
 
@@ -273,65 +278,70 @@ window.addEventListener("load", () => {
 
       rings = [
 
+        // Horizon
         {
           ring: 1,
           pitch: 0,
 
           yaws: [
 
-            0, 30, 60, 90,
-            120, 150, 180, 210,
-            240, 270, 300, 330
+            0, 25, 50, 75,
+            100, 125, 150,
+            175, 200, 225,
+            250, 275, 300,
+            325
 
           ]
         },
 
+        // Upper Mid
         {
           ring: 2,
-          pitch: 30,
-
-          yaws: [
-
-            0, 36, 72, 108,
-            144, 180, 216,
-            252, 288, 324
-
-          ]
-        },
-
-        {
-          ring: 3,
-          pitch: 60,
-
-          yaws: [
-
-            0, 60, 120,
-            180, 240, 300
-
-          ]
-        },
-
-        {
-          ring: 4,
-          pitch: -30,
+          pitch: 45,
 
           yaws: [
 
             18, 54, 90, 126,
-            162, 198, 234,
-            270, 306, 342
+            162, 198, 234, 270,
+            306, 342
 
           ]
         },
 
+        // Top
         {
-          ring: 5,
-          pitch: -60,
+          ring: 3,
+          pitch: 75,
 
           yaws: [
 
-            30, 90, 150,
-            210, 270, 330
+            0, 120, 240
+
+          ]
+        },
+
+        // Lower Mid
+        {
+          ring: 4,
+          pitch: -45,
+
+          yaws: [
+
+            0, 36, 72, 108,
+            144, 180, 216, 252,
+            288, 324
+
+          ]
+        },
+
+        // Bottom
+        {
+          ring: 5,
+          pitch: -75,
+
+          yaws: [
+
+            60, 180, 300
 
           ]
         }
@@ -484,8 +494,11 @@ window.addEventListener("load", () => {
 
       worldLockYaw = 0;
 
+      selectedMode =
+        btn.dataset.mode;
+
       setCaptureMode(
-        btn.dataset.mode
+        selectedMode
       );
 
       try {
@@ -989,8 +1002,8 @@ ${cameraFOV.focalLength.toFixed(1)}
       zip.file(
 
         captureData[i]
-        .sensors
-        .fileUri,
+          .sensors
+          .fileUri,
 
         img.split(",")[1],
 
@@ -1007,6 +1020,15 @@ ${cameraFOV.focalLength.toFixed(1)}
       "data.json",
 
       JSON.stringify({
+
+        mode:
+          selectedMode,
+
+        totalPhotos:
+          capturedImages.length,
+
+        capturedAt:
+          new Date().toISOString(),
 
         angleViewX:
           cameraFOV.horizontal,
@@ -1033,6 +1055,29 @@ ${cameraFOV.focalLength.toFixed(1)}
 
       });
 
+    const now =
+      new Date();
+
+    const pad = n =>
+      String(n).padStart(2, "0");
+
+    const timestamp =
+
+      `${now.getFullYear()}-` +
+      `${pad(now.getMonth() + 1)}-` +
+      `${pad(now.getDate())}_` +
+
+      `${pad(now.getHours())}-` +
+      `${pad(now.getMinutes())}-` +
+      `${pad(now.getSeconds())}`;
+
+    const filename =
+
+      `360_` +
+      `${selectedMode}_` +
+      `${capturedImages.length}photos_` +
+      `${timestamp}.zip`;
+
     const a =
       document.createElement("a");
 
@@ -1040,7 +1085,7 @@ ${cameraFOV.focalLength.toFixed(1)}
       URL.createObjectURL(blob);
 
     a.download =
-      "360_capture.zip";
+      filename;
 
     a.click();
 
