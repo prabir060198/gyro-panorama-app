@@ -602,13 +602,53 @@ window.addEventListener("load", () => {
         return;
       }
 
+      const alphaDeg =
+        e.alpha || 0;
+
+      const betaDeg =
+        e.beta || 0;
+
+      const gammaDeg =
+        e.gamma || 0;
+
+      const alpha =
+        alphaDeg * Math.PI / 180;
+
+      const beta =
+        betaDeg * Math.PI / 180;
+
+      const gamma =
+        gammaDeg * Math.PI / 180;
+
+      // Rotation matrix parts
+
+      const cA = Math.cos(alpha);
+      const sA = Math.sin(alpha);
+
+      const cB = Math.cos(beta);
+      const sB = Math.sin(beta);
+
+      const cG = Math.cos(gamma);
+      const sG = Math.sin(gamma);
+      
+
+      const xh =
+        -cA * sG -
+        sA * sB * cG;
+
+      const yh =
+        -sA * sG +
+        cA * sB * cG;
+
       let rawYaw =
-        360 - e.alpha;
+        Math.atan2(xh, yh) *
+        180 / Math.PI;
+
+      rawYaw =
+        norm360(rawYaw);
 
       let rawPitch =
-        getPitch(
-          e.beta || 0
-        );
+        getPitch(betaDeg);
 
       if (!environmentLocked) {
 
